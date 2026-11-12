@@ -71,7 +71,6 @@ export function PlayersLayer({ vp, interactive = true }: { vp: TopViewport; inte
             onPointerDown={toStart}
             onClick={() => selectPlayer({ side: p.side, playerId: p.playerId })}
             onTap={() => selectPlayer({ side: p.side, playerId: p.playerId })}
-            onDragStart={() => selectPlayer({ side: p.side, playerId: p.playerId })}
             onDragMove={onDrag(p)}
             onDragEnd={onDrag(p)}
             onMouseEnter={(e) => setCursor(e, 'grab')}

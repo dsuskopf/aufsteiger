@@ -41,7 +41,7 @@ export function ThreeView() {
 
     const scene = new THREE.Scene()
     scene.fog = new THREE.Fog(COLORS.bgDeep, 35, 80)
-    scene.add(new THREE.HemisphereLight('#b9b4c8', '#0b0b0d', 1.2))
+    scene.add(new THREE.HemisphereLight('#c4c4ca', '#0c0c0e', 1.2))
     const sun = new THREE.DirectionalLight('#ffffff', 1.2)
     sun.position.set(6, 14, 8)
     scene.add(sun)

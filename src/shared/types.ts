@@ -3,16 +3,16 @@ export const SCHEMA_VERSION = 1
 
 export type NetPresetId = 'herren' | 'damen' | 'mixed' | 'custom'
 
-export type Role = 'S' | 'MB' | 'AA' | 'DA' | 'L'
+export type Role = 'S' | 'MB' | 'A' | 'D' | 'L'
 
 /** Alle Rollen in Anzeige-Reihenfolge. Rollen sind rein optisch. */
-export const ROLES: readonly Role[] = ['S', 'AA', 'MB', 'DA', 'L']
+export const ROLES: readonly Role[] = ['S', 'A', 'MB', 'D', 'L']
 
 export const ROLE_LABELS: Record<Role, string> = {
   S: 'Steller',
   MB: 'Mittelblocker',
-  AA: 'Außenangreifer',
-  DA: 'Diagonalangreifer',
+  A: 'Außenangreifer',
+  D: 'Diagonalangreifer',
   L: 'Libero'
 }
 
@@ -30,6 +30,10 @@ export interface Player {
 export interface Team {
   id: string
   name: string
+  /** Trikotfarbe (Hex, z. B. #5b2a86) – gilt für alle Spieler außer dem Libero */
+  color: string
+  /** Libero-Trikotfarbe (Hex) – ein Spieler in der Rolle L trägt automatisch diese Farbe */
+  liberoColor: string
   players: Player[]
 }
 

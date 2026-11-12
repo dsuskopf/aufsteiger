@@ -1,4 +1,8 @@
 import { ROLES, type Player, type Role, type Team } from './types'
+import { DEFAULT_LIBERO_COLOR, DEFAULT_TEAM_COLOR, isHexColor, pairedLibero } from './teamColors'
+
+/** Alte Rollenkürzel (bis Phase 2) auf die neuen abbilden */
+const LEGACY_ROLES: Record<string, Role> = { AA: 'A', DA: 'D' }
 
 /**
  * Prüft und bereinigt Team-Daten (aus Datei oder vom Renderer).
@@ -12,9 +16,9 @@ export function sanitizeTeams(raw: unknown): Team[] {
     const players: Player[] = []
     for (const p of Array.isArray(t.players) ? t.players : []) {
       if (!isObj(p) || typeof p.id !== 'string') continue
-      const positions = (Array.isArray(p.positions) ? p.positions : []).filter((r): r is Role =>
-        ROLES.includes(r as Role)
-      )
+      const positions = (Array.isArray(p.positions) ? p.positions : [])
+        .map((r) => (typeof r === 'string' && r in LEGACY_ROLES ? LEGACY_ROLES[r] : r))
+        .filter((r): r is Role => ROLES.includes(r as Role))
       players.push({
         id: p.id,
         name: typeof p.name === 'string' ? p.name.slice(0, 80) : '',
@@ -22,7 +26,15 @@ export function sanitizeTeams(raw: unknown): Team[] {
         positions: [...new Set(positions)]
       })
     }
-    teams.push({ id: t.id, name: typeof t.name === 'string' ? t.name.slice(0, 80) : 'Team', players })
+    const color = isHexColor(t.color) ? t.color.toLowerCase() : DEFAULT_TEAM_COLOR
+    teams.push({
+      id: t.id,
+      name: typeof t.name === 'string' ? t.name.slice(0, 80) : 'Team',
+      color,
+      // Ohne gespeicherte Libero-Farbe: der passende Partner der Trikotfarbe
+      liberoColor: isHexColor(t.liberoColor) ? t.liberoColor.toLowerCase() : (pairedLibero(color) ?? DEFAULT_LIBERO_COLOR),
+      players
+    })
   }
   return teams
 }

@@ -23,9 +23,14 @@ export const COURT = {
   antennaLength: 1.8,
   antennaHeightAboveNet: 0.8,
   antennaRadius: 0.005,
+  /**
+   * Darstellungsradius in 3D: Die echten 10 mm wären auf dem Bildschirm nur 1–2 Pixel breit und würden
+   * durch die Kantenglättung grau und dunkel wirken. Daher bewusst etwa 1,8-fach dicker gezeichnet.
+   */
+  antennaDisplayRadius: 0.009,
   antennaStripe: 0.1,
   /** Antennentasche (Stoffhülle) entlang der Netzhöhe */
-  antennaPocketRadius: 0.016,
+  antennaPocketRadius: 0.019,
   /** Seitenband: 5 cm breit, senkrecht über jeder Seitenlinie */
   sideBandWidth: 0.05
 } as const

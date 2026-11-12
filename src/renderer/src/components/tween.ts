@@ -8,6 +8,8 @@ export function easeInOutCubic(k: number): number {
  * Gibt eine Abbruch-Funktion zurück.
  */
 export function tween(durationMs: number, onUpdate: (k: number) => void, onDone?: () => void): () => void {
+  // „Bewegung reduzieren“ in Windows: sofort ans Ziel
+  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) durationMs = 1
   let raf = 0
   let cancelled = false
   const t0 = performance.now()

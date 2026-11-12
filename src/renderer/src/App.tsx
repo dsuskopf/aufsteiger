@@ -47,7 +47,7 @@ export function App() {
         {show3d && (
           <section className="pane">
             <div className="pane-title">3D</div>
-            <div className="pane-hint">Ziehen = drehen · Zwei Finger / Rad = zoomen · Rechts / zwei Finger = verschieben</div>
+            <div className="pane-hint">Ziehen dreht · Zwei Finger zoomen und verschieben</div>
             <ThreeView />
           </section>
         )}

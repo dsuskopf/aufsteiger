@@ -6,6 +6,7 @@ import { COLORS } from '@renderer/theme/colors'
 import { useElementSize } from '@renderer/components/useElementSize'
 import { useZoomPan } from '@renderer/components/useZoomPan'
 import { ViewControls } from '@renderer/components/ViewControls'
+import { Icon } from '@renderer/components/Icon'
 import { useUi } from '@renderer/store/settingsStore'
 
 const S_MIN = -1
@@ -119,7 +120,7 @@ export function SideView() {
               {/* Netzhöhe als Referenzlinie */}
               <Line
                 points={[...P(S_MIN, netHeight), ...P(S_MAX, netHeight)]}
-                stroke={COLORS.violetLight}
+                stroke={COLORS.accent}
                 strokeWidth={1}
                 dash={[6, 6]}
                 opacity={0.6}
@@ -131,10 +132,10 @@ export function SideView() {
                 align={mirrored ? 'right' : 'left'}
                 text={`Netz ${fmt(netHeight, 2)} m`}
                 fontSize={12}
-                fill={COLORS.violetLight}
+                fill={COLORS.accent}
               />
               {/* Höhenskala bleibt am linken Rand stehen */}
-              <Rect x={0} y={0} width={PAD_L - 4} height={size.height} fill={COLORS.bg} opacity={0.9} />
+              <Rect x={0} y={0} width={PAD_L - 4} height={size.height} fill={COLORS.surface} opacity={0.92} />
               {labels}
             </Layer>
           </Stage>
@@ -142,12 +143,13 @@ export function SideView() {
       </div>
       <ViewControls onZoomIn={zoomIn} onZoomOut={zoomOut} onReset={reset}>
         <button
-          className={mirrored ? 'active' : ''}
+          className={mirrored ? 'selected' : ''}
+          aria-pressed={mirrored}
           title="Von der anderen Seite ansehen (horizontal drehen)"
           aria-label="Seitenansicht horizontal drehen"
           onClick={toggleMirror}
         >
-          ⇄
+          <Icon name="flip" />
         </button>
       </ViewControls>
     </>

@@ -24,7 +24,7 @@ export const SLOT_POSITIONS_A: Record<number, { x: number; y: number }> = {
 }
 
 /** Rolle je Position in Rotation 1: Steller auf 1, Diagonal gegenüber auf 4. */
-export const SLOT_ROLES: Record<number, Role> = { 1: 'S', 2: 'AA', 3: 'MB', 4: 'DA', 5: 'AA', 6: 'MB' }
+export const SLOT_ROLES: Record<number, Role> = { 1: 'S', 2: 'A', 3: 'MB', 4: 'D', 5: 'A', 6: 'MB' }
 
 export const SLOT_ORDER = [1, 2, 3, 4, 5, 6] as const
 
@@ -36,7 +36,7 @@ export function slotPosition(side: CourtSide, slot: number): { x: number; y: num
 
 /** Erste Position des Spielers, sonst Außenangreifer. */
 export function primaryRole(p: Player): Role {
-  return p.positions[0] ?? 'AA'
+  return p.positions[0] ?? 'A'
 }
 
 /** Rollen, die man für den Spieler wählen kann (seine Positionen, ohne Angabe alle). */

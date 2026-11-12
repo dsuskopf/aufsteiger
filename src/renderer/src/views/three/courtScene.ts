@@ -95,8 +95,8 @@ function buildAntenna(netHeight: number, side: number): THREE.Group {
   const g = new THREE.Group()
   const netBottom = netHeight - COURT.netBandDepth
   // Unbeleuchtete Materialien wie bei der Netzkante, damit Band, Tasche und Antenne gleich hell wirken
-  const white = new THREE.MeshBasicMaterial({ color: '#d9d9de' })
-  const red = new THREE.MeshBasicMaterial({ color: '#c62828' })
+  const white = new THREE.MeshBasicMaterial({ color: '#e6e6ea' })
+  const red = new THREE.MeshBasicMaterial({ color: '#d63230' })
 
   // Seitenband: von der Seitenlinie (innen) bis zur Außenkante der Linie
   const bandY = side * (COURT.halfWidth - COURT.sideBandWidth / 2)
@@ -112,14 +112,14 @@ function buildAntenna(netHeight: number, side: number): THREE.Group {
   // Tasche (Stoffhülle) über die gesamte Netzhöhe
   const pocket = new THREE.Mesh(
     new THREE.CylinderGeometry(COURT.antennaPocketRadius, COURT.antennaPocketRadius, COURT.netBandDepth, 16),
-    new THREE.MeshBasicMaterial({ color: '#c9c9cf' })
+    new THREE.MeshBasicMaterial({ color: '#d5d5da' })
   )
   pocket.position.set(ax, netBottom + COURT.netBandDepth / 2, az)
   g.add(pocket)
 
   // Rot-weiße Felder ab der Netzkante; das oberste Feld ist rot
   const n = Math.round(COURT.antennaHeightAboveNet / COURT.antennaStripe)
-  const stripeGeo = new THREE.CylinderGeometry(COURT.antennaRadius, COURT.antennaRadius, COURT.antennaStripe, 12)
+  const stripeGeo = new THREE.CylinderGeometry(COURT.antennaDisplayRadius, COURT.antennaDisplayRadius, COURT.antennaStripe, 16)
   for (let i = 0; i < n; i++) {
     const isRed = (n - 1 - i) % 2 === 0
     const stripe = new THREE.Mesh(stripeGeo, isRed ? red : white)

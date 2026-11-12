@@ -1,6 +1,12 @@
 import { create } from 'zustand'
 import type { Player, Role, Team } from '@shared/types'
 import { clampNumber } from '@shared/validate'
+import {
+  DEFAULT_LIBERO_COLOR,
+  DEFAULT_TEAM_COLOR,
+  nextTeamColor,
+  pairedLibero
+} from '@shared/teamColors'
 
 interface TeamsState {
   teams: Team[]
@@ -9,8 +15,11 @@ interface TeamsState {
   load: () => Promise<void>
   /** Ausstehende Speicherung sofort ausführen (z. B. beim Schließen) */
   flush: () => void
-  addTeam: (name?: string) => string
+  /** Legt ein Team mit einem ersten, leeren Spieler an (sofort ausfüllbar). */
+  addTeam: (name?: string) => { teamId: string; playerId: string }
   renameTeam: (teamId: string, name: string) => void
+  setTeamColor: (teamId: string, color: string) => void
+  setLiberoColor: (teamId: string, color: string) => void
   deleteTeam: (teamId: string) => void
   addPlayer: (teamId: string) => string
   updatePlayer: (teamId: string, playerId: string, patch: Partial<Omit<Player, 'id'>>) => void
@@ -25,13 +34,15 @@ function exampleTeam(): Team {
   return {
     id: newId(),
     name: 'Beispielteam',
+    color: DEFAULT_TEAM_COLOR,
+    liberoColor: DEFAULT_LIBERO_COLOR,
     players: [
       p('Steller', 7, 'S'),
-      p('Außen 1', 4, 'AA'),
-      p('Außen 2', 12, 'AA'),
+      p('Außen 1', 4, 'A'),
+      p('Außen 2', 12, 'A'),
       p('Mitte 1', 9, 'MB'),
       p('Mitte 2', 15, 'MB'),
-      p('Diagonal', 10, 'DA', 'AA'),
+      p('Diagonal', 10, 'D', 'A'),
       p('Libero', 1, 'L')
     ]
   }
@@ -85,11 +96,27 @@ export const useTeams = create<TeamsState>((set, get) => {
     },
 
     addTeam: (name) => {
-      const id = newId()
-      mutate((teams) => [...teams, { id, name: name ?? `Team ${teams.length + 1}`, players: [] }])
-      return id
+      const teamId = newId()
+      const playerId = newId()
+      mutate((teams) => {
+        const color = nextTeamColor(teams.map((t) => t.color))
+        return [
+        ...teams,
+        {
+          id: teamId,
+          name: name ?? `Team ${teams.length + 1}`,
+          color,
+          liberoColor: pairedLibero(color) ?? DEFAULT_LIBERO_COLOR,
+          players: [{ id: playerId, name: '', number: 1, positions: [] }]
+        }
+        ]
+      })
+      return { teamId, playerId }
     },
     renameTeam: (teamId, name) => mapTeam(teamId, (t) => ({ ...t, name })),
+    // Libero-Farbe bleibt beim Trikotwechsel unverändert (nur neue Teams starten mit dem passenden Paar)
+    setTeamColor: (teamId, color) => mapTeam(teamId, (t) => ({ ...t, color })),
+    setLiberoColor: (teamId, liberoColor) => mapTeam(teamId, (t) => ({ ...t, liberoColor })),
     deleteTeam: (teamId) => mutate((teams) => teams.filter((t) => t.id !== teamId)),
 
     addPlayer: (teamId) => {

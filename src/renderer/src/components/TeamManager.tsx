@@ -1,15 +1,21 @@
-import { useEffect, useState } from 'react'
-import { ROLES, ROLE_LABELS, type Player } from '@shared/types'
+import { useEffect, useRef, useState } from 'react'
+import { ROLES, ROLE_LABELS, type Player, type Team } from '@shared/types'
+import { JERSEY_COLORS, LIBERO_COLORS, jerseyFor, textOn } from '@shared/teamColors'
 import { useTeams } from '@renderer/store/teamsStore'
+import { teamStyle } from '@renderer/theme/teamStyle'
 import { ConfirmButton } from './ConfirmButton'
+import { ColorPopover } from './ColorPopover'
+import { Icon } from './Icon'
 
 /**
- * Teamverwaltung: beliebig viele Teams, je Spieler Name, Rückennummer und eine oder mehrere Positionen.
- * Änderungen werden sofort (verzögert) gespeichert.
+ * Teamverwaltung als Sheet: links die Teams, rechts Name, Farben und Spieler des gewählten Teams.
+ * Änderungen speichern sich selbst; „Fertig“ schließt.
  */
 export function TeamManager({ onClose }: { onClose: () => void }) {
-  const { teams, addTeam, renameTeam, deleteTeam, addPlayer, saveError } = useTeams()
+  const { teams, addTeam, saveError } = useTeams()
   const [selectedId, setSelectedId] = useState<string | null>(teams[0]?.id ?? null)
+  /** Spieler, dessen Namensfeld den Fokus bekommen soll (neues Team / neuer Spieler) */
+  const [focusPlayerId, setFocusPlayerId] = useState<string | null>(null)
   const team = teams.find((t) => t.id === selectedId) ?? teams[0]
 
   useEffect(() => {
@@ -18,106 +24,264 @@ export function TeamManager({ onClose }: { onClose: () => void }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
 
+  const newTeam = () => {
+    const { teamId, playerId } = addTeam()
+    setSelectedId(teamId)
+    setFocusPlayerId(playerId)
+  }
+
   return (
-    <div className="modal-backdrop" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal team-manager" role="dialog" aria-label="Teams verwalten">
-        <header className="modal-head">
-          <h2>Teams</h2>
-          {saveError && <span className="error">Speichern fehlgeschlagen</span>}
-          <button onClick={onClose} aria-label="Schließen">
-            ✕
+    <div className="sheet-backdrop" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="sheet" role="dialog" aria-modal="true" aria-labelledby="teams-title">
+        <header className="sheet-head">
+          <h2 id="teams-title">Teams</h2>
+          {saveError && <span className="error">Konnte nicht gespeichert werden. Bitte erneut ändern.</span>}
+          <button className="prominent" onClick={onClose}>
+            Fertig
           </button>
         </header>
 
-        <div className="team-manager-body">
-          <aside className="team-list">
+        <div className="teams-body">
+          <nav className="team-list" aria-label="Teams">
+            <button className="add-row new-team" onClick={newTeam}>
+              <Icon name="plus" />
+              Neues Team
+            </button>
             {teams.map((t) => (
               <button
                 key={t.id}
-                className={t.id === team?.id ? 'active' : ''}
+                className={`team-item ${t.id === team?.id ? 'selected' : ''}`}
+                style={teamStyle(t)}
+                aria-current={t.id === team?.id}
                 onClick={() => setSelectedId(t.id)}
               >
-                <span className="team-name">{t.name || 'Ohne Namen'}</span>
-                <span className="dim">{t.players.length}</span>
+                <span className="dot" style={{ background: t.color }} />
+                <span className="name">{t.name || 'Ohne Namen'}</span>
+                <span className="count">{t.players.length}</span>
               </button>
             ))}
-            <button className="add" onClick={() => setSelectedId(addTeam())}>
-              + Neues Team
-            </button>
-          </aside>
+          </nav>
 
-          <section className="team-edit">
-            {!team ? (
-              <p className="dim">Noch kein Team. Lege links ein neues an.</p>
-            ) : (
-              <>
-                <div className="row">
-                  <input
-                    className="text grow"
-                    aria-label="Teamname"
-                    value={team.name}
-                    placeholder="Teamname"
-                    onChange={(e) => renameTeam(team.id, e.target.value)}
-                  />
-                  <ConfirmButton
-                    label="Team löschen"
-                    confirmLabel="Wirklich löschen?"
-                    onConfirm={() => {
-                      deleteTeam(team.id)
-                      setSelectedId(null)
-                    }}
-                  />
-                </div>
-
-                <div className="player-table">
-                  <div className="player-row head">
-                    <span>Nr.</span>
-                    <span>Name</span>
-                    <span>Positionen</span>
-                    <span />
-                  </div>
-                  {team.players.map((p) => (
-                    <PlayerRow key={p.id} teamId={team.id} player={p} />
-                  ))}
-                </div>
-                <button className="add" onClick={() => addPlayer(team.id)}>
-                  + Spieler hinzufügen
-                </button>
-              </>
-            )}
-          </section>
+          {team ? (
+            <TeamEditor
+              key={team.id}
+              team={team}
+              focusPlayerId={focusPlayerId}
+              onFocused={() => setFocusPlayerId(null)}
+              onAddedPlayer={setFocusPlayerId}
+              onDeleted={() => setSelectedId(null)}
+            />
+          ) : (
+            <div className="team-edit">
+              <p className="secondary">Noch kein Team. Lege links ein neues an.</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
   )
 }
 
-function PlayerRow({ teamId, player }: { teamId: string; player: Player }) {
-  const { updatePlayer, togglePosition, deletePlayer } = useTeams()
+function TeamEditor({
+  team,
+  focusPlayerId,
+  onFocused,
+  onAddedPlayer,
+  onDeleted
+}: {
+  team: Team
+  focusPlayerId: string | null
+  onFocused: () => void
+  onAddedPlayer: (id: string) => void
+  onDeleted: () => void
+}) {
+  const { renameTeam, deleteTeam, addPlayer, setTeamColor, setLiberoColor } = useTeams()
+  const main = jerseyFor(team, 'S')
+  const libero = jerseyFor(team, 'L')
+
   return (
-    <div className="player-row">
+    <div className="team-edit team-scope" style={teamStyle(team)}>
+      <div className="row">
+        <input
+          className="field title grow"
+          aria-label="Teamname"
+          value={team.name}
+          placeholder="Teamname"
+          onChange={(e) => renameTeam(team.id, e.target.value)}
+        />
+        <ConfirmButton
+          label="Team löschen"
+          confirmLabel="Wirklich löschen?"
+          onConfirm={() => {
+            deleteTeam(team.id)
+            onDeleted()
+          }}
+        />
+      </div>
+
+      <section aria-labelledby="colors-title">
+        <h3 className="section-title" id="colors-title">
+          Farben
+        </h3>
+        <div className="colors">
+          <div className="jersey-preview" aria-hidden="true">
+            <div className="jersey" style={{ background: main.fill, borderColor: main.stroke, color: main.text }}>
+              <span className="role">S</span>
+              <span className="nr">7</span>
+            </div>
+            <div className="jersey" style={{ background: libero.fill, borderColor: libero.stroke, color: libero.text }}>
+              <span className="role">L</span>
+              <span className="nr">11</span>
+            </div>
+          </div>
+          <SwatchRow
+            label="Trikot"
+            colors={JERSEY_COLORS}
+            value={team.color}
+            onChange={(c) => setTeamColor(team.id, c)}
+          />
+          <SwatchRow
+            label="Libero"
+            colors={LIBERO_COLORS}
+            value={team.liberoColor}
+            onChange={(c) => setLiberoColor(team.id, c)}
+          />
+        </div>
+      </section>
+
+      <section aria-labelledby="players-title">
+        <h3 className="section-title" id="players-title">
+          Spieler
+        </h3>
+        <div className="players" role="table" aria-labelledby="players-title">
+          <div className="player-row head" role="row">
+            <span role="columnheader">Nr.</span>
+            <span role="columnheader">Name</span>
+            <span role="columnheader">Positionen</span>
+            <span />
+          </div>
+          {team.players.map((p) => (
+            <PlayerRow
+              key={p.id}
+              teamId={team.id}
+              player={p}
+              autoFocus={p.id === focusPlayerId}
+              onFocused={onFocused}
+            />
+          ))}
+        </div>
+        <button className="add-row" onClick={() => onAddedPlayer(addPlayer(team.id))}>
+          <Icon name="plus" />
+          Spieler hinzufügen
+        </button>
+      </section>
+    </div>
+  )
+}
+
+function SwatchRow({
+  label,
+  colors,
+  value,
+  onChange
+}: {
+  label: string
+  colors: readonly { hex: string; name: string }[]
+  value: string
+  onChange: (hex: string) => void
+}) {
+  const isCustom = !colors.some((c) => c.hex === value)
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="swatch-row" role="radiogroup" aria-label={`${label}farbe`}>
+      <span className="label">{label}</span>
+      {colors.map((c) => (
+        <button
+          key={c.hex}
+          role="radio"
+          aria-checked={c.hex === value}
+          aria-label={c.name}
+          title={c.name}
+          className={`swatch ${c.hex === value ? 'selected' : ''}`}
+          style={{ background: c.hex }}
+          onClick={() => onChange(c.hex)}
+        />
+      ))}
+      {/* Eigene Farbe: öffnet den Farbwähler (mit Hex-Code). Das Stift-Symbol zeigt, dass man hier ändern kann. */}
+      <span className="custom-wrap">
+        <button
+          data-color-trigger
+          className={`swatch custom ${isCustom ? 'selected' : ''}`}
+          title="Eigene Farbe wählen"
+          aria-label={`Eigene ${label}farbe wählen`}
+          aria-expanded={open}
+          aria-haspopup="dialog"
+          style={isCustom ? { background: value, color: textOn(value) } : undefined}
+          onClick={() => setOpen(!open)}
+        >
+          <Icon name="pencil" size={18} />
+        </button>
+        {open && <ColorPopover label={label} value={value} onChange={onChange} onClose={() => setOpen(false)} />}
+      </span>
+    </div>
+  )
+}
+
+function PlayerRow({
+  teamId,
+  player,
+  autoFocus,
+  onFocused
+}: {
+  teamId: string
+  player: Player
+  autoFocus: boolean
+  onFocused: () => void
+}) {
+  const { updatePlayer, togglePosition, deletePlayer } = useTeams()
+  const nameRef = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (!autoFocus) return
+    nameRef.current?.focus()
+    nameRef.current?.scrollIntoView({ block: 'nearest' })
+    onFocused()
+  }, [autoFocus, onFocused])
+
+  return (
+    <div className="player-row" role="row">
       <NumberInput value={player.number} onCommit={(n) => updatePlayer(teamId, player.id, { number: n })} />
       <input
-        className="text"
+        ref={nameRef}
+        className="field"
         aria-label="Name"
         value={player.name}
         placeholder="Name"
         onChange={(e) => updatePlayer(teamId, player.id, { name: e.target.value })}
       />
-      <div className="chips" role="group" aria-label="Positionen">
-        {ROLES.map((r) => (
-          <button
-            key={r}
-            className={`chip ${player.positions.includes(r) ? 'active' : ''}`}
-            title={ROLE_LABELS[r]}
-            aria-pressed={player.positions.includes(r)}
-            onClick={() => togglePosition(teamId, player.id, r)}
-          >
-            {r}
-          </button>
-        ))}
+      <div className="roles" role="group" aria-label="Positionen">
+        {ROLES.map((r) => {
+          const on = player.positions.includes(r)
+          return (
+            <button
+              key={r}
+              className={on ? 'selected' : ''}
+              data-role={r}
+              title={ROLE_LABELS[r]}
+              aria-label={ROLE_LABELS[r]}
+              aria-pressed={on}
+              onClick={() => togglePosition(teamId, player.id, r)}
+            >
+              {r}
+            </button>
+          )
+        })}
       </div>
-      <ConfirmButton label="✕" confirmLabel="Löschen?" title="Spieler löschen" onConfirm={() => deletePlayer(teamId, player.id)} />
+      <ConfirmButton
+        icon="trash"
+        label="Spieler löschen"
+        confirmLabel="Löschen?"
+        onConfirm={() => deletePlayer(teamId, player.id)}
+      />
     </div>
   )
 }
@@ -133,7 +297,7 @@ function NumberInput({ value, onCommit }: { value: number; onCommit: (n: number)
   }
   return (
     <input
-      className="num"
+      className="field num"
       inputMode="numeric"
       aria-label="Rückennummer"
       value={draft}

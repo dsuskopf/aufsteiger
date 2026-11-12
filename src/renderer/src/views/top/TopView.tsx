@@ -14,6 +14,7 @@ import { COLORS } from '@renderer/theme/colors'
 import { useElementSize } from '@renderer/components/useElementSize'
 import { useZoomPan } from '@renderer/components/useZoomPan'
 import { ViewControls } from '@renderer/components/ViewControls'
+import { Icon } from '@renderer/components/Icon'
 import { useUi } from '@renderer/store/settingsStore'
 
 const WORLD_W = COURT.length + 2 * COURT.freeZone
@@ -77,7 +78,7 @@ export function TopView() {
       </div>
       <ViewControls onZoomIn={zoomIn} onZoomOut={zoomOut} onReset={reset}>
         <button title="Feld um 90° drehen" aria-label="Feld um 90 Grad drehen" onClick={rotateTop}>
-          ⤾
+          <Icon name="rotate" />
         </button>
       </ViewControls>
     </>

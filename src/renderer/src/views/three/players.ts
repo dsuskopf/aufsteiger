@@ -1,13 +1,14 @@
 import * as THREE from 'three'
 import type { CourtSide, Role } from '@shared/types'
+import type { JerseyStyle } from '@shared/teamColors'
 import { worldToThree } from '@renderer/core/geometry/transform'
-import { TEAM_COLORS } from '@renderer/theme/colors'
 
 /** Was eine 3D-Darstellung über einen Spieler wissen muss. */
 export interface PlayerVisual {
   side: CourtSide
   role: Role
   number: number
+  jersey: JerseyStyle
 }
 
 /**
@@ -27,12 +28,12 @@ export class CylinderPlayerFactory implements PlayerMeshFactory {
   private geometry = new THREE.CylinderGeometry(BODY_RADIUS, BODY_RADIUS, BODY_HEIGHT, 24)
 
   create(v: PlayerVisual): THREE.Object3D {
-    const colors = TEAM_COLORS[v.side]
+    const colors = v.jersey
     const g = new THREE.Group()
     const body = new THREE.Mesh(
       this.geometry,
       new THREE.MeshStandardMaterial({
-        color: v.role === 'L' ? colors.libero : colors.fill,
+        color: colors.fill,
         emissive: colors.stroke,
         emissiveIntensity: 0.12,
         roughness: 0.7
@@ -62,14 +63,14 @@ export class CylinderPlayerFactory implements PlayerMeshFactory {
 }
 
 function labelTexture(v: PlayerVisual): THREE.Texture {
-  const colors = TEAM_COLORS[v.side]
+  const colors = v.jersey
   const size = 128
   const c = document.createElement('canvas')
   c.width = c.height = size
   const ctx = c.getContext('2d')!
   ctx.beginPath()
   ctx.arc(size / 2, size / 2, size / 2 - 4, 0, Math.PI * 2)
-  ctx.fillStyle = v.role === 'L' ? colors.libero : colors.fill
+  ctx.fillStyle = colors.fill
   ctx.fill()
   ctx.lineWidth = 5
   ctx.strokeStyle = colors.stroke
@@ -94,5 +95,5 @@ export function placePlayer(obj: THREE.Object3D, x: number, y: number): void {
 
 /** Kennung, ob sich das Aussehen geändert hat (dann neu erzeugen statt nur verschieben). */
 export function visualKey(v: PlayerVisual): string {
-  return `${v.side}|${v.role}|${v.number}`
+  return `${v.side}|${v.role}|${v.number}|${v.jersey.fill}`
 }

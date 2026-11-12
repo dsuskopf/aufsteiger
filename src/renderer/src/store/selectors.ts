@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import type { CourtSide, Role } from '@shared/types'
+import { jerseyFor, type JerseyStyle } from '@shared/teamColors'
 import { usePlay } from './playStore'
 import { useTeams } from './teamsStore'
 
@@ -13,6 +14,8 @@ export interface CourtPlayerView {
   name: string
   x: number
   y: number
+  /** Trikot: Libero automatisch in der Libero-Farbe, sonst Teamfarbe */
+  jersey: JerseyStyle
 }
 
 /** Spieler beider Seiten mit Nummer und Name aus dem Team. */
@@ -27,7 +30,17 @@ export function useCourtPlayers(): CourtPlayerView[] {
       for (const c of sides[side].players) {
         const p = team.players.find((pl) => pl.id === c.playerId)
         if (!p) continue
-        out.push({ key: `${side}:${p.id}`, side, playerId: p.id, role: c.role, number: p.number, name: p.name, x: c.x, y: c.y })
+        out.push({
+          key: `${side}:${p.id}`,
+          side,
+          playerId: p.id,
+          role: c.role,
+          number: p.number,
+          name: p.name,
+          x: c.x,
+          y: c.y,
+          jersey: jerseyFor(team, c.role)
+        })
       }
     }
     return out

@@ -2,7 +2,6 @@ import { Circle, Group, Layer, Text } from 'react-konva'
 import type Konva from 'konva'
 import { topToWorld, worldToTop, type TopViewport } from '@renderer/core/geometry/transform'
 import { clampToArea } from '@renderer/core/lineup/lineup'
-import { TEAM_COLORS } from '@renderer/theme/colors'
 import { useCourtPlayers, type CourtPlayerView } from '@renderer/store/selectors'
 import { usePlay } from '@renderer/store/playStore'
 
@@ -36,7 +35,7 @@ export function PlayersLayer({ vp }: { vp: TopViewport }) {
     <Layer>
       {players.map((p) => {
         const pos = worldToTop(vp, p.x, p.y)
-        const colors = TEAM_COLORS[p.side]
+        const colors = p.jersey
         return (
           <Group
             key={p.key}
@@ -52,7 +51,7 @@ export function PlayersLayer({ vp }: { vp: TopViewport }) {
           >
             <Circle
               radius={r}
-              fill={p.role === 'L' ? colors.libero : colors.fill}
+              fill={colors.fill}
               stroke={colors.stroke}
               strokeWidth={2}
               shadowColor="#000"

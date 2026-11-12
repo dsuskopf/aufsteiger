@@ -139,7 +139,7 @@ export const DEFAULT_SETTINGS: Settings = {
   defaultEndHAnnahme: 2.5,
   defaultHitH: 3.0,
   defaultApexOffsetZuspiel: 1,
-  defaultApexOffsetAnnahme: 1,
+  defaultApexOffsetAnnahme: 5,
   defaultLoop: true,
   defaultSpeed: 1,
   fingerDraws: false

@@ -79,7 +79,8 @@ export function App() {
   const is2d = viewMode === '2d'
   const show3d = viewMode === '3d'
   const main2D = useUi((s) => s.main2D)
-  const netTitle = `Netz · Blick von ${netViewFrom}`
+  const netAngle = useUi((s) => s.netAngle)
+  const netTitle = `Netz · Blick von ${netViewFrom}${netAngle ? ` · ${netAngle > 0 ? '+' : ''}${netAngle}°` : ''}`
   const pipTitle = main2D === 'top' ? netTitle : 'Draufsicht'
 
   return (

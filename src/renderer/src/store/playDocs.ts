@@ -24,6 +24,7 @@ export function currentDoc(meta: { id: string; code: string; title: string; crea
     netHeight: ui.netHeight,
     display: play.display,
     netViewFrom: ui.netViewFrom,
+    netAngle: ui.netAngle,
     netShowPlayers: ui.netShowPlayers
   }
 }
@@ -55,7 +56,7 @@ export function openDoc(doc: PlayDoc): void {
   usePlayback.setState({ t: 0 })
   const ui = useUi.getState()
   ui.setNetHeight(doc.netHeight)
-  useUi.setState({ netViewFrom: doc.netViewFrom, netShowPlayers: doc.netShowPlayers, tool: 'select' })
+  useUi.setState({ netViewFrom: doc.netViewFrom, netAngle: doc.netAngle, netShowPlayers: doc.netShowPlayers, tool: 'select' })
   usePlay.setState({
     sides: { A: strip('A'), B: strip('B') },
     trajectories: doc.trajectories,
@@ -116,6 +117,6 @@ export async function deletePlay(id: string): Promise<void> {
 
 // Netzhöhe und Netzansicht gehören zum Spielzug: Änderungen gelten als ungespeichert
 useUi.subscribe((s, prev) => {
-  if (s.netHeight !== prev.netHeight || s.netViewFrom !== prev.netViewFrom || s.netShowPlayers !== prev.netShowPlayers)
+  if (s.netHeight !== prev.netHeight || s.netViewFrom !== prev.netViewFrom || s.netAngle !== prev.netAngle || s.netShowPlayers !== prev.netShowPlayers)
     if (!usePlay.getState().dirty) usePlay.setState({ dirty: true })
 })

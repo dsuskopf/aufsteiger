@@ -2,7 +2,8 @@ import { createRoot } from 'react-dom/client'
 import { Layer, Stage } from 'react-konva'
 import type Konva from 'konva'
 import * as THREE from 'three'
-import { fitViewport, isNearSide, type NetViewport } from '@renderer/core/geometry/transform'
+import { fitViewport, isNearSide, netDepth, netHalfExtent, type NetViewport } from '@renderer/core/geometry/transform'
+import { COURT } from '@renderer/core/geometry/court'
 import { COLORS } from '@renderer/theme/colors'
 import { CourtLayer, WORLD_H, WORLD_W } from '@renderer/views/top/TopView'
 import { PlayersLayer } from '@renderer/views/top/PlayersLayer'
@@ -58,10 +59,11 @@ export function snapshotNet(width = 1100, height = 520): Promise<string> {
   // Höhe so wählen, dass Netz und höchster Scheitel sichtbar sind
   const top = Math.max(4, ...list.map((t) => t.sol.apexH + 0.6))
   const padB = 20
-  const scale = Math.min((width - 32) / (2 * HALF_W), (height - padB - 16) / top)
-  const vp: NetViewport = { scale, originX: width / 2, groundY: height - padB, from: ui.netViewFrom }
-  const towardViewer = (x: number) => (vp.from === 'A' ? -x : x)
-  const sorted = [...players].sort((a, b) => towardViewer(a.x) - towardViewer(b.x))
+  const angle = (ui.netAngle * Math.PI) / 180
+  const halfW = netHalfExtent({ from: ui.netViewFrom, angle }, COURT.halfLength + COURT.freeZone, HALF_W)
+  const scale = Math.min((width - 32) / (2 * halfW), (height - padB - 16) / top)
+  const vp: NetViewport = { scale, originX: width / 2, groundY: height - padB, from: ui.netViewFrom, angle }
+  const sorted = [...players].sort((a, b) => netDepth(vp, b.x, b.y) - netDepth(vp, a.x, a.y))
   return renderKonva((ref) => (
     <Stage ref={ref} width={width} height={height}>
       <Layer listening={false}>

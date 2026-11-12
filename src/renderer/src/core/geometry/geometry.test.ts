@@ -9,6 +9,9 @@ import {
   netToPx,
   pxToNet,
   isNearSide,
+  netProject,
+  netDepth,
+  netHalfExtent,
   threeToWorld,
   topToWorld,
   worldToThree,
@@ -158,5 +161,26 @@ describe('Netzansicht', () => {
     expect(isNearSide({ from: 'A' }, -3)).toBe(true)
     expect(isNearSide({ from: 'A' }, 3)).toBe(false)
     expect(isNearSide({ from: 'B' }, 3)).toBe(true)
+  })
+})
+
+describe('Netzansicht gedreht', () => {
+  const vp = { scale: 50, originX: 400, groundY: 600, from: 'A' as const }
+  it('ohne Drehung gleich wie netToPx, x spielt keine Rolle', () => {
+    expect(netProject(vp, 5, -4.5, 1).px).toBeCloseTo(netToPx(vp, -4.5, 1).px)
+  })
+  it('90° gedreht: Blick entlang des Netzes, die Feldlänge liegt quer', () => {
+    const r = { ...vp, angle: Math.PI / 2 }
+    // Blick in +y-Richtung, rechts = +x
+    expect(netProject(r, 9, 0, 0).px).toBeCloseTo(400 + 450)
+    expect(netProject(r, 0, 4.5, 0).px).toBeCloseTo(400)
+    expect(netDepth(r, 0, 4.5)).toBeCloseTo(4.5)
+    expect(netHalfExtent(r, 11, 6.5)).toBeCloseTo(11)
+    expect(netHalfExtent(vp, 11, 6.5)).toBeCloseTo(6.5)
+  })
+  it('Höhe bleibt senkrecht (nie von oben)', () => {
+    const r = { ...vp, angle: 0.7 }
+    expect(netProject(r, 3, 2, 2.43).py).toBeCloseTo(600 - 121.5)
+    expect(pxToNet(r, 123, netProject(r, 3, 2, 2.43).py).z).toBeCloseTo(2.43)
   })
 })

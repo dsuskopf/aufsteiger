@@ -138,29 +138,63 @@ export function lerpView(a: View2D, b: View2D, k: number): View2D {
   return { z: a.z + (b.z - a.z) * k, tx: a.tx + (b.tx - a.tx) * k, ty: a.ty + (b.ty - a.ty) * k }
 }
 
-/* ---------- Netzansicht: frontaler Blick aufs Netz ---------- */
+/* ---------- Netzansicht: seitlicher Blick aufs Netz (horizontal drehbar) ---------- */
 
 /**
- * Flache, maßstabstreue Projektion entlang der Feldlänge (x) auf die Netzebene (y, z).
- * Von Seite A (x < 0) schaut man Richtung +x: rechts ist dann −y. Von Seite B ist es gespiegelt.
+ * Flache, maßstabstreue Parallelprojektion auf eine senkrechte Ebene: vertikal = Höhe, horizontal = Richtung
+ * quer zur Blickrichtung. Man schaut immer waagerecht (nie von oben).
+ * Blickrichtung θ = Grundrichtung der Seite (A: +x, B: −x) + angle; angle reicht von −90° bis +90°.
+ * Von Seite A ohne Drehung ist rechts −y (frontaler Blick aufs Netz).
  */
 export interface NetViewport {
   scale: number
-  /** Pixel-x der Feldmitte (y = 0) */
+  /** Pixel-x der Feldmitte (Ursprung) */
   originX: number
   /** Pixel-y für z = 0 (Boden) */
   groundY: number
   from: 'A' | 'B'
+  /** Drehung um die senkrechte Achse (Radiant, −π/2 … π/2), 0 = frontal */
+  angle?: number
 }
 
+export const NET_ANGLE_MAX = Math.PI / 2
+
+/** Blickrichtung (Einheitsvektor in der Bodenebene) */
+export function netViewDir(vp: Pick<NetViewport, 'from' | 'angle'>): { dx: number; dy: number } {
+  const th = (vp.from === 'A' ? 0 : Math.PI) + (vp.angle ?? 0)
+  return { dx: Math.cos(th), dy: Math.sin(th) }
+}
+
+/** Welt (x, y, z) → Pixel */
+export function netProject(vp: NetViewport, x: number, y: number, z: number): { px: number; py: number } {
+  const d = netViewDir(vp)
+  // Rechts-Vektor = Blickrichtung um 90° im Uhrzeigersinn gedreht: (dy, −dx)
+  const u = x * d.dy - y * d.dx
+  return { px: vp.originX + u * vp.scale, py: vp.groundY - z * vp.scale }
+}
+
+/** Tiefe eines Punkts entlang der Blickrichtung (größer = weiter weg) */
+export function netDepth(vp: Pick<NetViewport, 'from' | 'angle'>, x: number, y: number): number {
+  const d = netViewDir(vp)
+  return x * d.dx + y * d.dy
+}
+
+/** Punkt in der Netzebene (x = 0) → Pixel */
 export function netToPx(vp: NetViewport, y: number, z: number): { px: number; py: number } {
-  const side = vp.from === 'A' ? -1 : 1
-  return { px: vp.originX + side * y * vp.scale, py: vp.groundY - z * vp.scale }
+  return netProject(vp, 0, y, z)
 }
 
+/** Pixel → Höhe z und (bei frontalem Blick) Breite y in der Netzebene */
 export function pxToNet(vp: NetViewport, px: number, py: number): { y: number; z: number } {
-  const side = vp.from === 'A' ? -1 : 1
-  return { y: (side * (px - vp.originX)) / vp.scale, z: (vp.groundY - py) / vp.scale }
+  const d = netViewDir(vp)
+  const u = (px - vp.originX) / vp.scale
+  return { y: Math.abs(d.dx) > 1e-9 ? -u / d.dx : 0, z: (vp.groundY - py) / vp.scale }
+}
+
+/** Halbe sichtbare Breite (m) eines Rechtecks ±hx × ±hy bei der aktuellen Drehung */
+export function netHalfExtent(vp: Pick<NetViewport, 'from' | 'angle'>, hx: number, hy: number): number {
+  const d = netViewDir(vp)
+  return Math.abs(d.dy) * hx + Math.abs(d.dx) * hy
 }
 
 /** Liegt ein Punkt auf der Seite des Betrachters (vor dem Netz)? */

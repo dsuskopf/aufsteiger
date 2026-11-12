@@ -65,7 +65,7 @@ export async function buildReport(code: string, title: string): Promise<string> 
     </div>
     <div class="row">
       <figure><figcaption>Draufsicht</figcaption><div class="img"><img src="${top}"></div></figure>
-      <figure><figcaption>Netzansicht · Blick von ${ui.netViewFrom}</figcaption><div class="img"><img src="${net}"></div></figure>
+      <figure><figcaption>Netzansicht · Blick von ${ui.netViewFrom}${ui.netAngle ? ` · ${ui.netAngle}°` : ''}</figcaption><div class="img"><img src="${net}"></div></figure>
     </div>
     ${
       rows

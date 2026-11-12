@@ -31,6 +31,9 @@ interface UiState {
   /** Netzansicht: Spieler einblenden */
   netShowPlayers: boolean
   toggleNetViewFrom: () => void
+  /** Drehung der Netzansicht um die senkrechte Achse in Grad (−90 … 90), 0 = frontal */
+  netAngle: number
+  setNetAngle: (deg: number) => void
   setNetShowPlayers: (show: boolean) => void
   /** 2D: Pop-up eingeklappt (die große Ansicht nutzt dann die volle Fläche) */
   netPipCollapsed: boolean
@@ -68,6 +71,8 @@ export const useUi = create<UiState>((set) => ({
   netViewFrom: 'A',
   // Spieler in der Netzansicht standardmäßig ausgeblendet
   netShowPlayers: false,
+  netAngle: 0,
+  setNetAngle: (deg) => set({ netAngle: Math.max(-90, Math.min(90, Number.isFinite(deg) ? deg : 0)) }),
   toggleNetViewFrom: () => set((s) => ({ netViewFrom: s.netViewFrom === 'A' ? 'B' : 'A' })),
   setNetShowPlayers: (netShowPlayers) => set({ netShowPlayers }),
   netPipCollapsed: false,

@@ -282,6 +282,27 @@ input[type='range'] { width: 150px; height: var(--touch); accent-color: var(--ac
   font-weight: 600;
   cursor: pointer;
 }
+.net-angle {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--touch);
+  padding: 0 14px;
+  border-radius: 999px;
+  background: var(--glass);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 0 0 1px var(--separator);
+  color: var(--label-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+.net-angle input[type='range'] { width: 180px; }
+.net-angle .value { min-width: 40px; text-align: right; color: var(--label); font-variant-numeric: tabular-nums; }
 .pane-check input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); cursor: pointer; }
 .pane-hint {
   position: absolute;

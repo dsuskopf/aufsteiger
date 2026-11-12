@@ -2,7 +2,8 @@ import type { ReactElement } from 'react'
 import { Circle, Group, Layer, Line, Rect, Stage, Text } from 'react-konva'
 import { HEAD_DIAMETER } from '@shared/types'
 import { COURT } from '@renderer/core/geometry/court'
-import { applyViewNet, isNearSide, netToPx, type NetViewport } from '@renderer/core/geometry/transform'
+import { applyViewNet, isNearSide, netDepth, netHalfExtent, netProject, netToPx, type NetViewport } from '@renderer/core/geometry/transform'
+import { tween } from '@renderer/components/tween'
 import { COLORS } from '@renderer/theme/colors'
 import { useElementSize } from '@renderer/components/useElementSize'
 import { useZoomPan } from '@renderer/components/useZoomPan'
@@ -11,7 +12,7 @@ import { Icon } from '@renderer/components/Icon'
 import { PipBar } from '@renderer/components/PipBar'
 import { useUi } from '@renderer/store/settingsStore'
 import { useCourtPlayers, type CourtPlayerView } from '@renderer/store/selectors'
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import type Konva from 'konva'
 import { NetTrajectories } from './NetTrajectories'
 import { hitsDraggable } from '../top/PlayersLayer'
@@ -22,7 +23,8 @@ export const HALF_W = COURT.halfWidth + COURT.freeZone
 const Z_MAX = 25
 const PAD_X = 16
 const PAD_T = 44
-const PAD_B = 28
+/** Unten Platz für „Spieler“ und den Dreh-Regler, damit der Boden frei bleibt */
+const PAD_B = 64
 /** Kompakt (Pop-up): wenig Rand, die Bedienleiste liegt in der Kopfleiste darüber */
 const PAD_T_COMPACT = 12
 const PAD_B_COMPACT = 12
@@ -45,19 +47,24 @@ export function NetView({ compact = false }: { compact?: boolean }) {
   const showPlayers = useUi((s) => s.netShowPlayers)
   const setShowPlayers = useUi((s) => s.setNetShowPlayers)
   const players = useCourtPlayers()
+  const angleDeg = useUi((s) => s.netAngle)
+  const setAngle = useUi((s) => s.setNetAngle)
+  const angle = (angleDeg * Math.PI) / 180
+  // Sichtbare halbe Breite hängt von der Drehung ab (seitlich sieht man die ganze Feldlänge)
+  const halfW = netHalfExtent({ from, angle }, COURT.halfLength + COURT.freeZone, HALF_W)
 
   // Basis: die Breite füllt die Fläche; mehr als 25 m Höhe sind nie sichtbar
   const padT = compact ? PAD_T_COMPACT : PAD_T
   const padB = compact ? PAD_B_COMPACT : PAD_B
-  const widthFit = (size.width - 2 * PAD_X) / (2 * HALF_W)
+  const widthFit = (size.width - 2 * PAD_X) / (2 * halfW)
   // Vollansicht: Breite füllt, höchstens 25 m Höhe. Kompakt: Netz passt immer ganz ins Fenster (Breite und 8 m Höhe).
   const scale = compact
     ? Math.max(0.0001, Math.min(widthFit, (size.height - padT - padB) / Z_COMPACT))
     : Math.max(0.0001, widthFit, (size.height - padT - padB) / Z_MAX)
-  const base: NetViewport = { scale, originX: size.width / 2, groundY: size.height - padB, from }
+  const base: NetViewport = { scale, originX: size.width / 2, groundY: size.height - padB, from, angle }
   const content = {
-    x0: base.originX - HALF_W * scale - PAD_X,
-    x1: base.originX + HALF_W * scale + PAD_X,
+    x0: base.originX - halfW * scale - PAD_X,
+    x1: base.originX + halfW * scale + PAD_X,
     y0: base.groundY - Z_MAX * scale - padT,
     y1: size.height
   }
@@ -74,10 +81,46 @@ export function NetView({ compact = false }: { compact?: boolean }) {
   const stageRef = useRef<Konva.Stage>(null)
   const vp = applyViewNet(base, view)
 
+  // Drehen: waagerecht ziehen mit Maus/Stift auf freier Fläche (Finger nur, solange nicht hineingezoomt ist)
+  const zoomedRef = useRef(false)
+  zoomedRef.current = view.z > 1.001
+  useEffect(() => {
+    const el = ref.current
+    if (!el || compact) return
+    let drag: { id: number; x: number; a0: number } | null = null
+    const onDown = (e: PointerEvent) => {
+      const ok = (e.pointerType === 'touch' && !zoomedRef.current) || (e.pointerType !== 'touch' && e.button === 0)
+      if (!ok || drag || hitsDraggable(stageRef.current, e.clientX, e.clientY)) return
+      drag = { id: e.pointerId, x: e.clientX, a0: useUi.getState().netAngle }
+    }
+    const onMove = (e: PointerEvent) => {
+      if (!drag || e.pointerId !== drag.id) return
+      setAngle(Math.round(drag.a0 + (e.clientX - drag.x) * 0.35))
+    }
+    const onUp = (e: PointerEvent) => {
+      if (drag && e.pointerId === drag.id) drag = null
+    }
+    el.addEventListener('pointerdown', onDown)
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
+    return () => {
+      el.removeEventListener('pointerdown', onDown)
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
+    }
+  }, [ref, compact, setAngle])
+
+  const resetAll = () => {
+    reset()
+    const a0 = useUi.getState().netAngle
+    if (a0 !== 0) tween(400, (k) => setAngle(a0 * (1 - k)))
+  }
+
   // Nach Tiefe zeichnen (Maler-Algorithmus): vom Betrachter am weitesten entfernt zuerst.
   // Der Betrachter steht hinter der eigenen Grundlinie; „Nähe“ = Abstand zur Grundlinie des Betrachters.
-  const towardViewer = (x: number) => (from === 'A' ? -x : x)
-  const byDepth = (a: CourtPlayerView, b: CourtPlayerView) => towardViewer(a.x) - towardViewer(b.x)
+  const byDepth = (a: CourtPlayerView, b: CourtPlayerView) => netDepth(vp, b.x, b.y) - netDepth(vp, a.x, a.y)
   const far = players.filter((p) => !isNearSide(vp, p.x)).sort(byDepth)
   const near = players.filter((p) => isNearSide(vp, p.x)).sort(byDepth)
 
@@ -121,7 +164,21 @@ export function NetView({ compact = false }: { compact?: boolean }) {
         <input type="checkbox" checked={showPlayers} onChange={(e) => setShowPlayers(e.target.checked)} />
         Spieler
       </label>
-      <ViewControls onZoomIn={zoomIn} onZoomOut={zoomOut} onReset={reset}>
+      <label className="net-angle" title="Blickwinkel drehen (auch: waagerecht ziehen) · Doppelklick = frontal">
+        <span>Drehen</span>
+        <input
+          type="range"
+          min={-90}
+          max={90}
+          step={1}
+          value={angleDeg}
+          aria-label="Blickwinkel der Netzansicht in Grad"
+          onChange={(e) => setAngle(Number(e.target.value))}
+          onDoubleClick={() => setAngle(0)}
+        />
+        <span className="value">{angleDeg}°</span>
+      </label>
+      <ViewControls onZoomIn={zoomIn} onZoomOut={zoomOut} onReset={resetAll}>
         <button
           title={`Von Seite ${from === 'A' ? 'B' : 'A'} aufs Netz schauen`}
           aria-label={`Blickseite wechseln, aktuell von Seite ${from}`}
@@ -136,26 +193,31 @@ export function NetView({ compact = false }: { compact?: boolean }) {
   )
 }
 
-/** Boden: Feldbreite als Linie, Seitenlinien als Markierung, Freizone gedämpft */
+/** Boden: Feld als Linie (Ausdehnung je nach Drehung), Ecken des Feldes als Markierung, Umgebung gedämpft */
 export function Floor({ vp }: { vp: NetViewport }) {
-  const P = (y: number, z: number) => {
-    const p = netToPx(vp, y, z)
-    return [p.px, p.py]
-  }
+  const L = COURT.halfLength
   const W = COURT.halfWidth
   const lw = Math.max(1.5, COURT.lineWidth * vp.scale)
+  const corners = [
+    [-L, -W],
+    [L, -W],
+    [L, W],
+    [-L, W]
+  ].map(([x, y]) => netProject(vp, x, y, 0).px)
+  const outer = netHalfExtent(vp, L + COURT.freeZone, W + COURT.freeZone) + 2
+  const gy = vp.groundY
   return (
     <>
-      <Line points={[...P(-HALF_W - 2, 0), ...P(HALF_W + 2, 0)]} stroke={COLORS.lineDim} strokeWidth={1.5} />
-      <Line points={[...P(-W, 0), ...P(W, 0)]} stroke={COLORS.line} strokeWidth={lw * 1.6} lineCap="butt" />
-      {[-W, W].map((y) => (
-        <Line key={y} points={[...P(y, 0), ...P(y, 0.12)]} stroke={COLORS.line} strokeWidth={lw} />
+      <Line points={[vp.originX - outer * vp.scale, gy, vp.originX + outer * vp.scale, gy]} stroke={COLORS.lineDim} strokeWidth={1.5} />
+      <Line points={[Math.min(...corners), gy, Math.max(...corners), gy]} stroke={COLORS.line} strokeWidth={lw * 1.6} lineCap="butt" />
+      {corners.map((px, i) => (
+        <Line key={i} points={[px, gy, px, gy - 0.12 * vp.scale]} stroke={COLORS.line} strokeWidth={lw} />
       ))}
     </>
   )
 }
 
-/** Netz frontal: Pfosten, Netzfläche mit Maschen, Bänder, Seitenbänder und rot-weiße Antennen */
+/** Netz (in der Ebene x = 0, mit der Ansicht gedreht): Pfosten, Netzfläche mit Maschen, Bänder, Seitenbänder und rot-weiße Antennen */
 export function Net({ vp, netHeight }: { vp: NetViewport; netHeight: number }) {
   const P = (y: number, z: number) => {
     const p = netToPx(vp, y, z)
@@ -169,7 +231,8 @@ export function Net({ vp, netHeight }: { vp: NetViewport; netHeight: number }) {
 
   const mesh: ReactElement[] = []
   const step = 0.1 // Maschenweite 10 cm
-  if (step * s >= 3) {
+  // Maschen nur zeichnen, wenn sie (auch schräg betrachtet) mindestens 3 px auseinander liegen
+  if (step * s * Math.abs(netProject(vp, 0, 1, 0).px - netProject(vp, 0, 0, 0).px) / s >= 3) {
     for (let y = -half; y <= half + 1e-9; y += step)
       mesh.push(<Line key={`v${y.toFixed(2)}`} points={[...P(y, bottom), ...P(y, top)]} stroke="#c8c8d0" strokeWidth={1} opacity={0.22} />)
     for (let z = bottom; z <= top + 1e-9; z += step)
@@ -220,7 +283,7 @@ export function Net({ vp, netHeight }: { vp: NetViewport; netHeight: number }) {
  */
 export function PlayerFigure({ vp, p, dim = false }: { vp: NetViewport; p: CourtPlayerView; dim?: boolean }) {
   const s = vp.scale
-  const foot = netToPx(vp, p.y, 0)
+  const foot = netProject(vp, p.x, p.y, 0)
   const w = BODY_WIDTH * s
   const headR = (HEAD_DIAMETER / 2) * s
   const h = Math.max(0.2, p.height - HEAD_DIAMETER) * s

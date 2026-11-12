@@ -1,7 +1,7 @@
 import { Group, Line, Text } from 'react-konva'
 import type Konva from 'konva'
 import { TRAJECTORY_LABELS } from '@shared/types'
-import { netToPx, pxToNet, type NetViewport } from '@renderer/core/geometry/transform'
+import { netProject, pxToNet, type NetViewport } from '@renderer/core/geometry/transform'
 import {
   moveHitAlongParabola,
   pointAt,
@@ -16,7 +16,7 @@ import { useVisibleTrajectories, type TrajectoryView } from '@renderer/store/sel
 import { Ball, Handle } from '../top/TrajectoryLayer'
 
 /**
- * Flugbahnen in der Netzansicht (auf die Netzebene projiziert) mit den Höhen-Griffen:
+ * Flugbahnen in der Netzansicht (seitliche Parallelprojektion, mit der Ansicht drehbar) mit den Höhen-Griffen:
  *  - Start (hohler Punkt): senkrecht ziehen = Starthöhe
  *  - Scheitel (Raute): senkrecht ziehen = Scheitelhöhe; nie unter Start/Schlagpunkt
  *  - Schlagpunkt: nur entlang der Parabel (fallender Ast); das Ende in der Draufsicht wandert mit
@@ -31,11 +31,11 @@ export function NetTrajectories({ vp, interactive = true, showBall = true }: { v
 
   const pts = (tv: TrajectoryView, s0: number, s1: number) =>
     sampleTrajectory(tv.sol, tv.input.start, s0, s1, 64).flatMap((p) => {
-      const q = netToPx(vp, p.y, p.z)
+      const q = netProject(vp, p.x, p.y, p.z)
       return [q.px, q.py]
     })
-  const at = (y: number, z: number) => {
-    const p = netToPx(vp, y, z)
+  const at = (x: number, y: number, z: number) => {
+    const p = netProject(vp, x, y, z)
     return { x: p.px, y: p.py }
   }
   const current = (tv: TrajectoryView) => usePlay.getState().trajectories[tv.type]
@@ -46,7 +46,7 @@ export function NetTrajectories({ vp, interactive = true, showBall = true }: { v
     const z = pxToNet(vp, e.target.x(), e.target.y()).z
     setTrajectory(tv.type, { ...t, start: { ...t.start, h: z } })
     const s = usePlay.getState().trajectories[tv.type]!
-    e.target.position(at(s.start.y, s.start.h))
+    e.target.position(at(s.start.x, s.start.y, s.start.h))
   }
   const dragApex = (tv: TrajectoryView) => (e: Konva.KonvaEventObject<DragEvent>) => {
     const t = current(tv)
@@ -54,15 +54,16 @@ export function NetTrajectories({ vp, interactive = true, showBall = true }: { v
     setTrajectory(tv.type, { ...t, apexH: pxToNet(vp, e.target.x(), e.target.y()).z })
     const n = usePlay.getState().trajectories[tv.type]!
     const sol = solveTrajectory(n)
-    e.target.position(at(pointAt(sol, n.start, sol.sA).y, sol.apexH))
+    const a = pointAt(sol, n.start, sol.sA)
+    e.target.position(at(a.x, a.y, sol.apexH))
   }
   const dragHit = (tv: TrajectoryView) => (e: Konva.KonvaEventObject<DragEvent>) => {
     const t = current(tv)
     if (!t) return
-    const s = projectToFallingBranch(solveTrajectory(t), t.start, (p) => netToPx(vp, p.y, p.z), e.target.x(), e.target.y())
+    const s = projectToFallingBranch(solveTrajectory(t), t.start, (p) => netProject(vp, p.x, p.y, p.z), e.target.x(), e.target.y())
     const next = moveHitAlongParabola(t, s)
     setTrajectory(tv.type, next)
-    e.target.position(at(next.end.y, next.hitH))
+    e.target.position(at(next.end.x, next.end.y, next.hitH))
   }
 
   return (
@@ -71,7 +72,7 @@ export function NetTrajectories({ vp, interactive = true, showBall = true }: { v
         const { sol, input, type } = tv
         const isSel = selected === type
         const apex = pointAt(sol, input.start, sol.sA)
-        const label = at(apex.y, apex.z)
+        const label = at(apex.x, apex.y, apex.z)
         return (
           <Group key={type} opacity={type === 'annahme' ? 0.8 : 1}>
             {display.showAfterHit && (
@@ -101,13 +102,13 @@ export function NetTrajectories({ vp, interactive = true, showBall = true }: { v
           const apex = pointAt(sol, input.start, sol.sA)
           return (
             <Group key={`h-${type}`}>
-              {!tv.coupled && <Handle {...at(input.start.y, input.start.h)} onDrag={dragStart(tv)} onPick={() => select(type)} hollow />}
-              <Handle {...at(apex.y, apex.z)} onDrag={dragApex(tv)} onPick={() => select(type)} diamond />
-              <Handle {...at(input.end.y, input.hitH)} onDrag={dragHit(tv)} onPick={() => select(type)} />
+              {!tv.coupled && <Handle {...at(input.start.x, input.start.y, input.start.h)} onDrag={dragStart(tv)} onPick={() => select(type)} hollow />}
+              <Handle {...at(apex.x, apex.y, apex.z)} onDrag={dragApex(tv)} onPick={() => select(type)} diamond />
+              <Handle {...at(input.end.x, input.end.y, input.hitH)} onDrag={dragHit(tv)} onPick={() => select(type)} />
             </Group>
           )
         })}
-      {showBall && ball && <Ball {...at(ball.y, ball.z)} r={Math.max(6, 0.105 * vp.scale)} />}
+      {showBall && ball && <Ball {...at(ball.x, ball.y, ball.z)} r={Math.max(6, 0.105 * vp.scale)} />}
     </>
   )
 }

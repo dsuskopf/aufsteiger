@@ -169,6 +169,7 @@ export function sanitizePlay(raw: unknown): PlayDoc | null {
       showAfterHit: bool(disp.showAfterHit, DEFAULT_DISPLAY.showAfterHit)
     },
     netViewFrom: raw.netViewFrom === 'B' ? 'B' : 'A',
+    netAngle: Math.round(num(raw.netAngle, 0, -90, 90)),
     netShowPlayers: bool(raw.netShowPlayers, false)
   }
 }

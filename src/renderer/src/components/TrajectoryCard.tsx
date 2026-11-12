@@ -1,13 +1,13 @@
-import { useEffect } from 'react'
+import { useEffect, useId } from 'react'
 import { TRAJECTORY_LABELS } from '@shared/types'
 import {
   APEX_EPS,
   APEX_H_MAX,
-  RISE_EPS,
   START_H_MAX,
   hitRanges,
-  setHitHeight,
-  solveTrajectory
+  moveHitAlongParabola,
+  solveTrajectory,
+  type TrajectoryInput
 } from '@renderer/core/physics/trajectory'
 import { usePlay } from '@renderer/store/playStore'
 import { useUi } from '@renderer/store/settingsStore'
@@ -44,24 +44,6 @@ export function TrajectoryCard() {
   const sol = solveTrajectory(t)
   const speed = Math.hypot(sol.vH, sol.vZ0) * 3.6
   const minApex = Math.max(t.start.h, t.hitH) + APEX_EPS
-  const rising = !!t.rising
-  const canRise = hitRanges(sol).rising !== null
-  // Schlagpunkt über seine Höhe auf dem gewählten Ast (Distanz folgt aus der Bahn)
-  const setHitH = (h: number) => setTrajectory(selected, setHitHeight(t, h, rising))
-  // Ast wechseln: gleiche Höhe auf dem anderen Ast, sonst die Mitte zwischen Start und Scheitel
-  const setBranch = (up: boolean) => {
-    if (up === rising) return
-    const h = up && t.hitH <= t.start.h + RISE_EPS ? (t.start.h + sol.apexH) / 2 : t.hitH
-    setTrajectory(selected, setHitHeight(t, h, up))
-  }
-  // Zuspielhöhe = Ende der Annahme: im Zuspiel (gekoppelt) verschiebt sie den Schlagpunkt der Annahme – beide Bahnen folgen
-  const setStartH = (h: number) => {
-    if (coupled && annahme) setTrajectory('annahme', setHitHeight(annahme, h, !!annahme.rising))
-    else setTrajectory(selected, { ...t, start: { ...t.start, h } })
-  }
-  const hitMin = rising ? t.start.h + RISE_EPS : 0
-  const hitMax = Math.max(hitMin + 0.01, sol.apexH - APEX_EPS)
-  const annSol = coupled && annahme ? solveTrajectory(annahme) : null
 
   return (
     <aside className="traj-card" aria-label={`${TRAJECTORY_LABELS[selected]} bearbeiten`}>
@@ -74,31 +56,25 @@ export function TrajectoryCard() {
           <Icon name="close" />
         </button>
       </header>
-      <MeterSlider
-        label={selected === 'annahme' ? 'Annahme' : 'Zuspiel'}
-        value={t.start.h}
-        min={annSol && annahme?.rising ? annahme.start.h + RISE_EPS : 0}
-        max={annSol ? Math.max(0.01, annSol.apexH - APEX_EPS) : START_H_MAX}
-        hint={coupled ? 'Ende der Annahme – verschiebt beide Flugbahnen' : undefined}
-        onChange={setStartH}
-      />
+      {coupled && annahme ? (
+        // Zuspielhöhe = Ende der Annahme: verschiebt den Schlagpunkt der Annahme, beide Bahnen folgen
+        <HitSlider label="Zuspiel" input={annahme} hint="Ende der Annahme – verschiebt beide Flugbahnen" onChange={(n) => setTrajectory('annahme', n)} />
+      ) : (
+        <MeterSlider
+          label={selected === 'annahme' ? 'Annahme' : 'Zuspiel'}
+          value={t.start.h}
+          min={0}
+          max={START_H_MAX}
+          onChange={(h) => setTrajectory(selected, { ...t, start: { ...t.start, h } })}
+        />
+      )}
       <MeterSlider label="Höchster Punkt" value={sol.apexH} min={minApex} max={APEX_H_MAX} onChange={(apexH) => setTrajectory(selected, { ...t, apexH })} />
-      <MeterSlider
+      <HitSlider
         // Ende der Annahme ist die Höhe, auf der gespielt wird (Zuspiel); beim Zuspiel der Schlagpunkt des Angriffs
         label={selected === 'annahme' ? 'Zuspiel' : 'Schlagpunkt'}
-        value={t.hitH}
-        min={hitMin}
-        max={hitMax}
-        onChange={setHitH}
+        input={t}
+        onChange={(n) => setTrajectory(selected, n)}
       />
-      <div className="segmented branch" role="radiogroup" aria-label="Schlagpunkt auf der Flugkurve">
-        <button role="radio" aria-checked={rising} className={rising ? 'selected' : ''} disabled={!canRise} title="Schlagpunkt vor dem höchsten Punkt (Ball steigt noch)" onClick={() => setBranch(true)}>
-          Steigend
-        </button>
-        <button role="radio" aria-checked={!rising} className={!rising ? 'selected' : ''} title="Schlagpunkt nach dem höchsten Punkt (Ball fällt)" onClick={() => setBranch(false)}>
-          Fallend
-        </button>
-      </div>
       <dl className="traj-stats">
         <div>
           <dt>Distanz</dt>
@@ -114,6 +90,40 @@ export function TrajectoryCard() {
         </div>
       </dl>
     </aside>
+  )
+}
+
+/**
+ * Schlagpunkt entlang der Flugkurve: ein durchgehender Regler vom Start über den höchsten Punkt bis zum Boden.
+ * Links vom Strich (Scheitel) wird der Ball noch steigend getroffen, rechts fallend. Angezeigt wird die Höhe.
+ */
+function HitSlider({ label, input, hint, onChange }: { label: string; input: TrajectoryInput; hint?: string; onChange: (t: TrajectoryInput) => void }) {
+  const id = useId()
+  const sol = solveTrajectory(input)
+  const { rising, falling } = hitRanges(sol)
+  const lo = rising ? rising[0] : falling[0]
+  const hi = Math.max(lo + 0.01, falling[1])
+  return (
+    <label className="traj-slider">
+      <span className="row">
+        <span className="grow">{label}</span>
+        {sol.rising && <span className="tag-rising">vor dem höchsten Punkt</span>}
+        <span className="value">{m(input.hitH)}</span>
+      </span>
+      <input
+        type="range"
+        min={lo}
+        max={hi}
+        step={0.005}
+        list={id}
+        value={Math.min(hi, Math.max(lo, sol.D))}
+        title="Über den höchsten Punkt ziehen: Schlagpunkt vor dem Scheitel (Ball steigt noch)"
+        onChange={(e) => onChange(moveHitAlongParabola(input, Number(e.target.value)))}
+      />
+      {/* Markierung am höchsten Punkt */}
+      <datalist id={id}>{rising && <option value={sol.sA} />}</datalist>
+      {hint && <span className="caption">{hint}</span>}
+    </label>
   )
 }
 

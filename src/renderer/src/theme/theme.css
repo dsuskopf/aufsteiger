@@ -695,9 +695,7 @@ input.field.hex.invalid { box-shadow: inset 0 0 0 1px var(--danger); }
 .traj-slider .value { font-variant-numeric: tabular-nums; font-weight: 600; }
 .traj-slider input[type='range'] { width: 100%; height: 32px; margin: 0; }
 .traj-slider.disabled { opacity: 0.55; }
-.traj-card .segmented.branch { display: grid; grid-template-columns: 1fr 1fr; margin-top: -4px; }
-.traj-card .segmented.branch button { min-height: 32px; padding: 0 8px; font-size: 13px; }
-.traj-card .segmented.branch button:disabled { opacity: 0.4; }
+.traj-slider .tag-rising { margin-right: 8px; font-size: 11px; color: var(--accent-text); }
 .traj-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 2px 0 0; padding-top: 10px; border-top: 1px solid var(--separator); }
 .traj-stats div { display: flex; flex-direction: column; }
 .traj-stats dt { font-size: 11px; color: var(--label-2); }

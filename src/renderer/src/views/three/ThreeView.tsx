@@ -11,7 +11,7 @@ import { useCourtPlayers } from '@renderer/store/selectors'
 import { CylinderPlayerFactory, placePlayer, visualKey, type PlayerMeshFactory } from './players'
 import { useVisibleTrajectories } from '@renderer/store/selectors'
 import { usePlay } from '@renderer/store/playStore'
-import { currentBall, currentTimeline, usePlayback } from '@renderer/store/playbackStore'
+import { currentBall, currentTimeline, usePathsHidden, usePlayback } from '@renderer/store/playbackStore'
 import { ballOrientation, buildBall, buildTrajectories, placeBall } from './trajectories'
 
 /** Zeichenfläche der laufenden 3D-Ansicht (für den Video-Export) */
@@ -43,6 +43,7 @@ export function ThreeView() {
   const trajectories = useVisibleTrajectories()
   const showAfterHit = usePlay((s) => s.display.showAfterHit)
   const selected = usePlay((s) => s.selected)
+  const hidePaths = usePathsHidden()
 
   useEffect(() => {
     const host = hostRef.current!
@@ -173,8 +174,15 @@ export function ThreeView() {
       disposeObject(ref.trajectories)
     }
     ref.trajectories = buildTrajectories(trajectories, showAfterHit, selected)
+    ref.trajectories.visible = !hidePaths
     ref.scene.add(ref.trajectories)
   }, [trajectories, showAfterHit, selected])
+
+  // „Nur Ball“ beim Abspielen: Bahnen aus-/einblenden, ohne sie neu aufzubauen
+  useEffect(() => {
+    const ref = sceneRef.current
+    if (ref?.trajectories) ref.trajectories.visible = !hidePaths
+  }, [hidePaths])
 
   // Netz neu aufbauen, wenn sich die Netzhöhe ändert
   useEffect(() => {

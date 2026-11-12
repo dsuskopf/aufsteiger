@@ -104,9 +104,11 @@ export interface PlayDisplay {
   showZuspiel: boolean
   /** Verlauf hinter dem Schlagpunkt gestrichelt bis zum Boden */
   showAfterHit: boolean
+  /** Beim Abspielen nur den Ball zeigen, die Flugbahnen ausblenden */
+  ballOnly: boolean
 }
 
-export const DEFAULT_DISPLAY: PlayDisplay = { showAnnahme: true, showZuspiel: true, showAfterHit: false }
+export const DEFAULT_DISPLAY: PlayDisplay = { showAnnahme: true, showZuspiel: true, showAfterHit: false, ballOnly: false }
 
 export interface Settings {
   schemaVersion: number

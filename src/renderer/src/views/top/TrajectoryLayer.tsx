@@ -6,7 +6,7 @@ import { clampToArea } from '@renderer/core/lineup/lineup'
 import { BALL_RADIUS, pointAt } from '@renderer/core/physics/trajectory'
 import { BALL_COLORS, COLORS } from '@renderer/theme/colors'
 import { usePlay } from '@renderer/store/playStore'
-import { useBall } from '@renderer/store/playbackStore'
+import { useBall, usePathsHidden } from '@renderer/store/playbackStore'
 import { useVisibleTrajectories, type TrajectoryView } from '@renderer/store/selectors'
 
 /** Name der ziehbaren Griffe (Treffertest für die Gestenerkennung) */
@@ -29,7 +29,9 @@ export function TrajectoryLayer({
   showBall?: boolean
   preview: { a: { x: number; y: number }; b: { x: number; y: number } } | null
 }) {
-  const list = useVisibleTrajectories()
+  const visible = useVisibleTrajectories()
+  // „Nur Ball“ beim Abspielen: Linien, Beschriftungen und Griffe ausblenden
+  const list = usePathsHidden() ? [] : visible
   const display = usePlay((s) => s.display)
   const selected = usePlay((s) => s.selected)
   const select = usePlay((s) => s.select)

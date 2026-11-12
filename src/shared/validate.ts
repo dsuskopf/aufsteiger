@@ -166,7 +166,8 @@ export function sanitizePlay(raw: unknown): PlayDoc | null {
     display: {
       showAnnahme: bool(disp.showAnnahme, DEFAULT_DISPLAY.showAnnahme),
       showZuspiel: bool(disp.showZuspiel, DEFAULT_DISPLAY.showZuspiel),
-      showAfterHit: bool(disp.showAfterHit, DEFAULT_DISPLAY.showAfterHit)
+      showAfterHit: bool(disp.showAfterHit, DEFAULT_DISPLAY.showAfterHit),
+      ballOnly: bool(disp.ballOnly, DEFAULT_DISPLAY.ballOnly)
     },
     netViewFrom: raw.netViewFrom === 'B' ? 'B' : 'A',
     netAngle: Math.round(num(raw.netAngle, 0, -90, 90)),

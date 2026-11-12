@@ -83,6 +83,10 @@ export function Playbar() {
           <input type="checkbox" checked={display.showAfterHit} onChange={(e) => setDisplay({ showAfterHit: e.target.checked })} />
           Nach Schlagpunkt
         </label>
+        <label title="Beim Abspielen nur den Ball zeigen, die Flugbahnen ausblenden">
+          <input type="checkbox" checked={display.ballOnly} onChange={(e) => setDisplay({ ballOnly: e.target.checked })} />
+          Nur Ball
+        </label>
       </div>
     </footer>
   )

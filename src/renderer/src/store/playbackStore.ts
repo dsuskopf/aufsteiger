@@ -81,6 +81,19 @@ usePlay.subscribe((s, prev) => {
   if (usePlayback.getState().t > total) usePlayback.setState({ t: total })
 })
 
+/**
+ * Flugbahnen ausgeblendet („Nur Ball“): solange die Animation läuft oder mitten im Flug angehalten ist.
+ * Am Anfang und am Ende sind die Bahnen wieder da, damit man sie bearbeiten kann.
+ */
+export function usePathsHidden(): boolean {
+  const ballOnly = usePlay((s) => s.display.ballOnly)
+  usePlay((s) => s.trajectories)
+  const playing = usePlayback((s) => s.playing)
+  // Nur der Wahrheitswert hängt an t, damit nicht jedes Bild neu gezeichnet wird
+  const midFlight = usePlayback((s) => s.t > 1e-6 && s.t < currentTimeline().total - 1e-6)
+  return ballOnly && (playing || midFlight)
+}
+
 /** React-Hook: Ballposition, aktualisiert mit der Uhr */
 export function useBall() {
   usePlayback((s) => s.t)

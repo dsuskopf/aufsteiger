@@ -12,7 +12,7 @@ import {
 } from '@renderer/core/physics/trajectory'
 import { COLORS } from '@renderer/theme/colors'
 import { usePlay } from '@renderer/store/playStore'
-import { useBall } from '@renderer/store/playbackStore'
+import { useBall, usePathsHidden } from '@renderer/store/playbackStore'
 import { useVisibleTrajectories, type TrajectoryView } from '@renderer/store/selectors'
 import { Ball, Handle } from '../top/TrajectoryLayer'
 
@@ -23,7 +23,9 @@ import { Ball, Handle } from '../top/TrajectoryLayer'
  *  - Schlagpunkt: nur entlang der Parabel (fallender Ast); das Ende in der Draufsicht wandert mit
  */
 export function NetTrajectories({ vp, interactive = true, showBall = true }: { vp: NetViewport; interactive?: boolean; showBall?: boolean }) {
-  const list = useVisibleTrajectories()
+  const visible = useVisibleTrajectories()
+  // „Nur Ball“ beim Abspielen: Bahnen und Griffe ausblenden
+  const list = usePathsHidden() ? [] : visible
   const display = usePlay((s) => s.display)
   const selected = usePlay((s) => s.selected)
   const select = usePlay((s) => s.select)

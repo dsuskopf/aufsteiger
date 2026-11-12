@@ -35,7 +35,10 @@ export function Toolbar() {
           <Icon name="library" />
           <span className="doc-name">
             {current ? (current.code || current.title || 'Spielzug') : 'Neuer Spielzug'}
-            {dirty && <span className="dirty" aria-label="ungespeicherte Änderungen"> •</span>}
+            {/* Platz für den Punkt immer reservieren, damit die Toolbar nicht springt */}
+            <span className="dirty" style={{ visibility: dirty ? 'visible' : 'hidden' }} aria-label={dirty ? 'ungespeicherte Änderungen' : undefined}>
+              {' •'}
+            </span>
           </span>
         </button>
         <button className="icon-only" title="Speichern (Strg+S)" aria-label="Speichern" onClick={() => setDialog('save')}>
@@ -86,24 +89,21 @@ export function Toolbar() {
               {p.label} · {fmt(p.height)} m
             </option>
           ))}
-          <option value="custom">Frei{netPreset === 'custom' ? ` · ${fmt(netHeight)} m` : ''}</option>
+          <option value="custom">Frei</option>
         </select>
-        {/* Feineinstellung nur, wenn „Frei“ gewählt ist */}
-        {netPreset === 'custom' && (
-          <>
-            <input
-              type="range"
-              aria-label="Netzhöhe"
-              min={NET_HEIGHT_MIN}
-              max={NET_HEIGHT_MAX}
-              step={0.01}
-              value={netHeight}
-              onChange={(e) => setNetHeight(Number(e.target.value))}
-            />
-            <NetHeightInput value={netHeight} onCommit={setNetHeight} />
-            <span className="toolbar-label">m</span>
-          </>
-        )}
+        {/* Regler und Feld immer da (Toolbar bleibt gleich): ein Preset stellt sie ein, Ziehen/Tippen wählt „Frei“ */}
+        <input
+          type="range"
+          className="net-slider"
+          aria-label="Netzhöhe"
+          min={NET_HEIGHT_MIN}
+          max={NET_HEIGHT_MAX}
+          step={0.01}
+          value={netHeight}
+          onChange={(e) => setNetHeight(Number(e.target.value))}
+        />
+        <NetHeightInput value={netHeight} onCommit={setNetHeight} />
+        <span className="toolbar-label">m</span>
       </div>
 
       <div className="toolbar-group">

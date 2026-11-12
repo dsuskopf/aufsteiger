@@ -129,6 +129,9 @@ input[type='range'] { width: 150px; height: var(--touch); accent-color: var(--ac
 .toolbar .spacer { flex: 1; }
 .toolbar-group { display: flex; align-items: center; gap: 8px; }
 .toolbar-label { color: var(--label-2); font-size: 13px; }
+.toolbar input.net-slider { width: 110px; }
+#net-preset { width: 172px; }
+@media (max-width: 1240px) { .toolbar input.net-slider { width: 72px; } }
 /* Schmales Fenster: Toolbar verdichten statt umbrechen */
 @media (max-width: 1040px) {
   .toolbar { gap: 12px; }

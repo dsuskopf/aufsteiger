@@ -1,12 +1,13 @@
-import { Circle, Layer, Line, Rect, Stage, Text } from 'react-konva'
+import { Circle, Layer, Line, Stage, Text } from 'react-konva'
 import { COURT, courtLines } from '@renderer/core/geometry/court'
+import { useEffect, useRef, useState } from 'react'
 import {
   applyViewTop,
   fitViewport,
-  normTurns,
   worldToTop,
   type TopViewport
 } from '@renderer/core/geometry/transform'
+import { tween } from '@renderer/components/tween'
 import { COLORS } from '@renderer/theme/colors'
 import { useElementSize } from '@renderer/components/useElementSize'
 import { useZoomPan } from '@renderer/components/useZoomPan'
@@ -27,19 +28,33 @@ export function TopView() {
 
   // Gerät hochkant → Feld hochkant (Ansichten stehen dann untereinander). Neu berechnet bei jeder Größenänderung.
   const autoTurns = window.innerHeight > window.innerWidth ? 1 : 0
-  const rotation = normTurns(autoTurns + topTurns)
-  const base = fitViewport(size.width, size.height, WORLD_W, WORLD_H, 16, rotation)
+  const targetAngle = ((autoTurns + topTurns) * Math.PI) / 2
+  const angle = useAnimatedAngle(targetAngle)
+  const base = fitViewport(size.width, size.height, WORLD_W, WORLD_H, 16, angle)
 
   // Inhalt (Feld + Freizone) in Basis-Pixeln, begrenzt das Verschieben
-  const c1 = worldToTop(base, -WORLD_W / 2, -WORLD_H / 2)
-  const c2 = worldToTop(base, WORLD_W / 2, WORLD_H / 2)
+  const corners = [
+    worldToTop(base, -WORLD_W / 2, -WORLD_H / 2),
+    worldToTop(base, WORLD_W / 2, -WORLD_H / 2),
+    worldToTop(base, WORLD_W / 2, WORLD_H / 2),
+    worldToTop(base, -WORLD_W / 2, WORLD_H / 2)
+  ]
   const content = {
-    x0: Math.min(c1.px, c2.px),
-    x1: Math.max(c1.px, c2.px),
-    y0: Math.min(c1.py, c2.py),
-    y1: Math.max(c1.py, c2.py)
+    x0: Math.min(...corners.map((c) => c.px)),
+    x1: Math.max(...corners.map((c) => c.px)),
+    y0: Math.min(...corners.map((c) => c.py)),
+    y1: Math.max(...corners.map((c) => c.py))
   }
-  const { view, zoomIn, zoomOut, reset } = useZoomPan(ref, { size, content, resetKey: rotation })
+  const { view, zoomIn, zoomOut, reset } = useZoomPan(ref, { size, content })
+  // Beim Drehen den Zoom weich zurücksetzen
+  const firstRef = useRef(true)
+  useEffect(() => {
+    if (firstRef.current) {
+      firstRef.current = false
+      return
+    }
+    reset()
+  }, [targetAngle])
   const vp = applyViewTop(base, view)
 
   return (
@@ -60,16 +75,34 @@ export function TopView() {
   )
 }
 
-/** Achsenparalleles Welt-Rechteck → Pixel-Rechteck (funktioniert für jede Vierteldrehung). */
+/** Dreht weich (Animation) zum Zielwinkel; mehrfaches Tippen setzt am aktuellen Winkel an. */
+function useAnimatedAngle(target: number): number {
+  const [angle, setAngle] = useState(target)
+  const angleRef = useRef(target)
+  useEffect(() => {
+    const from = angleRef.current
+    if (from === target) return
+    return tween(450, (k) => {
+      const a = from + (target - from) * k
+      angleRef.current = a
+      setAngle(a)
+    })
+  }, [target])
+  return angle
+}
+
+/** Welt-Rechteck → geschlossenes Polygon in Pixeln (funktioniert für jeden Drehwinkel). */
 function worldRect(vp: TopViewport, x0: number, y0: number, x1: number, y1: number) {
-  const a = worldToTop(vp, x0, y0)
-  const b = worldToTop(vp, x1, y1)
-  return {
-    x: Math.min(a.px, b.px),
-    y: Math.min(a.py, b.py),
-    width: Math.abs(a.px - b.px),
-    height: Math.abs(a.py - b.py)
-  }
+  const pts = [
+    [x0, y0],
+    [x1, y0],
+    [x1, y1],
+    [x0, y1]
+  ].flatMap(([x, y]) => {
+    const p = worldToTop(vp, x, y)
+    return [p.px, p.py]
+  })
+  return { points: pts, closed: true }
 }
 
 function CourtLayer({ vp }: { vp: TopViewport }) {
@@ -90,8 +123,8 @@ function CourtLayer({ vp }: { vp: TopViewport }) {
 
   return (
     <Layer listening={false}>
-      <Rect {...worldRect(vp, -L - F, -W - F, L + F, W + F)} fill={COLORS.freeZone} cornerRadius={4} />
-      <Rect {...worldRect(vp, -L, -W, L, W)} fill={COLORS.courtFloor} />
+      <Line {...worldRect(vp, -L - F, -W - F, L + F, W + F)} fill={COLORS.freeZone} />
+      <Line {...worldRect(vp, -L, -W, L, W)} fill={COLORS.courtFloor} />
       {courtLines().map((l, i) => (
         <Line
           key={i}

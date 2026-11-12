@@ -10,8 +10,8 @@ import { useUi } from '@renderer/store/settingsStore'
 
 const S_MIN = -1
 const S_MAX = COURT.length + 1
-/** Sichtbare Höhe der Seitenansicht in Metern */
-const Z_MAX = 10
+/** Maximal darstellbare Höhe in Metern */
+const Z_MAX = 25
 const PAD_L = 44
 const PAD_R = 16
 const PAD_T = 40
@@ -19,7 +19,7 @@ const PAD_B = 28
 
 /**
  * Seitenansicht (Phase 1: entlang der Feldlänge).
- * Horizontal = Distanz entlang der Linie, vertikal = Höhe (0–10 m). Netz + Netzhöhe als Referenz.
+ * Horizontal = Distanz entlang der Linie, vertikal = Höhe (bis 25 m). Netz + Netzhöhe als Referenz.
  * Zoombar, verschiebbar und horizontal drehbar (Blick von der anderen Seite).
  * Ab Phase 3 zeigt sie die vertikale Ebene der ausgewählten Flugbahn.
  */
@@ -29,8 +29,11 @@ export function SideView() {
   const mirrored = useUi((s) => s.sideMirrored)
   const toggleMirror = useUi((s) => s.toggleSideMirror)
 
-  // Basis: die volle Höhe zeigt genau 0–10 m; die Breite ist bei Bedarf verschiebbar
-  const scale = Math.max(0.0001, (size.height - PAD_T - PAD_B) / Z_MAX)
+  // Basis: die ganze Länge füllt die Breite. Wäre dann mehr als 25 m Höhe sichtbar,
+  // bestimmt stattdessen die Höhe den Maßstab (die Länge ist dann seitlich verschiebbar).
+  const widthFit = (size.width - PAD_L - PAD_R) / (S_MAX - S_MIN)
+  const heightFit = (size.height - PAD_T - PAD_B) / Z_MAX
+  const scale = Math.max(0.0001, widthFit, heightFit)
   const netS = COURT.halfLength
   const base: SideViewport = {
     scale,
@@ -39,13 +42,21 @@ export function SideView() {
     mirror: mirrored,
     mirrorCenter: (S_MIN + S_MAX) / 2
   }
-  const content = { x0: 0, y0: 0, x1: PAD_L + (S_MAX - S_MIN) * scale + PAD_R, y1: size.height }
+  // Inhalt: ganze Länge, Höhe bis 25 m (darüber hinaus kann man nicht verschieben)
+  const content = {
+    x0: 0,
+    y0: base.groundY - Z_MAX * scale - PAD_T,
+    x1: PAD_L + (S_MAX - S_MIN) * scale + PAD_R,
+    y1: size.height
+  }
   const netPx = sideToPx(base, netS, 0).px
   const { view, zoomIn, zoomOut, reset } = useZoomPan(ref, {
     size,
     content,
     // Start: Netz mittig
-    initial: { z: 1, tx: size.width / 2 - netPx, ty: 0 }
+    initial: { z: 1, tx: size.width / 2 - netPx, ty: 0 },
+    // Button-Zoom am Boden unter der Mitte, damit der Boden im Bild bleibt
+    zoomAnchor: { x: size.width / 2, y: size.height - PAD_B }
   })
   const vp = applyViewSide(base, view)
   const P = (s: number, z: number) => {
@@ -53,7 +64,7 @@ export function SideView() {
     return [p.px, p.py]
   }
 
-  const zStep = vp.scale >= 90 ? 0.5 : 1
+  const zStep = vp.scale >= 90 ? 0.5 : vp.scale >= 22 ? 1 : 2
   const sStep = vp.scale >= 45 ? 1 : 3
   const labelY = Math.min(vp.groundY + 8, size.height - 18)
 
@@ -62,7 +73,9 @@ export function SideView() {
   for (let z = zStep; z <= Z_MAX + 1e-9; z += zStep) {
     const y = P(0, z)[1]
     grid.push(<Line key={`z${z}`} points={[...P(S_MIN, z), ...P(S_MAX, z)]} stroke={COLORS.border} strokeWidth={1} />)
-    labels.push(
+    // Keine Beschriftung unter dem Ansichtstitel
+    if (y > 34)
+      labels.push(
       <Text key={`zt${z}`} x={4} y={y - 7} text={`${fmt(z)} m`} fontSize={11} fill={COLORS.textDim} />
     )
   }

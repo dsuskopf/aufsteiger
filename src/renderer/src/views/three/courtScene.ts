@@ -94,8 +94,9 @@ export function buildNet(netHeight: number): THREE.Group {
 function buildAntenna(netHeight: number, side: number): THREE.Group {
   const g = new THREE.Group()
   const netBottom = netHeight - COURT.netBandDepth
-  const white = new THREE.MeshStandardMaterial({ color: '#e6e6ea', roughness: 0.6 })
-  const red = new THREE.MeshStandardMaterial({ color: '#c62828', roughness: 0.5 })
+  // Unbeleuchtete Materialien wie bei der Netzkante, damit Band, Tasche und Antenne gleich hell wirken
+  const white = new THREE.MeshBasicMaterial({ color: '#d9d9de' })
+  const red = new THREE.MeshBasicMaterial({ color: '#c62828' })
 
   // Seitenband: von der Seitenlinie (innen) bis zur Außenkante der Linie
   const bandY = side * (COURT.halfWidth - COURT.sideBandWidth / 2)
@@ -111,7 +112,7 @@ function buildAntenna(netHeight: number, side: number): THREE.Group {
   // Tasche (Stoffhülle) über die gesamte Netzhöhe
   const pocket = new THREE.Mesh(
     new THREE.CylinderGeometry(COURT.antennaPocketRadius, COURT.antennaPocketRadius, COURT.netBandDepth, 16),
-    new THREE.MeshStandardMaterial({ color: '#d4d4da', roughness: 0.85 })
+    new THREE.MeshBasicMaterial({ color: '#c9c9cf' })
   )
   pocket.position.set(ax, netBottom + COURT.netBandDepth / 2, az)
   g.add(pocket)

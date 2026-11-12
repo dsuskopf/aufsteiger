@@ -17,6 +17,8 @@ interface Options {
   initial?: View2D
   /** Ändert sich dieser Schlüssel (z. B. Drehung), springt die Ansicht auf die Startansicht. */
   resetKey?: unknown
+  /** Fixpunkt für den Button-Zoom (Bildschirm-Pixel), Standard: Mitte der Fläche. */
+  zoomAnchor?: { x: number; y: number }
 }
 
 /**
@@ -28,13 +30,13 @@ interface Options {
  * - Buttons: weicher, animierter Zoom zur Mitte bzw. zurück zur Startansicht.
  */
 export function useZoomPan(hostRef: RefObject<HTMLElement | null>, opts: Options) {
-  const { size, content, initial = IDENTITY_VIEW, resetKey } = opts
+  const { size, content, initial = IDENTITY_VIEW, resetKey, zoomAnchor } = opts
   const [view, setViewState] = useState<View2D>(IDENTITY_VIEW)
   const viewRef = useRef(view)
   const goalRef = useRef<View2D | null>(null)
   const cancelRef = useRef<(() => void) | null>(null)
-  const optsRef = useRef({ size, content, initial })
-  optsRef.current = { size, content, initial }
+  const optsRef = useRef({ size, content, initial, zoomAnchor })
+  optsRef.current = { size, content, initial, zoomAnchor }
 
   const clamp = useCallback((v: View2D) => {
     const o = optsRef.current
@@ -76,10 +78,11 @@ export function useZoomPan(hostRef: RefObject<HTMLElement | null>, opts: Options
 
   const zoomBy = useCallback(
     (f: number) => {
-      const { width, height } = optsRef.current.size
+      const { size: sz, zoomAnchor: anchor } = optsRef.current
+      const a = anchor ?? { x: sz.width / 2, y: sz.height / 2 }
       // Mehrfaches Tippen baut auf dem laufenden Ziel auf, nicht auf dem Zwischenstand
       const base = goalRef.current ?? viewRef.current
-      animateTo(zoomAt(base, f, width / 2, height / 2))
+      animateTo(zoomAt(base, f, a.x, a.y))
     },
     [animateTo]
   )

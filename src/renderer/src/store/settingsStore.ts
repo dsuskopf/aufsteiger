@@ -26,7 +26,8 @@ export const useUi = create<UiState>((set) => ({
   netHeight: NET_PRESETS.herren.height,
   topTurns: 0,
   sideMirrored: false,
-  rotateTop: () => set((s) => ({ topTurns: (s.topTurns + 1) % 4 })),
+  // Ohne Modulo: der Winkel wächst weiter, damit die Animation immer in dieselbe Richtung dreht
+  rotateTop: () => set((s) => ({ topTurns: s.topTurns + 1 })),
   toggleSideMirror: () => set((s) => ({ sideMirrored: !s.sideMirrored })),
   setViewMode: (viewMode) => set({ viewMode }),
   setNetPreset: (netPreset) =>

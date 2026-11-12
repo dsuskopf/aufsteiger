@@ -3,38 +3,27 @@
  * Welt: x = Länge, y = Breite, z = Höhe (Meter).
  */
 
-/** Vierteldrehungen gegen den Uhrzeigersinn (0, 90, 180, 270 Grad). */
-export type QuarterTurns = 0 | 1 | 2 | 3
-
 export interface TopViewport {
   /** Pixel pro Meter */
   scale: number
   /** Pixelposition des Welt-Ursprungs */
   originX: number
   originY: number
-  rotation: QuarterTurns
+  /** Drehung der Ansicht gegen den Uhrzeigersinn (Radiant); stufenlos, damit sie animiert werden kann. */
+  angle: number
 }
 
-export function normTurns(n: number): QuarterTurns {
-  return (((n % 4) + 4) % 4) as QuarterTurns
-}
-
-function rot(x: number, y: number, r: QuarterTurns): [number, number] {
-  switch (r) {
-    case 0:
-      return [x, y]
-    case 1:
-      return [-y, x]
-    case 2:
-      return [-x, -y]
-    case 3:
-      return [y, -x]
-  }
+/** Größe des Begrenzungsrechtecks eines um `angle` gedrehten Rechtecks. */
+export function rotatedExtent(w: number, h: number, angle: number): { w: number; h: number } {
+  const c = Math.abs(Math.cos(angle))
+  const s = Math.abs(Math.sin(angle))
+  return { w: c * w + s * h, h: s * w + c * h }
 }
 
 /**
  * Passt einen Weltbereich (Breite × Höhe in Metern) maßstabstreu in eine Pixelfläche ein.
- * Ohne Drehung läuft Welt-x nach rechts und Welt-y nach oben; bei ungerader Drehung werden die Maße getauscht.
+ * Ohne Drehung läuft Welt-x nach rechts und Welt-y nach oben. Bei Drehung zählt das gedrehte Begrenzungsrechteck,
+ * so ändert sich der Maßstab während einer Drehanimation stetig.
  */
 export function fitViewport(
   pxWidth: number,
@@ -42,26 +31,30 @@ export function fitViewport(
   worldWidth: number,
   worldHeight: number,
   padding = 0,
-  rotation: QuarterTurns = 0
+  angle = 0
 ): TopViewport {
-  const [ww, wh] = rotation % 2 === 1 ? [worldHeight, worldWidth] : [worldWidth, worldHeight]
+  const ext = rotatedExtent(worldWidth, worldHeight, angle)
   const w = Math.max(1, pxWidth - 2 * padding)
   const h = Math.max(1, pxHeight - 2 * padding)
-  const scale = Math.max(0.0001, Math.min(w / ww, h / wh))
-  return { scale, originX: pxWidth / 2, originY: pxHeight / 2, rotation }
+  const scale = Math.max(0.0001, Math.min(w / ext.w, h / ext.h))
+  return { scale, originX: pxWidth / 2, originY: pxHeight / 2, angle }
 }
 
 /** Welt (x, y) → Pixel in der Draufsicht. */
 export function worldToTop(vp: TopViewport, x: number, y: number): { px: number; py: number } {
-  const [X, Y] = rot(x, y, vp.rotation)
+  const c = Math.cos(vp.angle)
+  const s = Math.sin(vp.angle)
+  const X = x * c - y * s
+  const Y = x * s + y * c
   return { px: vp.originX + X * vp.scale, py: vp.originY - Y * vp.scale }
 }
 
 export function topToWorld(vp: TopViewport, px: number, py: number): { x: number; y: number } {
   const X = (px - vp.originX) / vp.scale
   const Y = (vp.originY - py) / vp.scale
-  const [x, y] = rot(X, Y, normTurns(4 - vp.rotation))
-  return { x, y }
+  const c = Math.cos(vp.angle)
+  const s = Math.sin(vp.angle)
+  return { x: X * c + Y * s, y: -X * s + Y * c }
 }
 
 /** Welt → Three.js (y-up, rechtshändig): (x, y, z) → (x, z, −y). */

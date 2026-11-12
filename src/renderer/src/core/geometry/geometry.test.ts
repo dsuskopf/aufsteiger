@@ -74,9 +74,9 @@ describe('transform', () => {
 })
 
 describe('Draufsicht-Drehung', () => {
-  it('jede Vierteldrehung ist umkehrbar', () => {
-    for (const r of [0, 1, 2, 3] as const) {
-      const vp = fitViewport(800, 1000, 22, 13, 10, r)
+  it('jede Drehung ist umkehrbar', () => {
+    for (const a of [0, 0.3, Math.PI / 2, Math.PI, (3 * Math.PI) / 2]) {
+      const vp = fitViewport(800, 1000, 22, 13, 10, a)
       const p = worldToTop(vp, 7, -3)
       const w = topToWorld(vp, p.px, p.py)
       expect(w.x).toBeCloseTo(7)
@@ -85,12 +85,21 @@ describe('Draufsicht-Drehung', () => {
   })
 
   it('90 Grad: Feld steht hochkant (Länge vertikal)', () => {
-    const vp = fitViewport(600, 1000, 22, 13, 0, 1)
+    const vp = fitViewport(600, 1000, 22, 13, 0, Math.PI / 2)
     const a = worldToTop(vp, -9, 0)
     const b = worldToTop(vp, 9, 0)
     expect(Math.abs(a.px - b.px)).toBeCloseTo(0)
     expect(Math.abs(a.py - b.py)).toBeCloseTo(18 * vp.scale)
     expect(vp.scale).toBeCloseTo(Math.min(600 / 13, 1000 / 22))
+  })
+
+  it('Maßstab ändert sich während der Drehung stetig', () => {
+    let prev = fitViewport(1000, 600, 22, 13, 0, 0).scale
+    for (let i = 1; i <= 90; i++) {
+      const sc = fitViewport(1000, 600, 22, 13, 0, (i / 90) * (Math.PI / 2)).scale
+      expect(Math.abs(sc - prev) / prev).toBeLessThan(0.05)
+      prev = sc
+    }
   })
 })
 

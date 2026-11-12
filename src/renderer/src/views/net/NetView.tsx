@@ -17,6 +17,8 @@ import { useEffect, useRef } from 'react'
 import type Konva from 'konva'
 import { NetTrajectories } from './NetTrajectories'
 import { hitsDraggable } from '../top/PlayersLayer'
+import { LaeuferBadge } from '../top/LaeuferBadge'
+import { useEmptyTapClose } from '@renderer/components/useEmptyTapClose'
 import { usePlayback } from '@renderer/store/playbackStore'
 import { playerAt } from '@renderer/core/motion/motion'
 
@@ -124,6 +126,9 @@ export function NetView({ compact = false }: { compact?: boolean }) {
       window.removeEventListener('pointercancel', onUp)
     }
   }, [ref, compact, setAngle])
+
+  // Tippen ins Leere schließt Flugbahn- und Spieler-Karte
+  useEmptyTapClose(ref, stageRef)
 
   const resetAll = () => {
     reset()
@@ -306,26 +311,13 @@ export function PlayerFigure({ vp, p, dim = false }: { vp: NetViewport; p: Court
         height={h}
         cornerRadius={Math.min(w / 2, 0.2 * s)}
         fill={p.jersey.fill}
-        stroke={marked ? COLORS.accent : p.jersey.stroke}
-        strokeWidth={marked ? 3 : 1.5}
-        dash={marked?.standIn ? [6, 4] : undefined}
-        shadowColor={COLORS.accent}
-        shadowBlur={marked ? 14 : 0}
-        shadowOpacity={marked ? 0.9 : 0}
+        stroke={p.jersey.stroke}
+        strokeWidth={1.5}
       />
-      <Circle
-        x={foot.px}
-        y={foot.py - h - r}
-        radius={r}
-        fill={p.jersey.fill}
-        stroke={marked ? COLORS.accent : p.jersey.stroke}
-        strokeWidth={marked ? 3 : 2}
-        shadowColor={COLORS.accent}
-        shadowBlur={marked ? 14 : 0}
-        shadowOpacity={marked ? 0.9 : 0}
-      />
+      <Circle x={foot.px} y={foot.py - h - r} radius={r} fill={p.jersey.fill} stroke={p.jersey.stroke} strokeWidth={2} />
       <Text x={foot.px - r} y={foot.py - h - r - r * 0.55} width={2 * r} align="center" text={p.role} fontSize={r * 0.62} fontStyle="bold" fill={p.jersey.text} />
       <Text x={foot.px - r} y={foot.py - h - r + r * 0.1} width={2 * r} align="center" text={String(p.number)} fontSize={r * 0.5} fill={p.jersey.text} />
+      {marked && <LaeuferBadge x={foot.px + r * 0.85} y={foot.py - h - 2 * r + r * 0.2} n={marked.n} standIn={marked.standIn} h={Math.max(14, r * 0.7)} />}
       {showNames && p.name.trim() && (
         <Text
           x={foot.px - 80}

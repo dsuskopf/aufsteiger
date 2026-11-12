@@ -52,14 +52,14 @@ export function referencePlayer(order: Regular[], team: Team | undefined): Regul
  * Wer wird als Bezugs-Steller des Läufersystems hervorgehoben: der Steller selbst – oder, wenn der Libero
  * gerade für ihn steht, der Libero (standIn = gestrichelt). null ohne Positionen.
  */
-export function laeuferMarker(side: PlaySide, team: Team | undefined): { playerId: string; standIn: boolean } | null {
+export function laeuferMarker(side: PlaySide, team: Team | undefined): { playerId: string; standIn: boolean; n: number } | null {
   const ref = referencePlayer(rotationOrder(side), team)
   if (!ref) return null
   if (ref.playerId === side.liberoFor) {
     const libero = side.players.find((c) => c.role === 'L')
-    return libero ? { playerId: libero.playerId, standIn: true } : null
+    return libero ? { playerId: libero.playerId, standIn: true, n: ref.slot } : null
   }
-  return side.players.some((c) => c.playerId === ref.playerId) ? { playerId: ref.playerId, standIn: false } : null
+  return side.players.some((c) => c.playerId === ref.playerId) ? { playerId: ref.playerId, standIn: false, n: ref.slot } : null
 }
 
 /** Aktueller Läufer (Position des Stellers) oder null ohne Positionen */

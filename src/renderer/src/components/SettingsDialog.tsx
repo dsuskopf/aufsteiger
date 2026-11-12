@@ -81,6 +81,16 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
             </label>
           </section>
           <section>
+            <h3 className="section-title">Läufersystem</h3>
+            <label className="setting-row">
+              <span className="grow">
+                Läufer am Steller zeigen
+                <span className="caption block">Kleines Schild „L2“ am Steller, nach dem gezählt wird (Läufer = seine Position).</span>
+              </span>
+              <input type="checkbox" className="switch" checked={s.showLaeuferMark} onChange={(e) => update({ showLaeuferMark: e.target.checked })} />
+            </label>
+          </section>
+          <section>
             <h3 className="section-title">Zonen</h3>
             <label className="setting-row">
               <span className="grow">

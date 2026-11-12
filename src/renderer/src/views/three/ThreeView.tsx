@@ -7,6 +7,7 @@ import { buildCourt, buildNet, disposeObject } from './courtScene'
 import { CAMERA_LIMITS, clampTarget } from './camera'
 import { ViewControls } from '@renderer/components/ViewControls'
 import { NamesButton, ZonesButton } from '@renderer/components/ViewToggles'
+import { useEmptyTapClose } from '@renderer/components/useEmptyTapClose'
 import { ZOOM_DURATION_MS, ZOOM_STEP, tween } from '@renderer/components/tween'
 import { useCourtPlayers } from '@renderer/store/selectors'
 import { CylinderPlayerFactory, placePlayer, setLaeuferMark, showNameTag, visualKey, type PlayerMeshFactory } from './players'
@@ -55,6 +56,8 @@ export function ThreeView() {
   const showZones = useUi((s) => s.showZones)
   const showNames = useUi((s) => s.showNames)
   const markers = useLaeuferMarkers()
+  // In 3D gibt es nichts anzutippen: jeder kurze Tipp (ohne Drehen) schließt die Karten
+  useEmptyTapClose(hostRef)
   const zoneStyle = useSettings((s) => s.settings.zoneStyle)
 
   useEffect(() => {
@@ -178,7 +181,7 @@ export function ThreeView() {
       }
       placePlayer(item.obj, p.x, p.y)
       showNameTag(item.obj, showNames)
-      setLaeuferMark(item.obj, markers.get(p.key), COLORS.accent)
+      setLaeuferMark(item.obj, markers.get(p.key), COLORS.accent, COLORS.bgDeep)
     }
     applyMotion(pr)
     for (const [key, item] of pr.items) {

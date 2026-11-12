@@ -141,39 +141,47 @@ function nameTexture(name: string): { tex: THREE.Texture; aspect: number } {
 const MARK = 'laeuferMark'
 
 /**
- * Bezugs-Steller des Läufersystems: leuchtender Ring auf dem Boden unter dem Spieler (gestrichelt wirkt in 3D
- * unruhig – der Libero als Vertreter bekommt einen schmaleren Ring).
+ * Läufer-Abzeichen „L2“ am Bezugs-Steller: kleines Schild oben rechts am Kopf, immer zur Kamera gedreht.
+ * Steht der Libero für den Steller, ist das Schild nur umrandet.
  */
-export function setLaeuferMark(obj: THREE.Object3D, mark: { standIn: boolean } | undefined, color: string): void {
-  const old = obj.getObjectByName(MARK)
-  if (old && (!mark || old.userData.standIn !== mark.standIn)) {
+export function setLaeuferMark(obj: THREE.Object3D, mark: { standIn: boolean; n: number } | undefined, color: string, dark: string): void {
+  const key = mark ? `${mark.n}|${mark.standIn}` : ''
+  const old = obj.getObjectByName(MARK) as THREE.Sprite | undefined
+  if (old && old.userData.key !== key) {
     obj.remove(old)
-    old.traverse((o) => {
-      const m = o as THREE.Mesh
-      m.geometry?.dispose()
-      ;(m.material as THREE.Material | undefined)?.dispose()
-    })
+    old.material.map?.dispose()
+    old.material.dispose()
   }
   if (!mark || obj.getObjectByName(MARK)) return
-  const g = new THREE.Group()
-  g.name = MARK
-  g.userData.standIn = mark.standIn
-  const inner = mark.standIn ? 0.36 : 0.34
-  const ring = new THREE.Mesh(
-    new THREE.RingGeometry(inner, mark.standIn ? 0.4 : 0.44, 48),
-    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95, depthWrite: false })
-  )
-  const glow = new THREE.Mesh(
-    new THREE.RingGeometry(0.3, 0.62, 48),
-    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.28, depthWrite: false, blending: THREE.AdditiveBlending })
-  )
-  for (const m of [glow, ring]) {
-    m.rotation.x = -Math.PI / 2
-    m.position.y = 0.015
-    m.renderOrder = 3
-    g.add(m)
-  }
-  obj.add(g)
+  const head = obj.children.find((c) => c instanceof THREE.Sprite && c.name !== NAME_TAG)
+  const c = document.createElement('canvas')
+  c.width = 108
+  c.height = 64
+  const ctx = c.getContext('2d')!
+  ctx.beginPath()
+  ctx.roundRect(4, 4, 100, 56, 28)
+  ctx.fillStyle = mark.standIn ? dark : color
+  ctx.fill()
+  ctx.lineWidth = 5
+  ctx.strokeStyle = color
+  ctx.stroke()
+  ctx.fillStyle = mark.standIn ? color : dark
+  ctx.font = 'bold 36px "Segoe UI", system-ui, sans-serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(`L${mark.n}`, 54, 34)
+  const tex = new THREE.CanvasTexture(c)
+  tex.colorSpace = THREE.SRGBColorSpace
+  const badge = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }))
+  const h = 0.2
+  badge.scale.set(h * (108 / 64), h, 1)
+  // Anker in der Kopfmitte, Schild nach rechts oben versetzt (in Bildschirmrichtung)
+  badge.center.set(-0.15, -0.35)
+  badge.position.y = head ? head.position.y : 2
+  badge.name = MARK
+  badge.userData.key = key
+  badge.renderOrder = 4
+  obj.add(badge)
 }
 
 /** Namensschilder eines Spieler-Objekts ein-/ausblenden */

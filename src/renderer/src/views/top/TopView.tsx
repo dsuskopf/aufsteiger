@@ -7,6 +7,7 @@ import { TrajectoryLayer } from './TrajectoryLayer'
 import { useDrawTrajectory } from './useDrawTrajectory'
 import { useDrawPath } from './useDrawPath'
 import { PathLayer } from './PathLayer'
+import { useEmptyTapClose } from '@renderer/components/useEmptyTapClose'
 import { useSettings } from '@renderer/store/appSettings'
 import {
   applyViewTop,
@@ -82,6 +83,8 @@ export function TopView({ compact = false }: { compact?: boolean }) {
   const vp = applyViewTop(base, view)
   const preview = useDrawTrajectory(ref, vp, tool === 'annahme' || tool === 'zuspiel' ? tool : null)
   const stroke = useDrawPath(ref, vp, tool === 'laufweg')
+  // Tippen ins Leere schließt Flugbahn- und Spieler-Karte
+  useEmptyTapClose(ref, stageRef)
 
   return (
     <>

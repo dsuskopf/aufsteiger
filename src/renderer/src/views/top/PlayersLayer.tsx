@@ -8,6 +8,7 @@ import { useUi } from '@renderer/store/settingsStore'
 import { usePlayback } from '@renderer/store/playbackStore'
 import { playerAt } from '@renderer/core/motion/motion'
 import { COLORS } from '@renderer/theme/colors'
+import { LaeuferBadge } from './LaeuferBadge'
 
 /** Name der Konva-Gruppen, über die man Spieler beim Treffertest erkennt. */
 export const PLAYER_NODE_NAME = 'player'
@@ -77,21 +78,7 @@ export function PlayersLayer({ vp, interactive = true }: { vp: TopViewport; inte
             onMouseEnter={(e) => setCursor(e, 'grab')}
             onMouseLeave={(e) => setCursor(e, '')}
           >
-            {markers.has(p.key) && (
-              // Bezugs-Steller des Läufersystems: breiter, leuchtender Ring (gestrichelt, wenn der Libero für ihn steht)
-              <Circle
-                radius={r + 8}
-                stroke={COLORS.accent}
-                strokeWidth={4}
-                opacity={0.9}
-                dash={markers.get(p.key)!.standIn ? [7, 5] : undefined}
-                shadowColor={COLORS.accent}
-                shadowBlur={16}
-                shadowOpacity={0.9}
-                listening={false}
-              />
-            )}
-            {isSel && <Circle radius={r + 3} stroke="#ffffff" strokeWidth={1.5} opacity={0.9} listening={false} />}
+            {isSel && <Circle radius={r + 4} stroke={COLORS.accent} strokeWidth={2.5} listening={false} />}
             <Circle
               radius={r}
               fill={colors.fill}
@@ -124,6 +111,10 @@ export function PlayersLayer({ vp, interactive = true }: { vp: TopViewport; inte
               opacity={0.85}
               listening={false}
             />
+            {markers.has(p.key) && (
+              // Läufer-Abzeichen oben rechts am Bezugs-Steller
+              <LaeuferBadge x={r * 0.8} y={-r * 0.8} n={markers.get(p.key)!.n} standIn={markers.get(p.key)!.standIn} h={Math.max(15, r * 0.6)} />
+            )}
             {showNames && p.name.trim() && (
               // Name unter dem Spieler, immer aufrecht
               <Text

@@ -176,6 +176,8 @@ export interface Settings {
    * (ersetzt einen Hinterfeldspieler). Aus: freie Aufstellung.
    */
   lineupRules: boolean
+  /** Läufer-Abzeichen („L2“) am Bezugs-Steller des Läufersystems zeigen */
+  showLaeuferMark: boolean
   /** Art der Zonen auf dem Feldboden (eingeblendet per Button in der Ansicht) */
   zoneStyle: ZoneStyle
 }
@@ -198,6 +200,7 @@ export const DEFAULT_SETTINGS: Settings = {
   defaultSpeed: 1,
   fingerDraws: false,
   lineupRules: true,
+  showLaeuferMark: false,
   zoneStyle: 'standard'
 }
 

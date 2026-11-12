@@ -78,12 +78,12 @@ describe('Hervorhebung des Bezugs-Stellers', () => {
   it('markiert den Steller; steht der Libero für ihn, den Libero (gestrichelt)', async () => {
     const { laeuferMarker } = await import('./rotation')
     const side = autoLineup(team, 'A')
-    expect(laeuferMarker(side, team)).toEqual({ playerId: 's', standIn: false })
+    expect(laeuferMarker(side, team)).toEqual({ playerId: 's', standIn: false, n: 2 })
     // Läufer 1: Steller hinten; Libero für den Steller einwechseln
     const l1 = laeuferLineup(side, team, 'A', 1, 'annahme')
     const { setLiberoFor } = await import('./lineup')
     const swapped = setLiberoFor(l1, team, 's', 'A')
     expect(swapped.liberoFor).toBe('s')
-    expect(laeuferMarker(swapped, team)).toEqual({ playerId: 'l', standIn: true })
+    expect(laeuferMarker(swapped, team)).toEqual({ playerId: 'l', standIn: true, n: 1 })
   })
 })

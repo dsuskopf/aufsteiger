@@ -5,6 +5,7 @@ import { jerseyFor, type JerseyStyle } from '@shared/teamColors'
 import { usePlay } from './playStore'
 import { useTeams } from './teamsStore'
 import { laeuferMarker } from '@renderer/core/lineup/rotation'
+import { useSettings } from './appSettings'
 
 /** Alles, was eine Ansicht zum Zeichnen eines Spielers braucht. */
 export interface CourtPlayerView {
@@ -52,20 +53,26 @@ export function courtPlayers(sides: Record<CourtSide, PlaySide>, teams: Team[]):
 }
 
 /** Bezugs-Steller des Läufersystems je Seite (zum Hervorheben), Schlüssel wie CourtPlayerView.key */
-export function laeuferMarkers(sides: Record<CourtSide, PlaySide>, teams: Team[]): Map<string, { standIn: boolean }> {
-  const out = new Map<string, { standIn: boolean }>()
+export type LaeuferMark = { standIn: boolean; n: number }
+
+export function laeuferMarkers(sides: Record<CourtSide, PlaySide>, teams: Team[]): Map<string, LaeuferMark> {
+  const out = new Map<string, LaeuferMark>()
   for (const side of ['A', 'B'] as const) {
     const team = teams.find((t) => t.id === sides[side].teamId)
     const m = team ? laeuferMarker(sides[side], team) : null
-    if (m) out.set(`${side}:${m.playerId}`, { standIn: m.standIn })
+    if (m) out.set(`${side}:${m.playerId}`, { standIn: m.standIn, n: m.n })
   }
   return out
 }
 
-export function useLaeuferMarkers(): Map<string, { standIn: boolean }> {
+const NO_MARKERS = new Map<string, LaeuferMark>()
+
+/** Läufer-Abzeichen je Spieler – leer, wenn es in den Einstellungen ausgeschaltet ist */
+export function useLaeuferMarkers(): Map<string, LaeuferMark> {
+  const on = useSettings((s) => s.settings.showLaeuferMark)
   const sides = usePlay((s) => s.sides)
   const teams = useTeams((s) => s.teams)
-  return useMemo(() => laeuferMarkers(sides, teams), [sides, teams])
+  return useMemo(() => (on ? laeuferMarkers(sides, teams) : NO_MARKERS), [on, sides, teams])
 }
 
 /** Spieler beider Seiten mit Nummer und Name aus dem Team. */

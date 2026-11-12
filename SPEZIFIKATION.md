@@ -46,7 +46,7 @@ Es gibt zwei Flugbahn-Typen: **Annahme** und **Zuspiel**. Beide funktionieren na
 - Stift-Eingabe (Pointer Events, pointerType "pen") vom Finger unterscheiden, damit man nicht versehentlich verschiebt.
 
 ### Höhen einstellen
-> Bezeichnungen in der App: Starthöhe = **Annahmehöhe** bzw. **Zuspielhöhe**, Scheitel = **Höchster Punkt**, Schlagpunkt bleibt **Schlagpunkt**.
+> Bezeichnungen in der App: Annahme-Bahn = **Annahme** → **Höchster Punkt** → **Zuspiel** (das Ende der Annahme ist die Zuspielhöhe, kein Schlagpunkt). Zuspiel-Bahn = **Zuspiel** → **Höchster Punkt** → **Schlagpunkt**.
 > Festgelegt (Phase 3): Die Höhen werden in der **Netzansicht** direkt an Griffen gezogen – Start (hohler Punkt) und Scheitel (Raute) senkrecht, der Schlagpunkt nur entlang der Parabel. Zusätzlich zeigt eine **Flugbahn-Karte** zur gewählten Bahn Schieberegler für Starthöhe, Scheitel und Schlagpunkt (wirkt auch in 3D) sowie Distanz, Flugzeit und Abfluggeschwindigkeit. In der Draufsicht verschiebt man Start und Ende.
 
 - Startpunkt: Position kommt aus der Draufsicht, die Höhe wird per Ziehen eingestellt (vom Boden bis weit oben möglich).

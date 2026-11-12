@@ -8,7 +8,7 @@ import { Icon, type IconName } from './Icon'
 const TOOLS: { id: Tool; label: string; icon: IconName; title: string }[] = [
   { id: 'select', label: 'Auswählen', icon: 'pointer', title: 'Auswählen und ziehen (Spieler, Griffe)' },
   { id: 'annahme', label: 'Annahme', icon: 'arc', title: 'Annahme zeichnen: Klick Start, Klick Ende – oder ziehen' },
-  { id: 'zuspiel', label: 'Zuspiel', icon: 'arc', title: 'Zuspiel zeichnen: startet am Schlagpunkt der Annahme' }
+  { id: 'zuspiel', label: 'Zuspiel', icon: 'arc', title: 'Zuspiel zeichnen: startet am Ende der Annahme' }
 ]
 
 const VIEW_MODES: { id: ViewMode; label: string; title: string }[] = [

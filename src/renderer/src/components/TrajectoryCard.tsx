@@ -59,21 +59,20 @@ export function TrajectoryCard() {
         </button>
       </header>
       <MeterSlider
-        label={selected === 'annahme' ? 'Annahmehöhe' : 'Zuspielhöhe'}
+        label={selected === 'annahme' ? 'Annahme' : 'Zuspiel'}
         value={t.start.h}
         min={0}
         max={START_H_MAX}
         disabled={coupled}
-        hint={coupled ? 'folgt dem Schlagpunkt der Annahme' : undefined}
         onChange={(h) => setTrajectory(selected, { ...t, start: { ...t.start, h } })}
       />
       <MeterSlider label="Höchster Punkt" value={sol.apexH} min={minApex} max={APEX_H_MAX} onChange={(apexH) => setTrajectory(selected, { ...t, apexH })} />
       <MeterSlider
-        label="Schlagpunkt"
+        // Ende der Annahme ist die Höhe, auf der gespielt wird (Zuspiel); beim Zuspiel der Schlagpunkt des Angriffs
+        label={selected === 'annahme' ? 'Zuspiel' : 'Schlagpunkt'}
         value={t.hitH}
         min={0}
         max={Math.max(0.01, sol.apexH - APEX_EPS)}
-        hint="verschiebt sich entlang der Parabel"
         onChange={setHitH}
       />
       <dl className="traj-stats">

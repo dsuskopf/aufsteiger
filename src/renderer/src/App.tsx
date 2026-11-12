@@ -23,7 +23,7 @@ import './store/playDocs'
 const HINTS = {
   annahme: 'Annahme: Klick Start, Klick Ende – oder in einem Zug ziehen · Esc bricht ab',
   zuspiel: 'Zuspiel: Klick Start, Klick Ende – oder ziehen · Esc bricht ab',
-  zuspielCoupled: 'Zuspiel startet am Schlagpunkt der Annahme: Ziel antippen oder hinziehen · Esc bricht ab'
+  zuspielCoupled: 'Zuspiel startet am Ende der Annahme: Ziel antippen oder hinziehen · Esc bricht ab'
 }
 
 export function App() {

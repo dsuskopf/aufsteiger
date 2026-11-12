@@ -35,16 +35,16 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
         <div className="settings-body">
           <section>
             <h3 className="section-title">Annahme</h3>
-            <MeterSlider label="Annahmehöhe" value={s.defaultStartHAnnahme} min={0} max={4} onChange={(v) => update({ defaultStartHAnnahme: v })} />
-            <MeterSlider label="Schlagpunkt" value={s.defaultEndHAnnahme} min={0} max={4.5} hint="Schlagpunkt der Annahme = Zuspielhöhe" onChange={(v) => update({ defaultEndHAnnahme: v })} />
-            <MeterSlider label="Höchster Punkt über der Annahmehöhe" value={s.defaultApexOffsetAnnahme} min={0} max={8} onChange={(v) => update({ defaultApexOffsetAnnahme: v })} />
+            <MeterSlider label="Annahme" value={s.defaultStartHAnnahme} min={0} max={4} onChange={(v) => update({ defaultStartHAnnahme: v })} />
+            <MeterSlider label="Zuspiel" value={s.defaultEndHAnnahme} min={0} max={4.5} hint="Ende der Annahme = Start des Zuspiels" onChange={(v) => update({ defaultEndHAnnahme: v })} />
+            <MeterSlider label="Höchster Punkt über der Annahme" value={s.defaultApexOffsetAnnahme} min={0} max={8} onChange={(v) => update({ defaultApexOffsetAnnahme: v })} />
           </section>
           <section>
             <h3 className="section-title">Zuspiel</h3>
-            <MeterSlider label="Zuspielhöhe (Hand des Stellers)" value={s.defaultStartHZuspiel} min={0} max={4} onChange={(v) => update({ defaultStartHZuspiel: v })} />
+            <MeterSlider label="Zuspiel (Hand des Stellers)" value={s.defaultStartHZuspiel} min={0} max={4} onChange={(v) => update({ defaultStartHZuspiel: v })} />
             <MeterSlider label="Schlagpunkt (Angriff)" value={s.defaultHitH} min={0} max={4.5} onChange={(v) => update({ defaultHitH: v })} />
-            <MeterSlider label="Höchster Punkt über der Zuspielhöhe" value={s.defaultApexOffsetZuspiel} min={0} max={8} onChange={(v) => update({ defaultApexOffsetZuspiel: v })} />
-            <p className="caption">Gilt für neu gezeichnete Flugbahnen. Der höchste Punkt liegt immer mindestens 0,3 m über dem Schlagpunkt. Folgt das Zuspiel einer Annahme, ist die Zuspielhöhe deren Schlagpunkt.</p>
+            <MeterSlider label="Höchster Punkt über dem Zuspiel" value={s.defaultApexOffsetZuspiel} min={0} max={8} onChange={(v) => update({ defaultApexOffsetZuspiel: v })} />
+            <p className="caption">Gilt für neu gezeichnete Flugbahnen. Der höchste Punkt liegt immer mindestens 0,3 m über dem Schlagpunkt. Folgt das Zuspiel einer Annahme, startet es am Ende der Annahme.</p>
           </section>
           <section>
             <h3 className="section-title">Neuer Spielzug</h3>

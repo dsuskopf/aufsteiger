@@ -60,12 +60,18 @@ export interface CourtPlayer {
   /** Position in Weltkoordinaten (Meter) */
   x: number
   y: number
+  /** Feste Position 1–6 in der Rotation (2/3/4 vorne, 1/6/5 hinten); der Libero hat die des Ersetzten */
+  slot?: number
 }
 
 export interface PlaySide {
   teamId: string | null
-  /** Höchstens 6 Spieler */
+  /** Höchstens 6 Spieler (ein Libero ersetzt einen Hinterfeldspieler, zählt also nicht extra) */
   players: CourtPlayer[]
+  /** Spieler, den der Libero gerade ersetzt (nicht auf dem Feld) */
+  liberoFor?: string
+  /** Rolle des ersetzten Spielers (für die Rückkehr aufs Feld) */
+  liberoRole?: Role
 }
 
 export const MAX_PLAYERS_PER_SIDE = 6
@@ -130,6 +136,11 @@ export interface Settings {
   defaultSpeed: number
   /** Finger zeichnet Flugbahnen auf leerem Feld (sonst nur Stift und Maus) */
   fingerDraws: boolean
+  /**
+   * Aufstellungsregeln: 1 Steller + 1 Diagonal oder 2 Steller, 2 MB, 2 Außen; Libero nur im Hinterfeld
+   * (ersetzt einen Hinterfeldspieler). Aus: freie Aufstellung.
+   */
+  lineupRules: boolean
   /** Art der Zonen auf dem Feldboden (eingeblendet per Button in der Ansicht) */
   zoneStyle: ZoneStyle
 }
@@ -151,6 +162,7 @@ export const DEFAULT_SETTINGS: Settings = {
   defaultLoop: true,
   defaultSpeed: 1,
   fingerDraws: false,
+  lineupRules: true,
   zoneStyle: 'standard'
 }
 

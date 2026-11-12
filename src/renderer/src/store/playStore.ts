@@ -8,7 +8,17 @@ import {
   type Trajectory,
   type TrajectoryType
 } from '@shared/types'
-import { addToLineup, autoLineup, clampToArea, syncWithTeam } from '@renderer/core/lineup/lineup'
+import {
+  addToLineup,
+  allowedRoles,
+  autoLineup,
+  clampLibero,
+  clampToArea,
+  removeFromLineup,
+  setLiberoFor,
+  syncWithTeam
+} from '@renderer/core/lineup/lineup'
+import { useSettings } from './appSettings'
 import { clampInput, coupleTrajectories } from '@renderer/core/physics/trajectory'
 import { useTeams } from './teamsStore'
 
@@ -20,6 +30,8 @@ interface PlayState {
   autoArrange: (side: CourtSide) => void
   togglePlayer: (side: CourtSide, playerId: string) => void
   setRole: (side: CourtSide, playerId: string, role: Role) => void
+  /** Libero für einen anderen Hinterfeldspieler einwechseln */
+  setLiberoFor: (side: CourtSide, playerId: string) => void
   movePlayer: (side: CourtSide, playerId: string, x: number, y: number) => void
 
   /** Höchstens eine Annahme und ein Zuspiel; das Zuspiel startet am Schlagpunkt der Annahme */
@@ -41,6 +53,8 @@ interface PlayState {
 
 const emptySide = (): PlaySide => ({ teamId: null, players: [] })
 const teamById = (id: string | null) => useTeams.getState().teams.find((t) => t.id === id)
+/** Aufstellungsregeln aktiv? (Einstellungen) */
+const rulesOn = () => useSettings.getState().settings.lineupRules
 
 /** Der aktuelle Spielzug: Aufstellung, Flugbahnen und Anzeige-Optionen. */
 export const usePlay = create<PlayState>((set) => {
@@ -69,29 +83,39 @@ export const usePlay = create<PlayState>((set) => {
 
     setTeam: (side, teamId) => {
       const team = teamById(teamId)
-      mapSide(side, () => ({ teamId: team ? team.id : null, players: team ? autoLineup(team, side) : [] }))
+      mapSide(side, () => (team ? autoLineup(team, side, rulesOn()) : emptySide()))
     },
     autoArrange: (side) =>
       mapSide(side, (s) => {
         const team = teamById(s.teamId)
-        return team ? { ...s, players: autoLineup(team, side) } : s
+        return team ? autoLineup(team, side, rulesOn()) : s
       }),
     togglePlayer: (side, playerId) =>
       mapSide(side, (s) => {
-        if (s.players.some((c) => c.playerId === playerId))
-          return { ...s, players: s.players.filter((c) => c.playerId !== playerId) }
+        if (s.players.some((c) => c.playerId === playerId)) return removeFromLineup(s, playerId)
         const player = teamById(s.teamId)?.players.find((p) => p.id === playerId)
-        return player ? { ...s, players: addToLineup(s.players, player, side) } : s
+        return player ? addToLineup(s, player, side, rulesOn()) : s
       }),
     setRole: (side, playerId, role) =>
-      mapSide(side, (s) => ({
-        ...s,
-        players: s.players.map((c) => (c.playerId === playerId ? { ...c, role } : c))
-      })),
+      mapSide(side, (s) => {
+        const player = teamById(s.teamId)?.players.find((p) => p.id === playerId)
+        if (rulesOn() && player && !allowedRoles(player, s.players, true).includes(role)) return s
+        return { ...s, players: s.players.map((c) => (c.playerId === playerId ? { ...c, role } : c)) }
+      }),
+    setLiberoFor: (side, playerId) =>
+      mapSide(side, (s) => {
+        const team = teamById(s.teamId)
+        return team ? setLiberoFor(s, team, playerId, side) : s
+      }),
     movePlayer: (side, playerId, x, y) =>
       mapSide(side, (s) => ({
         ...s,
-        players: s.players.map((c) => (c.playerId === playerId ? { ...c, ...clampToArea(x, y) } : c))
+        players: s.players.map((c) => {
+          if (c.playerId !== playerId) return c
+          // Mit Regeln bleibt der Libero im Hinterfeld
+          const p = rulesOn() && c.role === 'L' ? clampLibero(side, x, y) : clampToArea(x, y)
+          return { ...c, ...p }
+        })
       }))
   }
 })
@@ -120,10 +144,9 @@ useTeams.subscribe((state) => {
     const s = sides[side]
     if (s.teamId === null) continue
     const team = state.teams.find((t) => t.id === s.teamId)
-    const players = syncWithTeam(s.players, team)
-    const teamId = team ? s.teamId : null
-    if (players !== s.players || teamId !== s.teamId) {
-      next[side] = { teamId, players }
+    const synced = syncWithTeam(s, team)
+    if (synced !== s) {
+      next[side] = synced
       changed = true
     }
   }

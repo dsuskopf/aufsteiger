@@ -105,6 +105,7 @@ export function sanitizeSettings(raw: unknown): Settings {
     defaultLoop: bool(r.defaultLoop, d.defaultLoop),
     defaultSpeed: SPEED_STEPS.includes(speed) ? speed : d.defaultSpeed,
     fingerDraws: bool(r.fingerDraws, d.fingerDraws),
+    lineupRules: bool(r.lineupRules, d.lineupRules),
     zoneStyle: ZONE_STYLES.includes(r.zoneStyle as ZoneStyle) ? (r.zoneStyle as ZoneStyle) : d.zoneStyle
   }
 }
@@ -127,19 +128,27 @@ function sanitizeSide(raw: unknown): PlaySideDoc {
   for (const p of Array.isArray(r.players) ? r.players : []) {
     if (!isObj(p) || typeof p.playerId !== 'string') continue
     const role = (typeof p.role === 'string' && p.role in LEGACY_ROLES ? LEGACY_ROLES[p.role] : p.role) as Role
+    const slot = Math.round(Number(p.slot))
     players.push({
       playerId: p.playerId,
       role: ROLES.includes(role) ? role : 'A',
       x: num(p.x, 0, -11, 11),
-      y: num(p.y, 0, -6.5, 6.5)
+      y: num(p.y, 0, -6.5, 6.5),
+      ...(slot >= 1 && slot <= 6 ? { slot } : {})
     })
   }
   const snap = sanitizeTeams([r.teamSnapshot])[0] ?? null
-  return {
+  const side: PlaySideDoc = {
     teamId: typeof r.teamId === 'string' ? r.teamId : null,
     players: players.slice(0, MAX_PLAYERS_PER_SIDE),
     teamSnapshot: snap
   }
+  // Libero ersetzt einen Spieler, der nicht auf dem Feld steht
+  if (typeof r.liberoFor === 'string' && !side.players.some((c) => c.playerId === r.liberoFor) && side.players.some((c) => c.role === 'L')) {
+    side.liberoFor = r.liberoFor
+    if (ROLES.includes(r.liberoRole as Role) && r.liberoRole !== 'L') side.liberoRole = r.liberoRole as Role
+  }
+  return side
 }
 
 const str = (v: unknown, max: number, fallback = '') => (typeof v === 'string' ? v.slice(0, max) : fallback)

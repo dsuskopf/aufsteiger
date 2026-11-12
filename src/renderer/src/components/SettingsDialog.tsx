@@ -103,6 +103,15 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
               </span>
               <input type="checkbox" className="switch" checked={s.fingerDraws} onChange={(e) => update({ fingerDraws: e.target.checked })} />
             </label>
+            <label className="setting-row">
+              <span className="grow">
+                Aufstellungsregeln
+                <span className="caption block">
+                  1 Steller + 1 Diagonal oder 2 Steller, 2 Mittelblocker, 2 Außen. Der Libero spielt nur im Hinterfeld und ersetzt dort einen beliebigen Spieler. Aus: freie Aufstellung.
+                </span>
+              </span>
+              <input type="checkbox" className="switch" checked={s.lineupRules} onChange={(e) => update({ lineupRules: e.target.checked })} />
+            </label>
           </section>
         </div>
       </div>

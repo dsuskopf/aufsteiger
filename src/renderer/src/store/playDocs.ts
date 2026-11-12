@@ -4,6 +4,7 @@ import { useUi } from './settingsStore'
 import { useTeams } from './teamsStore'
 import { useSettings } from './appSettings'
 import { usePlayback } from './playbackStore'
+import { inferSlots } from '@renderer/core/lineup/lineup'
 
 /** Aktuellen Spielzug als speicherbares Dokument (Teams als Referenz + Kopie) */
 export function currentDoc(meta: { id: string; code: string; title: string; createdAt: string }): PlayDoc {
@@ -51,7 +52,11 @@ export function openDoc(doc: PlayDoc): void {
     const snap = doc.sides[s].teamSnapshot
     if (doc.sides[s].teamId && snap && !teams.teams.some((t) => t.id === doc.sides[s].teamId)) teams.restoreTeam(snap)
   }
-  const strip = (s: CourtSide) => ({ teamId: doc.sides[s].teamId, players: doc.sides[s].players })
+  // Spielzug-Seite ohne Team-Kopie; ältere Spielzüge bekommen ihre Positionen 1–6 aus der Lage
+  const strip = (s: CourtSide) => {
+    const { teamSnapshot: _snap, ...side } = doc.sides[s]
+    return { ...side, players: inferSlots(side.players, s) }
+  }
   usePlayback.getState().pause()
   usePlayback.setState({ t: 0 })
   const ui = useUi.getState()

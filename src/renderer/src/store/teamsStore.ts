@@ -1,6 +1,6 @@
 import { create } from 'zustand'
-import type { Player, Role, Team } from '@shared/types'
-import { clampNumber } from '@shared/validate'
+import { PLAYER_HEIGHT, type Player, type Role, type Team } from '@shared/types'
+import { clampHeight, clampNumber } from '@shared/validate'
 import {
   DEFAULT_LIBERO_COLOR,
   DEFAULT_TEAM_COLOR,
@@ -30,7 +30,13 @@ interface TeamsState {
 const newId = () => crypto.randomUUID()
 
 function exampleTeam(): Team {
-  const p = (name: string, number: number, ...positions: Role[]): Player => ({ id: newId(), name, number, positions })
+  const p = (name: string, number: number, ...positions: Role[]): Player => ({
+    id: newId(),
+    name,
+    number,
+    positions,
+    height: PLAYER_HEIGHT.default
+  })
   return {
     id: newId(),
     name: 'Beispielteam',
@@ -107,7 +113,7 @@ export const useTeams = create<TeamsState>((set, get) => {
           name: name ?? `Team ${teams.length + 1}`,
           color,
           liberoColor: pairedLibero(color) ?? DEFAULT_LIBERO_COLOR,
-          players: [{ id: playerId, name: '', number: 1, positions: [] }]
+          players: [{ id: playerId, name: '', number: 1, positions: [], height: PLAYER_HEIGHT.default }]
         }
         ]
       })
@@ -125,7 +131,7 @@ export const useTeams = create<TeamsState>((set, get) => {
         const used = new Set(t.players.map((p) => p.number))
         let number = 1
         while (used.has(number) && number < 99) number++
-        return { ...t, players: [...t.players, { id, name: '', number, positions: [] }] }
+        return { ...t, players: [...t.players, { id, name: '', number, positions: [], height: PLAYER_HEIGHT.default }] }
       })
       return id
     },
@@ -133,7 +139,8 @@ export const useTeams = create<TeamsState>((set, get) => {
       mapPlayer(teamId, playerId, (p) => ({
         ...p,
         ...patch,
-        ...(patch.number !== undefined ? { number: clampNumber(patch.number) } : {})
+        ...(patch.number !== undefined ? { number: clampNumber(patch.number) } : {}),
+        ...(patch.height !== undefined ? { height: clampHeight(patch.height) } : {})
       })),
     togglePosition: (teamId, playerId, role) =>
       mapPlayer(teamId, playerId, (p) => ({

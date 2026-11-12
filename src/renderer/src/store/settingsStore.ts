@@ -3,21 +3,26 @@ import type { CourtSide, NetPresetId } from '@shared/types'
 import type { PxRect } from '@renderer/core/geometry/transform'
 import { NET_PRESETS, clampNetHeight, presetForHeight } from '@renderer/core/geometry/court'
 
-/** split = Draufsicht (groß) + Netzansicht (klein) */
-export type ViewMode = 'split' | 'top' | 'net' | '3d'
+/** 2D = eine große Ansicht + die andere als Pop-up (Bild-im-Bild); 3D = 3D-Ansicht */
+export type ViewMode = '2d' | '3d'
+/** Welche 2D-Ansicht groß ist; die andere erscheint im Pop-up */
+export type Main2D = 'top' | 'net'
 
 interface UiState {
   viewMode: ViewMode
+  main2D: Main2D
+  /** Große Ansicht und Pop-up tauschen */
+  swapMain2D: () => void
   /** Netzansicht: von welcher Feldseite man aufs Netz schaut */
   netViewFrom: CourtSide
   /** Netzansicht: Spieler einblenden */
   netShowPlayers: boolean
   toggleNetViewFrom: () => void
   setNetShowPlayers: (show: boolean) => void
-  /** „Beide“: Netz-Bild-im-Bild eingeklappt (Draufsicht nutzt dann die volle Fläche) */
+  /** 2D: Pop-up eingeklappt (die große Ansicht nutzt dann die volle Fläche) */
   netPipCollapsed: boolean
   setNetPipCollapsed: (collapsed: boolean) => void
-  /** Lage und Größe des Netz-Bild-im-Bild (px im Ansichtsbereich); null = Standard unten rechts */
+  /** Lage und Größe des Pop-ups (px im Ansichtsbereich); null = Standard unten rechts */
   netPipRect: PxRect | null
   setNetPipRect: (r: PxRect | null) => void
   netPreset: NetPresetId
@@ -36,7 +41,9 @@ interface UiState {
 
 /** Phase 1: Anzeige- und Netz-Einstellungen. Persistenz folgt mit dem Settings-IPC. */
 export const useUi = create<UiState>((set) => ({
-  viewMode: 'split',
+  viewMode: '2d',
+  main2D: 'top',
+  swapMain2D: () => set((s) => ({ main2D: s.main2D === 'top' ? 'net' : 'top' })),
   netViewFrom: 'A',
   // Spieler in der Netzansicht standardmäßig ausgeblendet
   netShowPlayers: false,

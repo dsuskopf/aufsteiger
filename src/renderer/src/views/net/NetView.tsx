@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react'
 import { Circle, Group, Layer, Line, Rect, Stage, Text } from 'react-konva'
+import { HEAD_DIAMETER } from '@shared/types'
 import { COURT } from '@renderer/core/geometry/court'
 import { applyViewNet, isNearSide, netToPx, type NetViewport } from '@renderer/core/geometry/transform'
 import { COLORS } from '@renderer/theme/colors'
@@ -7,6 +8,7 @@ import { useElementSize } from '@renderer/components/useElementSize'
 import { useZoomPan } from '@renderer/components/useZoomPan'
 import { ViewControls } from '@renderer/components/ViewControls'
 import { Icon } from '@renderer/components/Icon'
+import { PipBar } from '@renderer/components/PipBar'
 import { useUi } from '@renderer/store/settingsStore'
 import { useCourtPlayers, type CourtPlayerView } from '@renderer/store/selectors'
 
@@ -18,10 +20,11 @@ const PAD_X = 16
 const PAD_T = 44
 const PAD_B = 28
 /** Kompakt (Bild-im-Bild): weniger Rand, die Bedienleiste liegt unten über dem Boden */
-const PAD_T_COMPACT = 30
-const PAD_B_COMPACT = 14
+const PAD_T_COMPACT = 52
+const PAD_B_COMPACT = 12
+/** Kompakt: sichtbare Höhe, an die das Netz angepasst wird (Netz, Antennen und typische Flugkurven) */
+const Z_COMPACT = 8
 
-const BODY_HEIGHT = 1.85
 const BODY_WIDTH = 0.5
 
 /**
@@ -37,16 +40,16 @@ export function NetView({ compact = false }: { compact?: boolean }) {
   const toggleFrom = useUi((s) => s.toggleNetViewFrom)
   const showPlayers = useUi((s) => s.netShowPlayers)
   const setShowPlayers = useUi((s) => s.setNetShowPlayers)
-  const setViewMode = useUi((s) => s.setViewMode)
-  const setPipCollapsed = useUi((s) => s.setNetPipCollapsed)
   const players = useCourtPlayers()
 
   // Basis: die Breite füllt die Fläche; mehr als 25 m Höhe sind nie sichtbar
   const padT = compact ? PAD_T_COMPACT : PAD_T
   const padB = compact ? PAD_B_COMPACT : PAD_B
   const widthFit = (size.width - 2 * PAD_X) / (2 * HALF_W)
-  const heightFit = (size.height - padT - padB) / Z_MAX
-  const scale = Math.max(0.0001, widthFit, heightFit)
+  // Vollansicht: Breite füllt, höchstens 25 m Höhe. Kompakt: Netz passt immer ganz ins Fenster (Breite und 8 m Höhe).
+  const scale = compact
+    ? Math.max(0.0001, Math.min(widthFit, (size.height - padT - padB) / Z_COMPACT))
+    : Math.max(0.0001, widthFit, (size.height - padT - padB) / Z_MAX)
   const base: NetViewport = { scale, originX: size.width / 2, groundY: size.height - padB, from }
   const content = {
     x0: base.originX - HALF_W * scale - PAD_X,
@@ -58,7 +61,9 @@ export function NetView({ compact = false }: { compact?: boolean }) {
     size,
     content,
     // Button-Zoom am Boden unter der Mitte, damit Boden und Netz im Bild bleiben
-    zoomAnchor: { x: size.width / 2, y: size.height - padB }
+    zoomAnchor: { x: size.width / 2, y: size.height - padB },
+    // Im Bild-im-Bild feste Ansicht: kein Zoom, kein Verschieben
+    enabled: !compact
   })
   const vp = applyViewNet(base, view)
 
@@ -86,8 +91,8 @@ export function NetView({ compact = false }: { compact?: boolean }) {
         )}
       </div>
       {compact ? (
-        /* Kompakte Leiste im Bild-im-Bild: Spieler, Blickseite, Vergrößern */
-        <div className="pip-bar">
+        /* Kompakte Leiste im Pop-up: Spieler, Blickseite, Tauschen, Minimieren */
+        <PipBar>
           <label className="pip-check">
             <input type="checkbox" checked={showPlayers} onChange={(e) => setShowPlayers(e.target.checked)} />
             Spieler
@@ -100,23 +105,7 @@ export function NetView({ compact = false }: { compact?: boolean }) {
           >
             <Icon name="flip" />
           </button>
-          <button
-            className="icon-only"
-            title="Netzansicht vergrößern"
-            aria-label="Netzansicht vergrößern"
-            onClick={() => setViewMode('net')}
-          >
-            <Icon name="expand" />
-          </button>
-          <button
-            className="icon-only"
-            title="Netzansicht einklappen"
-            aria-label="Netzansicht einklappen"
-            onClick={() => setPipCollapsed(true)}
-          >
-            <Icon name="minus" />
-          </button>
-        </div>
+        </PipBar>
       ) : (
         <>
       <label className="pane-check">
@@ -216,13 +205,18 @@ function Net({ vp, netHeight }: { vp: NetViewport; netHeight: number }) {
   )
 }
 
-/** Spieler als Säule in Trikotfarbe an seiner Breitenposition, Schild mit Kürzel und Nummer über dem Kopf */
+/**
+ * Spieler als Säule in Trikotfarbe an seiner Breitenposition, der Kreis mit Kürzel und Nummer ist der Kopf.
+ * Körper + Kopf ergeben zusammen genau die Körpergröße.
+ */
 function PlayerFigure({ vp, p, dim = false }: { vp: NetViewport; p: CourtPlayerView; dim?: boolean }) {
   const s = vp.scale
   const foot = netToPx(vp, p.y, 0)
   const w = BODY_WIDTH * s
-  const h = BODY_HEIGHT * s
-  const r = Math.max(12, 0.3 * s)
+  const headR = (HEAD_DIAMETER / 2) * s
+  const h = Math.max(0.2, p.height - HEAD_DIAMETER) * s
+  // Der Kopf wächst nur für die Lesbarkeit über die echte Größe hinaus (min. 12 px Radius)
+  const r = Math.max(12, headR)
   return (
     <Group opacity={dim ? 0.4 : 1}>
       <Rect
@@ -235,9 +229,9 @@ function PlayerFigure({ vp, p, dim = false }: { vp: NetViewport; p: CourtPlayerV
         stroke={p.jersey.stroke}
         strokeWidth={1.5}
       />
-      <Circle x={foot.px} y={foot.py - h - r - 4} radius={r} fill={p.jersey.fill} stroke={p.jersey.stroke} strokeWidth={2} />
-      <Text x={foot.px - r} y={foot.py - h - r - 4 - r * 0.55} width={2 * r} align="center" text={p.role} fontSize={r * 0.62} fontStyle="bold" fill={p.jersey.text} />
-      <Text x={foot.px - r} y={foot.py - h - r - 4 + r * 0.1} width={2 * r} align="center" text={String(p.number)} fontSize={r * 0.5} fill={p.jersey.text} />
+      <Circle x={foot.px} y={foot.py - h - r} radius={r} fill={p.jersey.fill} stroke={p.jersey.stroke} strokeWidth={2} />
+      <Text x={foot.px - r} y={foot.py - h - r - r * 0.55} width={2 * r} align="center" text={p.role} fontSize={r * 0.62} fontStyle="bold" fill={p.jersey.text} />
+      <Text x={foot.px - r} y={foot.py - h - r + r * 0.1} width={2 * r} align="center" text={String(p.number)} fontSize={r * 0.5} fill={p.jersey.text} />
     </Group>
   )
 }

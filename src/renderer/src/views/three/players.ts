@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import type { CourtSide, Role } from '@shared/types'
+import { HEAD_DIAMETER, type CourtSide, type Role } from '@shared/types'
 import type { JerseyStyle } from '@shared/teamColors'
 import { worldToThree } from '@renderer/core/geometry/transform'
 
@@ -9,6 +9,8 @@ export interface PlayerVisual {
   role: Role
   number: number
   jersey: JerseyStyle
+  /** Körpergröße in Metern inkl. Kopf */
+  height: number
 }
 
 /**
@@ -21,13 +23,17 @@ export interface PlayerMeshFactory {
   dispose(obj: THREE.Object3D): void
 }
 
-const BODY_HEIGHT = 1.85
 const BODY_RADIUS = 0.25
 
+/**
+ * Zylinder als Körper plus Schild als Kopf; zusammen genau so hoch wie die Körpergröße.
+ * Der Zylinder wird pro Spieler in der Höhe skaliert (eine gemeinsame Einheits-Geometrie).
+ */
 export class CylinderPlayerFactory implements PlayerMeshFactory {
-  private geometry = new THREE.CylinderGeometry(BODY_RADIUS, BODY_RADIUS, BODY_HEIGHT, 24)
+  private geometry = new THREE.CylinderGeometry(BODY_RADIUS, BODY_RADIUS, 1, 24)
 
   create(v: PlayerVisual): THREE.Object3D {
+    const bodyHeight = Math.max(0.2, v.height - HEAD_DIAMETER)
     const colors = v.jersey
     const g = new THREE.Group()
     const body = new THREE.Mesh(
@@ -39,15 +45,17 @@ export class CylinderPlayerFactory implements PlayerMeshFactory {
         roughness: 0.7
       })
     )
-    body.position.y = BODY_HEIGHT / 2
+    body.scale.y = bodyHeight
+    body.position.y = bodyHeight / 2
     g.add(body)
 
     // Schild über dem Kopf mit Kürzel und Nummer, immer zur Kamera gedreht
     const label = new THREE.Sprite(
       new THREE.SpriteMaterial({ map: labelTexture(v), transparent: true, depthWrite: false })
     )
-    label.scale.set(0.62, 0.62, 1)
-    label.position.y = BODY_HEIGHT + 0.42
+    // Schild = Kopf: Durchmesser HEAD_DIAMETER, sitzt direkt auf dem Körper
+    label.scale.set(HEAD_DIAMETER, HEAD_DIAMETER, 1)
+    label.position.y = bodyHeight + HEAD_DIAMETER / 2
     g.add(label)
     return g
   }
@@ -95,5 +103,5 @@ export function placePlayer(obj: THREE.Object3D, x: number, y: number): void {
 
 /** Kennung, ob sich das Aussehen geändert hat (dann neu erzeugen statt nur verschieben). */
 export function visualKey(v: PlayerVisual): string {
-  return `${v.side}|${v.role}|${v.number}|${v.jersey.fill}`
+  return `${v.side}|${v.role}|${v.number}|${v.jersey.fill}|${v.height}`
 }

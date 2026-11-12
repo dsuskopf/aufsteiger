@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ROLES, ROLE_LABELS, type Player, type Team } from '@shared/types'
+import { PLAYER_HEIGHT, ROLES, ROLE_LABELS, type Player, type Team } from '@shared/types'
 import { JERSEY_COLORS, LIBERO_COLORS, jerseyFor, textOn } from '@shared/teamColors'
 import { useTeams } from '@renderer/store/teamsStore'
 import { teamStyle } from '@renderer/theme/teamStyle'
@@ -157,6 +157,7 @@ function TeamEditor({
           <div className="player-row head" role="row">
             <span role="columnheader">Nr.</span>
             <span role="columnheader">Name</span>
+            <span role="columnheader">Größe</span>
             <span role="columnheader">Positionen</span>
             <span />
           </div>
@@ -258,6 +259,7 @@ function PlayerRow({
         placeholder="Name"
         onChange={(e) => updatePlayer(teamId, player.id, { name: e.target.value })}
       />
+      <HeightInput value={player.height} onCommit={(h) => updatePlayer(teamId, player.id, { height: h })} />
       <div className="roles" role="group" aria-label="Positionen">
         {ROLES.map((r) => {
           const on = player.positions.includes(r)
@@ -283,6 +285,31 @@ function PlayerRow({
         onConfirm={() => deletePlayer(teamId, player.id)}
       />
     </div>
+  )
+}
+
+/** Körpergröße in Metern (z. B. „1,75“), mindestens 1,0 m; übernommen bei Enter oder Verlassen. */
+function HeightInput({ value, onCommit }: { value: number; onCommit: (h: number) => void }) {
+  const fmt = (v: number) => v.toFixed(2).replace('.', ',')
+  const [draft, setDraft] = useState(fmt(value))
+  useEffect(() => setDraft(fmt(value)), [value])
+  const n = Number(draft.trim().replace(',', '.'))
+  const valid = draft.trim() !== '' && Number.isFinite(n) && n >= PLAYER_HEIGHT.min && n <= PLAYER_HEIGHT.max
+  const commit = () => {
+    if (valid) onCommit(n)
+    else setDraft(fmt(value))
+  }
+  return (
+    <input
+      className={`field height ${valid ? '' : 'invalid'}`}
+      inputMode="decimal"
+      aria-label={`Körpergröße in Metern (${fmt(PLAYER_HEIGHT.min)}–${fmt(PLAYER_HEIGHT.max)})`}
+      title="Körpergröße in Metern, inkl. Kopf"
+      value={draft}
+      onChange={(e) => setDraft(e.target.value.replace(/[^0-9.,]/g, '').slice(0, 4))}
+      onBlur={commit}
+      onKeyDown={(e) => e.key === 'Enter' && commit()}
+    />
   )
 }
 

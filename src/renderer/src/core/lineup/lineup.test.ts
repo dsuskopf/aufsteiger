@@ -6,7 +6,8 @@ const pl = (id: string, number: number, ...positions: Player['positions']): Play
   id,
   name: id,
   number,
-  positions
+  positions,
+  height: 1.75
 })
 
 const team: Team = {

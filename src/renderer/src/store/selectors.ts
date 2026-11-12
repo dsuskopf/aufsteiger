@@ -16,6 +16,8 @@ export interface CourtPlayerView {
   y: number
   /** Trikot: Libero automatisch in der Libero-Farbe, sonst Teamfarbe */
   jersey: JerseyStyle
+  /** Körpergröße in Metern (inkl. Kopf) */
+  height: number
 }
 
 /** Spieler beider Seiten mit Nummer und Name aus dem Team. */
@@ -39,7 +41,8 @@ export function useCourtPlayers(): CourtPlayerView[] {
           name: p.name,
           x: c.x,
           y: c.y,
-          jersey: jerseyFor(team, c.role)
+          jersey: jerseyFor(team, c.role),
+          height: p.height
         })
       }
     }

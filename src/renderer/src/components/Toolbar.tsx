@@ -5,9 +5,7 @@ import { useUi, type ViewMode } from '@renderer/store/settingsStore'
 import { Icon } from './Icon'
 
 const VIEW_MODES: { id: ViewMode; label: string; title: string }[] = [
-  { id: 'split', label: 'Beide', title: 'Draufsicht groß, Netzansicht daneben' },
-  { id: 'top', label: 'Draufsicht', title: 'Nur Draufsicht' },
-  { id: 'net', label: 'Netz', title: 'Frontaler Blick aufs Netz' },
+  { id: '2d', label: '2D', title: 'Draufsicht und Netzansicht (eine groß, eine als Pop-up)' },
   { id: '3d', label: '3D', title: '3D-Ansicht' }
 ]
 

@@ -25,11 +25,14 @@ export function clampPipRect(r: PxRect, viewsW: number, viewsH: number): PxRect 
   return { x0, y0, x1: x0 + w, y1: y0 + h }
 }
 
-type Mode = 'move' | 'resize-tl' | 'resize-br'
+/** Verschieben oder Größe ändern an einer Kante/Ecke (n = oben, s = unten, w = links, e = rechts) */
+type Edge = 'n' | 's' | 'w' | 'e' | 'nw' | 'ne' | 'sw' | 'se'
+type Mode = 'move' | Edge
+const EDGES: Edge[] = ['n', 's', 'w', 'e', 'nw', 'ne', 'sw', 'se']
 
 /**
  * Freies Bild-im-Bild-Fenster über den Ansichten: an der Titelleiste verschiebbar,
- * an den Ecken (oben links, unten rechts) in der Größe änderbar. Lage und Größe merkt sich der Store
+ * an allen vier Kanten und Ecken in der Größe änderbar. Lage und Größe merkt sich der Store
  * erst beim Loslassen, damit die Draufsicht nicht während des Ziehens neu ausrichtet.
  */
 export function PipWindow({ title, children }: { title: string; children: ReactNode }) {
@@ -69,20 +72,13 @@ export function PipWindow({ title, children }: { title: string; children: ReactN
       const dy = ev.clientY - sy
       let next: PxRect
       if (mode === 'move') next = { x0: r0.x0 + dx, y0: r0.y0 + dy, x1: r0.x1 + dx, y1: r0.y1 + dy }
-      else if (mode === 'resize-tl')
-        next = {
-          x0: Math.min(r0.x0 + dx, r0.x1 - MIN_W),
-          y0: Math.min(r0.y0 + dy, r0.y1 - MIN_H),
-          x1: r0.x1,
-          y1: r0.y1
-        }
-      else
-        next = {
-          x0: r0.x0,
-          y0: r0.y0,
-          x1: Math.max(r0.x1 + dx, r0.x0 + MIN_W),
-          y1: Math.max(r0.y1 + dy, r0.y0 + MIN_H)
-        }
+      else {
+        next = { ...r0 }
+        if (mode.includes('w')) next.x0 = Math.min(r0.x0 + dx, r0.x1 - MIN_W)
+        if (mode.includes('e')) next.x1 = Math.max(r0.x1 + dx, r0.x0 + MIN_W)
+        if (mode.includes('n')) next.y0 = Math.min(r0.y0 + dy, r0.y1 - MIN_H)
+        if (mode.includes('s')) next.y1 = Math.max(r0.y1 + dy, r0.y0 + MIN_H)
+      }
       last = clampPipRect(next, views.w, views.h)
       setLive(last)
     }
@@ -121,8 +117,9 @@ export function PipWindow({ title, children }: { title: string; children: ReactN
         {title}
       </div>
       {children}
-      <span className="pip-resize tl" onPointerDown={start('resize-tl')} title="Größe ändern" aria-hidden="true" />
-      <span className="pip-resize br" onPointerDown={start('resize-br')} title="Größe ändern" aria-hidden="true" />
+      {EDGES.map((edge) => (
+        <span key={edge} className={`pip-resize ${edge}`} onPointerDown={start(edge)} title="Größe ändern" aria-hidden="true" />
+      ))}
     </section>
   )
 }

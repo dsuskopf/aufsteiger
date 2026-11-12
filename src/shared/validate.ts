@@ -1,4 +1,4 @@
-import { ROLES, type Player, type Role, type Team } from './types'
+import { PLAYER_HEIGHT, ROLES, type Player, type Role, type Team } from './types'
 import { DEFAULT_LIBERO_COLOR, DEFAULT_TEAM_COLOR, isHexColor, pairedLibero } from './teamColors'
 
 /** Alte Rollenkürzel (bis Phase 2) auf die neuen abbilden */
@@ -23,7 +23,8 @@ export function sanitizeTeams(raw: unknown): Team[] {
         id: p.id,
         name: typeof p.name === 'string' ? p.name.slice(0, 80) : '',
         number: clampNumber(p.number),
-        positions: [...new Set(positions)]
+        positions: [...new Set(positions)],
+        height: clampHeight(p.height)
       })
     }
     const color = isHexColor(t.color) ? t.color.toLowerCase() : DEFAULT_TEAM_COLOR
@@ -37,6 +38,13 @@ export function sanitizeTeams(raw: unknown): Team[] {
     })
   }
   return teams
+}
+
+/** Körpergröße auf 1,0–2,3 m begrenzen, auf Zentimeter runden; ohne Angabe 1,75 m */
+export function clampHeight(h: unknown): number {
+  const v = Number(h)
+  if (h === undefined || h === null || h === '' || !Number.isFinite(v)) return PLAYER_HEIGHT.default
+  return Math.round(Math.min(PLAYER_HEIGHT.max, Math.max(PLAYER_HEIGHT.min, v)) * 100) / 100
 }
 
 export function clampNumber(n: unknown): number {

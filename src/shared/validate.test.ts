@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { sanitizeTeams } from './validate'
+import { clampHeight, sanitizeTeams } from './validate'
 
 describe('sanitizeTeams', () => {
   it('bereinigt fehlerhafte Daten', () => {
@@ -15,7 +15,7 @@ describe('sanitizeTeams', () => {
       ]
     })
     expect(teams).toHaveLength(1)
-    expect(teams[0].players).toEqual([{ id: 'p', name: 'X', number: 99, positions: ['S', 'L'] }])
+    expect(teams[0].players).toEqual([{ id: 'p', name: 'X', number: 99, positions: ['S', 'L'], height: 1.75 }])
     expect(teams[0].color).toBe('#1f4e79')
     expect(teams[0].liberoColor).toBe('#ef8a52')
   })
@@ -34,6 +34,14 @@ describe('sanitizeTeams', () => {
     expect(t.color).toBe('#8e2438')
     // ungültige Libero-Farbe → Partner von Bordeaux
     expect(t.liberoColor).toBe('#e8c547')
+  })
+
+  it('Körpergröße: Standard 1,75 m, mindestens 1,0 m', () => {
+    expect(clampHeight(undefined)).toBe(1.75)
+    expect(clampHeight('abc')).toBe(1.75)
+    expect(clampHeight(0.5)).toBe(1)
+    expect(clampHeight(3)).toBe(2.3)
+    expect(clampHeight(1.874)).toBe(1.87)
   })
 
   it('leere Eingabe', () => {

@@ -21,6 +21,8 @@ interface Options {
   zoomAnchor?: { x: number; y: number }
   /** Bereich, in dem der Inhalt zentriert/begrenzt wird (Standard: ganze Fläche) */
   frame?: PxRect
+  /** false = feste Ansicht ohne Zoom/Verschieben (z. B. Netz-Bild-im-Bild) */
+  enabled?: boolean
   /** true = diese Berührung gehört einem Objekt (z. B. Spieler ziehen), nicht der Ansicht. */
   shouldIgnore?: (e: PointerEvent) => boolean
 }
@@ -34,7 +36,7 @@ interface Options {
  * - Buttons: weicher, animierter Zoom zur Mitte bzw. zurück zur Startansicht.
  */
 export function useZoomPan(hostRef: RefObject<HTMLElement | null>, opts: Options) {
-  const { size, content, initial = IDENTITY_VIEW, resetKey, zoomAnchor, shouldIgnore, frame } = opts
+  const { size, content, initial = IDENTITY_VIEW, resetKey, zoomAnchor, shouldIgnore, frame, enabled = true } = opts
   const [view, setViewState] = useState<View2D>(IDENTITY_VIEW)
   const viewRef = useRef(view)
   const goalRef = useRef<View2D | null>(null)
@@ -112,7 +114,7 @@ export function useZoomPan(hostRef: RefObject<HTMLElement | null>, opts: Options
   // Zeiger- und Rad-Gesten
   useEffect(() => {
     const el = hostRef.current
-    if (!el) return
+    if (!el || !enabled) return
     const pointers = new Map<number, { x: number; y: number }>()
     let pinch: { dist: number; mx: number; my: number } | null = null
 
@@ -186,12 +188,12 @@ export function useZoomPan(hostRef: RefObject<HTMLElement | null>, opts: Options
       el.removeEventListener('wheel', onWheel)
       el.removeEventListener('contextmenu', onContext)
     }
-  }, [hostRef, setView, stopAnimation])
+  }, [hostRef, setView, stopAnimation, enabled])
 
   useEffect(() => () => cancelRef.current?.(), [])
 
   return {
-    view,
+    view: enabled ? view : IDENTITY_VIEW,
     zoomIn: () => zoomBy(ZOOM_STEP),
     zoomOut: () => zoomBy(1 / ZOOM_STEP),
     reset

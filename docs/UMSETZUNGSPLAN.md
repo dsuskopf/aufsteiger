@@ -1,5 +1,9 @@
 # Umsetzungsplan: Volleyball-Spielzugplaner
 
+> **Stand 2026-11-12:** Alle Phasen 1–7 umgesetzt. Installer: `npm run dist` → `dist\Volleyball-Playbook-Setup-0.1.0.exe` (x64 + ARM64).
+> Abweichungen vom Plan: Seitenansicht durch Netzansicht ersetzt (Höhen-Griffe dort + Flugbahn-Karte), 2D = große Ansicht + Pop-up,
+> pro Spielzug höchstens eine Annahme und ein Zuspiel, Bibliothek liest die Dateien direkt (kein index.json), PDF per printToPDF statt jsPDF.
+
 ## Context
 Das Repo enthält bisher nur `SPEZIFIKATION.md`. Gebaut wird eine Offline-Desktop-App für Windows 11 (Surface Pro 9: Stift, Touch, Maus). Damit plant man Volleyball-Spielzüge, hier Annahme und Zuspiel, mit physikalisch korrekten Parabeln. Es gibt eine Draufsicht und eine Netzansicht in 2D, eine 3D-Ansicht, eine Animation, eine Bibliothek und einen Export.
 

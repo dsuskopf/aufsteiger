@@ -15,6 +15,9 @@ import { Playbar } from './components/Playbar'
 import { SettingsDialog } from './components/SettingsDialog'
 import { useSettings } from './store/appSettings'
 import { usePlayback } from './store/playbackStore'
+import { SaveDialog } from './components/SaveDialog'
+import { Library } from './components/Library'
+import './store/playDocs'
 
 const HINTS = {
   annahme: 'Annahme: Klick Start, Klick Ende – oder in einem Zug ziehen · Esc bricht ab',
@@ -26,7 +29,7 @@ export function App() {
   const viewMode = useUi((s) => s.viewMode)
   const { lineupOpen, teamsOpen, setLineupOpen, setTeamsOpen, netViewFrom, netPipCollapsed, setNetPipCollapsed } = useUi()
 
-  const { settingsOpen, setSettingsOpen, tool } = useUi()
+  const { settingsOpen, setSettingsOpen, tool, dialog, setDialog } = useUi()
   const hasAnnahme = usePlay((s) => !!s.trajectories.annahme)
 
   // Einstellungen laden und als Startwerte übernehmen (Netzhöhe, Schleife, Tempo)
@@ -118,6 +121,8 @@ export function App() {
       </main>
       <Playbar />
       {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} />}
+      {dialog === 'save' && <SaveDialog onClose={() => setDialog(null)} />}
+      {dialog === 'library' && <Library onClose={() => setDialog(null)} />}
       {teamsOpen && (
         <TeamManager
           onClose={() => {

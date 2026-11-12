@@ -21,6 +21,8 @@ interface TeamsState {
   setTeamColor: (teamId: string, color: string) => void
   setLiberoColor: (teamId: string, color: string) => void
   deleteTeam: (teamId: string) => void
+  /** Team aus einem gespeicherten Spielzug wiederherstellen, falls es nicht mehr existiert */
+  restoreTeam: (team: Team) => void
   addPlayer: (teamId: string) => string
   updatePlayer: (teamId: string, playerId: string, patch: Partial<Omit<Player, 'id'>>) => void
   togglePosition: (teamId: string, playerId: string, role: Role) => void
@@ -124,6 +126,10 @@ export const useTeams = create<TeamsState>((set, get) => {
     setTeamColor: (teamId, color) => mapTeam(teamId, (t) => ({ ...t, color })),
     setLiberoColor: (teamId, liberoColor) => mapTeam(teamId, (t) => ({ ...t, liberoColor })),
     deleteTeam: (teamId) => mutate((teams) => teams.filter((t) => t.id !== teamId)),
+    restoreTeam: (team) => {
+      if (get().teams.some((t) => t.id === team.id)) return
+      mutate((teams) => [...teams, team])
+    },
 
     addPlayer: (teamId) => {
       const id = newId()

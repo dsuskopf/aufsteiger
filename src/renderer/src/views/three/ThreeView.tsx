@@ -9,6 +9,13 @@ import { ViewControls } from '@renderer/components/ViewControls'
 import { ZOOM_DURATION_MS, ZOOM_STEP, tween } from '@renderer/components/tween'
 import { useCourtPlayers } from '@renderer/store/selectors'
 import { CylinderPlayerFactory, placePlayer, visualKey, type PlayerMeshFactory } from './players'
+import { useVisibleTrajectories } from '@renderer/store/selectors'
+import { usePlay } from '@renderer/store/playStore'
+import { currentBall, usePlayback } from '@renderer/store/playbackStore'
+import { buildBall, buildTrajectories, placeBall } from './trajectories'
+
+/** Zeichenfläche der laufenden 3D-Ansicht (für den Video-Export) */
+export let activeThreeCanvas: HTMLCanvasElement | null = null
 
 interface PlayerItems {
   group: THREE.Group
@@ -17,7 +24,7 @@ interface PlayerItems {
 }
 
 /**
- * 3D-Ansicht: Feld, Netz, Spieler (später Flugbahnen, Ball).
+ * 3D-Ansicht: Feld, Netz, Spieler, Flugbahnen und Ball.
  * Kamera per OrbitControls, beschränkt auf die obere Halbkugel.
  */
 export function ThreeView() {
@@ -25,12 +32,17 @@ export function ThreeView() {
   const sceneRef = useRef<{
     scene: THREE.Scene
     net: THREE.Group | null
+    trajectories: THREE.Group | null
+    ball: THREE.Group
     camera: THREE.PerspectiveCamera
     controls: OrbitControls
   } | null>(null)
   const netHeight = useUi((s) => s.netHeight)
   const players = useCourtPlayers()
   const playersRef = useRef<PlayerItems | null>(null)
+  const trajectories = useVisibleTrajectories()
+  const showAfterHit = usePlay((s) => s.display.showAfterHit)
+  const selected = usePlay((s) => s.selected)
 
   useEffect(() => {
     const host = hostRef.current!
@@ -38,6 +50,7 @@ export function ThreeView() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.setClearColor(COLORS.bgDeep)
     host.appendChild(renderer.domElement)
+    activeThreeCanvas = renderer.domElement
 
     const scene = new THREE.Scene()
     scene.fog = new THREE.Fog(COLORS.bgDeep, 35, 80)
@@ -50,6 +63,8 @@ export function ThreeView() {
     playerGroup.name = 'players'
     scene.add(playerGroup)
     playersRef.current = { group: playerGroup, factory: new CylinderPlayerFactory(), items: new Map() }
+    const ball = buildBall()
+    scene.add(ball)
 
     const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200)
     camera.position.copy(DEFAULT_CAMERA)
@@ -75,7 +90,13 @@ export function ThreeView() {
     })
     controls.update()
 
-    sceneRef.current = { scene, net: null, camera, controls }
+    sceneRef.current = { scene, net: null, trajectories: null, ball, camera, controls }
+
+    // Ball folgt der Uhr ohne React-Neuzeichnung
+    const updateBall = () => placeBall(ball, currentBall())
+    updateBall()
+    const unsubA = usePlayback.subscribe(updateBall)
+    const unsubB = usePlay.subscribe(updateBall)
 
     const resize = () => {
       const w = Math.max(1, host.clientWidth)
@@ -96,6 +117,9 @@ export function ThreeView() {
     })
 
     return () => {
+      unsubA()
+      unsubB()
+      if (activeThreeCanvas === renderer.domElement) activeThreeCanvas = null
       const pr = playersRef.current
       if (pr) for (const { obj } of pr.items.values()) pr.factory.dispose(obj)
       playersRef.current = null
@@ -137,6 +161,18 @@ export function ThreeView() {
       pr.items.delete(key)
     }
   }, [players])
+
+  // Flugbahnen neu aufbauen, wenn sie sich ändern
+  useEffect(() => {
+    const ref = sceneRef.current
+    if (!ref) return
+    if (ref.trajectories) {
+      ref.scene.remove(ref.trajectories)
+      disposeObject(ref.trajectories)
+    }
+    ref.trajectories = buildTrajectories(trajectories, showAfterHit, selected)
+    ref.scene.add(ref.trajectories)
+  }, [trajectories, showAfterHit, selected])
 
   // Netz neu aufbauen, wenn sich die Netzhöhe ändert
   useEffect(() => {

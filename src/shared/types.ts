@@ -83,27 +83,94 @@ export interface Vec3 {
 }
 
 export type TrajectoryType = 'annahme' | 'zuspiel'
+export const TRAJECTORY_TYPES: readonly TrajectoryType[] = ['annahme', 'zuspiel']
+export const TRAJECTORY_LABELS: Record<TrajectoryType, string> = { annahme: 'Annahme', zuspiel: 'Zuspiel' }
 
+/**
+ * Gespeicherte Flugbahn. In der Draufsicht eine Gerade von start nach end (= Schlagpunkt);
+ * Parabel, Geschwindigkeit und Dauer werden daraus berechnet (core/physics).
+ * Beim Zuspiel ist start an den Schlagpunkt der Annahme gekoppelt, sobald es eine Annahme gibt.
+ */
 export interface Trajectory {
-  type: TrajectoryType
   start: { x: number; y: number; h: number }
-  dir: { dx: number; dy: number }
+  end: { x: number; y: number }
   apexH: number
-  hitDist: number
   hitH: number
 }
+
+/** Anzeige-Optionen eines Spielzugs */
+export interface PlayDisplay {
+  showAnnahme: boolean
+  showZuspiel: boolean
+  /** Verlauf hinter dem Schlagpunkt gestrichelt bis zum Boden */
+  showAfterHit: boolean
+}
+
+export const DEFAULT_DISPLAY: PlayDisplay = { showAnnahme: true, showZuspiel: true, showAfterHit: false }
 
 export interface Settings {
   schemaVersion: number
   netPreset: NetPresetId
   netHeight: number
+  /** Hand des Stellers */
   defaultStartHZuspiel: number
   defaultStartHAnnahme: number
+  /** Ende der Annahme (Standard = Starthöhe Zuspiel) */
   defaultEndHAnnahme: number
+  /** Schlagpunkt des Angriffs (Ende des Zuspiels) */
   defaultHitH: number
+  /** Scheitel relativ zum Start */
   defaultApexOffsetZuspiel: number
   defaultApexOffsetAnnahme: number
   defaultLoop: boolean
   defaultSpeed: number
+  /** Finger zeichnet Flugbahnen auf leerem Feld (sonst nur Stift und Maus) */
   fingerDraws: boolean
+}
+
+export const DEFAULT_SETTINGS: Settings = {
+  schemaVersion: SCHEMA_VERSION,
+  netPreset: 'herren',
+  netHeight: 2.43,
+  defaultStartHZuspiel: 2.5,
+  defaultStartHAnnahme: 0.8,
+  defaultEndHAnnahme: 2.5,
+  defaultHitH: 3.0,
+  defaultApexOffsetZuspiel: 1,
+  defaultApexOffsetAnnahme: 1,
+  defaultLoop: true,
+  defaultSpeed: 1,
+  fingerDraws: false
+}
+
+/* ---------- Gespeicherter Spielzug ---------- */
+
+export interface PlaySideDoc extends PlaySide {
+  /** Kopie des Teams beim Speichern (falls es später gelöscht wird) */
+  teamSnapshot: Team | null
+}
+
+export interface PlayDoc {
+  schemaVersion: number
+  id: string
+  /** Kürzel, z. B. „AngrV1“ */
+  code: string
+  title: string
+  createdAt: string
+  updatedAt: string
+  sides: Record<CourtSide, PlaySideDoc>
+  trajectories: Partial<Record<TrajectoryType, Trajectory>>
+  netPreset: NetPresetId
+  netHeight: number
+  display: PlayDisplay
+  netViewFrom: CourtSide
+  netShowPlayers: boolean
+}
+
+/** Eintrag der Bibliothek */
+export interface PlaySummary {
+  id: string
+  code: string
+  title: string
+  updatedAt: string
 }

@@ -2,7 +2,10 @@ import { Circle, Layer, Line, Stage, Text } from 'react-konva'
 import { COURT, courtLines } from '@renderer/core/geometry/court'
 import { useEffect, useRef, useState } from 'react'
 import type Konva from 'konva'
-import { PlayersLayer, hitsPlayer } from './PlayersLayer'
+import { PlayersLayer, hitsDraggable } from './PlayersLayer'
+import { TrajectoryLayer } from './TrajectoryLayer'
+import { useDrawTrajectory } from './useDrawTrajectory'
+import { useSettings } from '@renderer/store/appSettings'
 import {
   applyViewTop,
   fitViewport,
@@ -18,8 +21,8 @@ import { Icon } from '@renderer/components/Icon'
 import { PipBar } from '@renderer/components/PipBar'
 import { useUi } from '@renderer/store/settingsStore'
 
-const WORLD_W = COURT.length + 2 * COURT.freeZone
-const WORLD_H = COURT.width + 2 * COURT.freeZone
+export const WORLD_W = COURT.length + 2 * COURT.freeZone
+export const WORLD_H = COURT.width + 2 * COURT.freeZone
 
 /**
  * Draufsicht: Feld 18 × 9 m, Netz bei x = 0, maßstabstreu.
@@ -29,6 +32,8 @@ export function TopView({ compact = false }: { compact?: boolean }) {
   const [ref, size] = useElementSize<HTMLDivElement>()
   const topTurns = useUi((s) => s.topTurns)
   const rotateTop = useUi((s) => s.rotateTop)
+  const tool = useUi((s) => s.tool)
+  const drawing = tool !== 'select'
 
   // Gerät hochkant → Feld hochkant (Ansichten stehen dann untereinander). Neu berechnet bei jeder Größenänderung.
   const autoTurns = window.innerHeight > window.innerWidth ? 1 : 0
@@ -56,8 +61,10 @@ export function TopView({ compact = false }: { compact?: boolean }) {
     content,
     // Im Pop-up feste Ansicht: kein Zoom, kein Verschieben (Spieler bleiben ziehbar)
     enabled: !compact,
-    // Finger auf einem Spieler zieht den Spieler, nicht die Ansicht
-    shouldIgnore: (e) => hitsPlayer(stageRef.current, e.clientX, e.clientY)
+    // Finger auf einem Spieler oder Griff zieht diesen, nicht die Ansicht; zeichnet der Finger, verschiebt er nicht
+    shouldIgnore: (e) =>
+      (e.pointerType === 'touch' && drawing && useSettings.getState().settings.fingerDraws) ||
+      (!drawing && hitsDraggable(stageRef.current, e.clientX, e.clientY))
   })
   // Beim Drehen den Zoom weich zurücksetzen
   const firstRef = useRef(true)
@@ -69,14 +76,16 @@ export function TopView({ compact = false }: { compact?: boolean }) {
     reset()
   }, [targetAngle])
   const vp = applyViewTop(base, view)
+  const preview = useDrawTrajectory(ref, vp, drawing ? tool : null)
 
   return (
     <>
-      <div className="canvas-host" ref={ref}>
+      <div className={`canvas-host ${drawing ? 'drawing' : ''}`} ref={ref}>
         {size.width > 0 && (
           <Stage ref={stageRef} width={size.width} height={size.height}>
             <CourtLayer vp={vp} />
-            <PlayersLayer vp={vp} />
+            <PlayersLayer vp={vp} interactive={!drawing} />
+            <TrajectoryLayer vp={vp} interactive={!drawing} preview={preview} />
           </Stage>
         )}
       </div>
@@ -127,7 +136,7 @@ function worldRect(vp: TopViewport, x0: number, y0: number, x1: number, y1: numb
   return { points: pts, closed: true }
 }
 
-function CourtLayer({ vp }: { vp: TopViewport }) {
+export function CourtLayer({ vp }: { vp: TopViewport }) {
   const P = (x: number, y: number) => {
     const p = worldToTop(vp, x, y)
     return [p.px, p.py]

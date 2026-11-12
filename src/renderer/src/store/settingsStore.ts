@@ -8,7 +8,17 @@ export type ViewMode = '2d' | '3d'
 /** Welche 2D-Ansicht groß ist; die andere erscheint im Pop-up */
 export type Main2D = 'top' | 'net'
 
+/** Werkzeug der Draufsicht: auswählen/ziehen oder eine Flugbahn zeichnen */
+export type Tool = 'select' | 'annahme' | 'zuspiel'
+
 interface UiState {
+  tool: Tool
+  setTool: (t: Tool) => void
+  settingsOpen: boolean
+  setSettingsOpen: (open: boolean) => void
+  /** Offenes Fenster: Bibliothek, Speichern-Dialog, Export */
+  dialog: 'library' | 'save' | 'export' | null
+  setDialog: (d: 'library' | 'save' | 'export' | null) => void
   viewMode: ViewMode
   main2D: Main2D
   /** Große Ansicht und Pop-up tauschen */
@@ -39,8 +49,14 @@ interface UiState {
   setNetHeight: (h: number) => void
 }
 
-/** Phase 1: Anzeige- und Netz-Einstellungen. Persistenz folgt mit dem Settings-IPC. */
+/** Anzeige-Zustand der Oberfläche (nicht dauerhaft gespeichert; dauerhafte Einstellungen: appSettings.ts). */
 export const useUi = create<UiState>((set) => ({
+  tool: 'select',
+  setTool: (tool) => set({ tool }),
+  settingsOpen: false,
+  setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
+  dialog: null,
+  setDialog: (dialog) => set({ dialog }),
   viewMode: '2d',
   main2D: 'top',
   swapMain2D: () => set((s) => ({ main2D: s.main2D === 'top' ? 'net' : 'top' })),

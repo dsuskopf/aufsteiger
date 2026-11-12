@@ -17,7 +17,7 @@ const RADIUS_M = 0.38
  * Spieler als Kreise mit Kürzel und Rückennummer, frei ziehbar mit Maus, Stift und Finger
  * (der Finger muss direkt auf dem Spieler aufsetzen; daneben verschiebt er die Ansicht).
  */
-export function PlayersLayer({ vp }: { vp: TopViewport }) {
+export function PlayersLayer({ vp, interactive = true }: { vp: TopViewport; interactive?: boolean }) {
   const players = useCourtPlayers()
   const movePlayer = usePlay((s) => s.movePlayer)
   const r = Math.max(MIN_RADIUS_PX, RADIUS_M * vp.scale)
@@ -32,7 +32,7 @@ export function PlayersLayer({ vp }: { vp: TopViewport }) {
   }
 
   return (
-    <Layer>
+    <Layer listening={interactive}>
       {players.map((p) => {
         const pos = worldToTop(vp, p.x, p.y)
         const colors = p.jersey
@@ -92,10 +92,10 @@ function setCursor(e: Konva.KonvaEventObject<MouseEvent>, cursor: string) {
   if (container) container.style.cursor = cursor
 }
 
-/** Liegt unter dem Zeiger ein Spieler? (für die Gestenerkennung der Ansicht) */
-export function hitsPlayer(stage: Konva.Stage | null, clientX: number, clientY: number): boolean {
+/** Liegt unter dem Zeiger ein ziehbares Objekt (Spieler oder Griff)? Für die Gestenerkennung der Ansicht. */
+export function hitsDraggable(stage: Konva.Stage | null, clientX: number, clientY: number): boolean {
   if (!stage) return false
   const rect = stage.container().getBoundingClientRect()
   const shape = stage.getIntersection({ x: clientX - rect.left, y: clientY - rect.top })
-  return !!shape?.findAncestor(`.${PLAYER_NODE_NAME}`)
+  return !!shape?.findAncestor(`.${PLAYER_NODE_NAME}, .handle`)
 }

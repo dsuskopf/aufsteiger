@@ -11,6 +11,10 @@ import { Icon } from '@renderer/components/Icon'
 import { PipBar } from '@renderer/components/PipBar'
 import { useUi } from '@renderer/store/settingsStore'
 import { useCourtPlayers, type CourtPlayerView } from '@renderer/store/selectors'
+import { useRef } from 'react'
+import type Konva from 'konva'
+import { NetTrajectories } from './NetTrajectories'
+import { hitsDraggable } from '../top/PlayersLayer'
 
 /** Sichtbare Breite: Feld plus Freizone (Pfosten stehen 1 m neben den Seitenlinien) */
 const HALF_W = COURT.halfWidth + COURT.freeZone
@@ -31,7 +35,7 @@ const BODY_WIDTH = 0.5
  * Netzansicht: flacher, maßstabstreuer Blick frontal aufs Netz aus dem Feld (Standard: von Seite A).
  * Horizontal = Feldbreite, vertikal = Höhe. So sieht man Flugkurven parallel zum Netz.
  * Zeichenreihenfolge = Tiefe: Spieler der anderen Seite, Netz, Spieler der eigenen Seite.
- * Flugbahnen und Ball kommen in Phase 3/4 hinzu (Ebene „trajectories“).
+ * Darüber Flugbahnen, Ball und die Griffe für Starthöhe, Scheitel und Schlagpunkt.
  */
 export function NetView({ compact = false }: { compact?: boolean }) {
   const [ref, size] = useElementSize<HTMLDivElement>()
@@ -63,8 +67,11 @@ export function NetView({ compact = false }: { compact?: boolean }) {
     // Button-Zoom am Boden unter der Mitte, damit Boden und Netz im Bild bleiben
     zoomAnchor: { x: size.width / 2, y: size.height - padB },
     // Im Bild-im-Bild feste Ansicht: kein Zoom, kein Verschieben
-    enabled: !compact
+    enabled: !compact,
+    // Finger auf einem Höhen-Griff zieht den Griff
+    shouldIgnore: (e) => hitsDraggable(stageRef.current, e.clientX, e.clientY)
   })
+  const stageRef = useRef<Konva.Stage>(null)
   const vp = applyViewNet(base, view)
 
   // Nach Tiefe zeichnen (Maler-Algorithmus): vom Betrachter am weitesten entfernt zuerst.
@@ -78,15 +85,17 @@ export function NetView({ compact = false }: { compact?: boolean }) {
     <>
       <div className="canvas-host" ref={ref}>
         {size.width > 0 && (
-          <Stage width={size.width} height={size.height}>
+          <Stage ref={stageRef} width={size.width} height={size.height}>
             <Layer listening={false}>
               <Floor vp={vp} />
               {showPlayers && far.map((p) => <PlayerFigure key={p.key} vp={vp} p={p} dim />)}
               <Net vp={vp} netHeight={netHeight} />
               {showPlayers && near.map((p) => <PlayerFigure key={p.key} vp={vp} p={p} />)}
             </Layer>
-            {/* Phase 3/4: Flugbahnen (projiziert auf die Netzebene) und Ball in COLORS.trajectory */}
-            <Layer name="trajectories" listening={false} />
+            {/* Flugbahnen (projiziert auf die Netzebene), Höhen-Griffe und Ball */}
+            <Layer name="trajectories">
+              <NetTrajectories vp={vp} />
+            </Layer>
           </Stage>
         )}
       </div>

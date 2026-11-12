@@ -1,6 +1,15 @@
 import { create } from 'zustand'
-import type { CourtSide, PlaySide, Role } from '@shared/types'
+import {
+  DEFAULT_DISPLAY,
+  type CourtSide,
+  type PlayDisplay,
+  type PlaySide,
+  type Role,
+  type Trajectory,
+  type TrajectoryType
+} from '@shared/types'
 import { addToLineup, autoLineup, clampToArea, syncWithTeam } from '@renderer/core/lineup/lineup'
+import { clampInput, coupleTrajectories } from '@renderer/core/physics/trajectory'
 import { useTeams } from './teamsStore'
 
 interface PlayState {
@@ -12,18 +21,48 @@ interface PlayState {
   togglePlayer: (side: CourtSide, playerId: string) => void
   setRole: (side: CourtSide, playerId: string, role: Role) => void
   movePlayer: (side: CourtSide, playerId: string, x: number, y: number) => void
+
+  /** Höchstens eine Annahme und ein Zuspiel; das Zuspiel startet am Schlagpunkt der Annahme */
+  trajectories: Partial<Record<TrajectoryType, Trajectory>>
+  display: PlayDisplay
+  selected: TrajectoryType | null
+  setTrajectory: (type: TrajectoryType, t: Trajectory) => void
+  removeTrajectory: (type: TrajectoryType) => void
+  select: (type: TrajectoryType | null) => void
+  setDisplay: (patch: Partial<PlayDisplay>) => void
+
+  /** Geöffneter, gespeicherter Spielzug (null = neu, noch nicht gespeichert) */
+  current: { id: string; code: string; title: string; createdAt: string } | null
+  /** Ungespeicherte Änderungen */
+  dirty: boolean
 }
 
 const emptySide = (): PlaySide => ({ teamId: null, players: [] })
 const teamById = (id: string | null) => useTeams.getState().teams.find((t) => t.id === id)
 
-/** Der aktuelle Spielzug (Phase 2: Aufstellung; Flugbahnen ab Phase 3, Speichern ab Phase 5). */
+/** Der aktuelle Spielzug: Aufstellung, Flugbahnen und Anzeige-Optionen. */
 export const usePlay = create<PlayState>((set) => {
   const mapSide = (side: CourtSide, fn: (s: PlaySide) => PlaySide) =>
     set((st) => ({ sides: { ...st.sides, [side]: fn(st.sides[side]) } }))
 
   return {
     sides: { A: emptySide(), B: emptySide() },
+    trajectories: {},
+    display: { ...DEFAULT_DISPLAY },
+    selected: null,
+    current: null,
+    dirty: false,
+
+    setTrajectory: (type, t) =>
+      set((st) => ({ trajectories: coupleTrajectories({ ...st.trajectories, [type]: clampInput(t) }) })),
+    removeTrajectory: (type) =>
+      set((st) => {
+        const next = { ...st.trajectories }
+        delete next[type]
+        return { trajectories: next, selected: st.selected === type ? null : st.selected }
+      }),
+    select: (selected) => set({ selected }),
+    setDisplay: (patch) => set((st) => ({ display: { ...st.display, ...patch } })),
 
     setTeam: (side, teamId) => {
       const team = teamById(teamId)
@@ -52,6 +91,12 @@ export const usePlay = create<PlayState>((set) => {
         players: s.players.map((c) => (c.playerId === playerId ? { ...c, ...clampToArea(x, y) } : c))
       }))
   }
+})
+
+// Jede inhaltliche Änderung markiert den Spielzug als ungespeichert
+usePlay.subscribe((s, prev) => {
+  if (!s.dirty && (s.sides !== prev.sides || s.trajectories !== prev.trajectories || s.display !== prev.display))
+    usePlay.setState({ dirty: true })
 })
 
 // Änderungen an den Teams (Spieler gelöscht, Positionen geändert, Team gelöscht) in den Spielzug übernehmen

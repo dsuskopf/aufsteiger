@@ -215,10 +215,10 @@ Details:
 - **3D:** Zylinder über eine `PlayerMeshFactory`-Schnittstelle, damit später echte Modelle eingesetzt werden können.
 
 ### Phase 3: Flugbahnen, Physik und Netzansicht
-> Offen: Wo die Höhen (Start, Scheitel, Schlagpunkt) gezogen werden, nachdem die Profilansicht entfallen ist – vor Phase 3 mit dem Nutzer klären.
+> Entschieden: Höhen-Griffe in der Netzansicht (Start/Scheitel senkrecht, Schlagpunkt entlang der Parabel) plus Flugbahn-Karte mit Schiebereglern (auch in 3D). Gespeichert wird je Bahn start{x,y,h}, end{x,y} (= Schlagpunkt), apexH, hitH.
 - Das Modul `core/physics` mit allen Tests aus Abschnitt 2 wird zuerst geschrieben.
 - Eingabe in der Draufsicht nach der Policy aus Abschnitt 3, für Annahme und Zuspiel jeweils ein Werkzeug.
-- **Höhen-Bearbeitung (Ort offen):**
+- **Höhen-Bearbeitung (Netzansicht + Flugbahn-Karte):**
   - Handles für Starthöhe, Scheitel und Schlagpunkt, live gelöst.
   - Die Checkbox „Flugbahn nach Schlagpunkt anzeigen“ zeigt den Rest gestrichelt bzw. verblasst.
 - Toggles für Annahme und Zuspiel.

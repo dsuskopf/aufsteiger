@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
-import type { CourtSide, Role } from '@shared/types'
+import { TRAJECTORY_TYPES, type CourtSide, type PlayDisplay, type Role, type Trajectory, type TrajectoryType } from '@shared/types'
+import { solveTrajectory, type SolvedTrajectory } from '@renderer/core/physics/trajectory'
 import { jerseyFor, type JerseyStyle } from '@shared/teamColors'
 import { usePlay } from './playStore'
 import { useTeams } from './teamsStore'
@@ -48,4 +49,34 @@ export function useCourtPlayers(): CourtPlayerView[] {
     }
     return out
   }, [sides, teams])
+}
+
+/** Eine sichtbare, gelöste Flugbahn */
+export interface TrajectoryView {
+  type: TrajectoryType
+  input: Trajectory
+  sol: SolvedTrajectory
+  /** Zuspiel hängt an der Annahme (Start nicht separat verschiebbar) */
+  coupled: boolean
+}
+
+export function visibleTrajectories(
+  trajectories: Partial<Record<TrajectoryType, Trajectory>>,
+  display: PlayDisplay
+): TrajectoryView[] {
+  const out: TrajectoryView[] = []
+  for (const type of TRAJECTORY_TYPES) {
+    const input = trajectories[type]
+    if (!input) continue
+    if (type === 'annahme' ? !display.showAnnahme : !display.showZuspiel) continue
+    out.push({ type, input, sol: solveTrajectory(input), coupled: type === 'zuspiel' && !!trajectories.annahme })
+  }
+  return out
+}
+
+/** Sichtbare Flugbahnen (nach Anzeige-Optionen), gelöst */
+export function useVisibleTrajectories(): TrajectoryView[] {
+  const trajectories = usePlay((s) => s.trajectories)
+  const display = usePlay((s) => s.display)
+  return useMemo(() => visibleTrajectories(trajectories, display), [trajectories, display])
 }

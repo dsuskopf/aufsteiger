@@ -1,8 +1,15 @@
 import { useEffect, useState } from 'react'
 import type { NetPresetId } from '@shared/types'
 import { NET_HEIGHT_MAX, NET_HEIGHT_MIN, NET_PRESETS } from '@renderer/core/geometry/court'
-import { useUi, type ViewMode } from '@renderer/store/settingsStore'
-import { Icon } from './Icon'
+import { useUi, type Tool, type ViewMode } from '@renderer/store/settingsStore'
+import { usePlay } from '@renderer/store/playStore'
+import { Icon, type IconName } from './Icon'
+
+const TOOLS: { id: Tool; label: string; icon: IconName; title: string }[] = [
+  { id: 'select', label: 'Auswählen', icon: 'pointer', title: 'Auswählen und ziehen (Spieler, Griffe)' },
+  { id: 'annahme', label: 'Annahme', icon: 'arc', title: 'Annahme zeichnen: Klick Start, Klick Ende – oder ziehen' },
+  { id: 'zuspiel', label: 'Zuspiel', icon: 'arc', title: 'Zuspiel zeichnen: startet am Schlagpunkt der Annahme' }
+]
 
 const VIEW_MODES: { id: ViewMode; label: string; title: string }[] = [
   { id: '2d', label: '2D', title: 'Draufsicht und Netzansicht (eine groß, eine als Pop-up)' },
@@ -12,15 +19,30 @@ const VIEW_MODES: { id: ViewMode; label: string; title: string }[] = [
 const fmt = (v: number) => v.toFixed(2).replace('.', ',')
 
 /**
- * Toolbar mit drei Gruppen (HIG toolbars.md: „aim for a maximum of three“):
- * vorne die Ansicht, hinten Netz und die Panels (Aufstellung, Teams).
+ * Toolbar: vorne Spielzug (Bibliothek, Speichern), Ansicht und Werkzeug;
+ * hinten Netz, Panels (Aufstellung, Teams), Export und Einstellungen.
  */
 export function Toolbar() {
   const { viewMode, setViewMode, netPreset, setNetPreset, netHeight, setNetHeight } = useUi()
-  const { lineupOpen, setLineupOpen, setTeamsOpen } = useUi()
+  const { lineupOpen, setLineupOpen, setTeamsOpen, tool, setTool, setSettingsOpen, setDialog } = useUi()
+  const current = usePlay((s) => s.current)
+  const dirty = usePlay((s) => s.dirty)
 
   return (
     <header className="toolbar">
+      <div className="toolbar-group">
+        <button className="doc-button" title="Bibliothek: gespeicherte Spielzüge" onClick={() => setDialog('library')}>
+          <Icon name="library" />
+          <span className="doc-name">
+            {current ? (current.code || current.title || 'Spielzug') : 'Neuer Spielzug'}
+            {dirty && <span className="dirty" aria-label="ungespeicherte Änderungen"> •</span>}
+          </span>
+        </button>
+        <button className="icon-only" title="Speichern (Strg+S)" aria-label="Speichern" onClick={() => setDialog('save')}>
+          <Icon name="save" />
+        </button>
+      </div>
+
       <div className="segmented" role="radiogroup" aria-label="Ansicht">
         {VIEW_MODES.map((m) => (
           <button
@@ -32,6 +54,22 @@ export function Toolbar() {
             onClick={() => setViewMode(m.id)}
           >
             {m.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="segmented tools" role="radiogroup" aria-label="Werkzeug">
+        {TOOLS.map((t) => (
+          <button
+            key={t.id}
+            role="radio"
+            aria-checked={tool === t.id}
+            className={tool === t.id ? 'selected' : ''}
+            title={t.title}
+            onClick={() => setTool(t.id)}
+          >
+            <Icon name={t.icon} />
+            <span className="tool-label">{t.label}</span>
           </button>
         ))}
       </div>
@@ -80,6 +118,12 @@ export function Toolbar() {
         <button onClick={() => setTeamsOpen(true)}>
           <Icon name="people" />
           Teams
+        </button>
+        <button className="icon-only" title="Exportieren (PDF, Video)" aria-label="Exportieren" onClick={() => setDialog('export')}>
+          <Icon name="share" />
+        </button>
+        <button className="icon-only" title="Einstellungen" aria-label="Einstellungen" onClick={() => setSettingsOpen(true)}>
+          <Icon name="settings" />
         </button>
       </div>
     </header>

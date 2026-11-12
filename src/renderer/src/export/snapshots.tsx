@@ -13,7 +13,7 @@ import { NetTrajectories } from '@renderer/views/net/NetTrajectories'
 import { buildCourt, buildNet, disposeObject } from '@renderer/views/three/courtScene'
 import { buildZones, orientZoneLabels } from '@renderer/views/three/zones'
 import { useSettings } from '@renderer/store/appSettings'
-import { CylinderPlayerFactory, placePlayer } from '@renderer/views/three/players'
+import { CylinderPlayerFactory, placePlayer, showNameTag } from '@renderer/views/three/players'
 import { buildTrajectories } from '@renderer/views/three/trajectories'
 import { courtPlayers, visibleTrajectories } from '@renderer/store/selectors'
 import { usePlay } from '@renderer/store/playStore'
@@ -109,6 +109,7 @@ export function snapshotsThree(width = 900, height = 560): { label: string; url:
   const created: THREE.Object3D[] = []
   for (const p of courtPlayers(usePlay.getState().sides, useTeams.getState().teams)) {
     const obj = factory.create(p)
+    showNameTag(obj, useUi.getState().showNames)
     placePlayer(obj, p.x, p.y)
     scene.add(obj)
     created.push(obj)

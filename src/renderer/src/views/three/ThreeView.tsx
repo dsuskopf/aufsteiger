@@ -6,10 +6,10 @@ import { useUi } from '@renderer/store/settingsStore'
 import { buildCourt, buildNet, disposeObject } from './courtScene'
 import { CAMERA_LIMITS, clampTarget } from './camera'
 import { ViewControls } from '@renderer/components/ViewControls'
-import { ZonesButton } from '@renderer/components/ZonesButton'
+import { NamesButton, ZonesButton } from '@renderer/components/ViewToggles'
 import { ZOOM_DURATION_MS, ZOOM_STEP, tween } from '@renderer/components/tween'
 import { useCourtPlayers } from '@renderer/store/selectors'
-import { CylinderPlayerFactory, placePlayer, visualKey, type PlayerMeshFactory } from './players'
+import { CylinderPlayerFactory, placePlayer, showNameTag, visualKey, type PlayerMeshFactory } from './players'
 import { useVisibleTrajectories } from '@renderer/store/selectors'
 import { usePlay } from '@renderer/store/playStore'
 import { currentBall, currentTimeline, usePathsHidden, usePlayback } from '@renderer/store/playbackStore'
@@ -49,6 +49,7 @@ export function ThreeView() {
   const selected = usePlay((s) => s.selected)
   const hidePaths = usePathsHidden()
   const showZones = useUi((s) => s.showZones)
+  const showNames = useUi((s) => s.showNames)
   const zoneStyle = useSettings((s) => s.settings.zoneStyle)
 
   useEffect(() => {
@@ -168,6 +169,7 @@ export function ThreeView() {
         pr.items.set(p.key, item)
       }
       placePlayer(item.obj, p.x, p.y)
+      showNameTag(item.obj, showNames)
     }
     for (const [key, item] of pr.items) {
       if (seen.has(key)) continue
@@ -175,7 +177,7 @@ export function ThreeView() {
       pr.factory.dispose(item.obj)
       pr.items.delete(key)
     }
-  }, [players])
+  }, [players, showNames])
 
   // Flugbahnen neu aufbauen, wenn sie sich ändern
   useEffect(() => {
@@ -294,6 +296,7 @@ export function ThreeView() {
         onReset={resetView}
       >
         <ZonesButton />
+        <NamesButton />
       </ViewControls>
     </>
   )

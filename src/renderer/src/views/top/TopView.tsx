@@ -20,7 +20,7 @@ import { ViewControls } from '@renderer/components/ViewControls'
 import { Icon } from '@renderer/components/Icon'
 import { PipBar } from '@renderer/components/PipBar'
 import { ZoneMarks } from './ZoneMarks'
-import { ZonesButton } from '@renderer/components/ZonesButton'
+import { NamesButton, ZonesButton } from '@renderer/components/ViewToggles'
 import { useUi } from '@renderer/store/settingsStore'
 
 export const WORLD_W = COURT.length + 2 * COURT.freeZone
@@ -103,6 +103,7 @@ export function TopView({ compact = false }: { compact?: boolean }) {
           <Icon name="rotate" />
         </button>
         <ZonesButton />
+        <NamesButton />
       </ViewControls>
       )}
     </>

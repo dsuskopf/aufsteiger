@@ -4,6 +4,8 @@ import { topToWorld, worldToTop, type TopViewport } from '@renderer/core/geometr
 import { clampToArea } from '@renderer/core/lineup/lineup'
 import { useCourtPlayers, type CourtPlayerView } from '@renderer/store/selectors'
 import { usePlay } from '@renderer/store/playStore'
+import { useUi } from '@renderer/store/settingsStore'
+import { COLORS } from '@renderer/theme/colors'
 
 /** Name der Konva-Gruppen, über die man Spieler beim Treffertest erkennt. */
 export const PLAYER_NODE_NAME = 'player'
@@ -20,6 +22,7 @@ const RADIUS_M = 0.38
 export function PlayersLayer({ vp, interactive = true }: { vp: TopViewport; interactive?: boolean }) {
   const players = useCourtPlayers()
   const movePlayer = usePlay((s) => s.movePlayer)
+  const showNames = useUi((s) => s.showNames)
   const r = Math.max(MIN_RADIUS_PX, RADIUS_M * vp.scale)
 
   const onDrag = (p: CourtPlayerView) => (e: Konva.KonvaEventObject<DragEvent>) => {
@@ -80,6 +83,23 @@ export function PlayersLayer({ vp, interactive = true }: { vp: TopViewport; inte
               opacity={0.85}
               listening={false}
             />
+            {showNames && p.name.trim() && (
+              // Name unter dem Spieler, immer aufrecht
+              <Text
+                text={p.name.trim()}
+                x={-80}
+                y={r + 3}
+                width={160}
+                align="center"
+                fontSize={Math.max(11, Math.min(15, r * 0.48))}
+                fontStyle="bold"
+                fill={COLORS.text}
+                shadowColor="#000"
+                shadowBlur={4}
+                shadowOpacity={0.9}
+                listening={false}
+              />
+            )}
           </Group>
         )
       })}

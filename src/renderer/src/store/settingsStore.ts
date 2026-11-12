@@ -15,6 +15,9 @@ interface UiState {
   /** Zonen auf dem Feldboden einblenden (welche Art: Einstellungen → Zonen) */
   showZones: boolean
   setShowZones: (show: boolean) => void
+  /** Namen der Spieler einblenden (nur wenn ein Name eingetragen ist) */
+  showNames: boolean
+  setShowNames: (show: boolean) => void
   tool: Tool
   setTool: (t: Tool) => void
   /** Netzhöhe in der zweiten Toolbar-Reihe ausgeklappt */
@@ -62,6 +65,8 @@ interface UiState {
 export const useUi = create<UiState>((set) => ({
   showZones: false,
   setShowZones: (showZones) => set({ showZones }),
+  showNames: false,
+  setShowNames: (showNames) => set({ showNames }),
   tool: 'select',
   setTool: (tool) => set({ tool }),
   netBarOpen: true,

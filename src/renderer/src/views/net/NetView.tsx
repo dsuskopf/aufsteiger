@@ -11,6 +11,7 @@ import { ViewControls } from '@renderer/components/ViewControls'
 import { Icon } from '@renderer/components/Icon'
 import { PipBar } from '@renderer/components/PipBar'
 import { useUi } from '@renderer/store/settingsStore'
+import { NamesButton } from '@renderer/components/ViewToggles'
 import { useCourtPlayers, type CourtPlayerView } from '@renderer/store/selectors'
 import { useEffect, useRef } from 'react'
 import type Konva from 'konva'
@@ -177,6 +178,7 @@ export function NetView({ compact = false }: { compact?: boolean }) {
         >
           <Icon name="flip" />
         </button>
+        <NamesButton />
       </ViewControls>
         </>
       )}
@@ -273,6 +275,7 @@ export function Net({ vp, netHeight }: { vp: NetViewport; netHeight: number }) {
  * Körper + Kopf ergeben zusammen genau die Körpergröße.
  */
 export function PlayerFigure({ vp, p, dim = false }: { vp: NetViewport; p: CourtPlayerView; dim?: boolean }) {
+  const showNames = useUi((st) => st.showNames)
   const s = vp.scale
   const foot = netProject(vp, p.x, p.y, 0)
   const w = BODY_WIDTH * s
@@ -295,6 +298,21 @@ export function PlayerFigure({ vp, p, dim = false }: { vp: NetViewport; p: Court
       <Circle x={foot.px} y={foot.py - h - r} radius={r} fill={p.jersey.fill} stroke={p.jersey.stroke} strokeWidth={2} />
       <Text x={foot.px - r} y={foot.py - h - r - r * 0.55} width={2 * r} align="center" text={p.role} fontSize={r * 0.62} fontStyle="bold" fill={p.jersey.text} />
       <Text x={foot.px - r} y={foot.py - h - r + r * 0.1} width={2 * r} align="center" text={String(p.number)} fontSize={r * 0.5} fill={p.jersey.text} />
+      {showNames && p.name.trim() && (
+        <Text
+          x={foot.px - 80}
+          y={foot.py - h - 2 * r - 18}
+          width={160}
+          align="center"
+          text={p.name.trim()}
+          fontSize={12}
+          fontStyle="bold"
+          fill={COLORS.text}
+          shadowColor="#000"
+          shadowBlur={4}
+          shadowOpacity={0.9}
+        />
+      )}
     </Group>
   )
 }

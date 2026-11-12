@@ -3,8 +3,8 @@ import type Konva from 'konva'
 import { TRAJECTORY_LABELS } from '@shared/types'
 import { topToWorld, worldToTop, type TopViewport } from '@renderer/core/geometry/transform'
 import { clampToArea } from '@renderer/core/lineup/lineup'
-import { pointAt } from '@renderer/core/physics/trajectory'
-import { COLORS } from '@renderer/theme/colors'
+import { BALL_RADIUS, pointAt } from '@renderer/core/physics/trajectory'
+import { BALL_COLORS, COLORS } from '@renderer/theme/colors'
 import { usePlay } from '@renderer/store/playStore'
 import { useBall } from '@renderer/store/playbackStore'
 import { useVisibleTrajectories, type TrajectoryView } from '@renderer/store/selectors'
@@ -127,7 +127,7 @@ export function TrajectoryLayer({
           listening={false}
         />
       )}
-      {showBall && ball && <Ball {...xy(vp, ball.x, ball.y)} r={Math.max(6, 0.105 * vp.scale)} />}
+      {showBall && ball && <Ball {...xy(vp, ball.x, ball.y)} r={Math.max(6, BALL_RADIUS * vp.scale)} />}
     </Layer>
   )
 }
@@ -139,7 +139,7 @@ const xy = (vp: TopViewport, x: number, y: number) => {
 
 export function Ball({ x, y, r }: { x: number; y: number; r: number }) {
   return (
-    <Circle x={x} y={y} radius={r} fill="#f4efe4" stroke={COLORS.trajectory} strokeWidth={2} shadowColor="#000" shadowBlur={6} shadowOpacity={0.6} listening={false} />
+    <Circle x={x} y={y} radius={r} fill={BALL_COLORS.yellow} stroke={BALL_COLORS.blue} strokeWidth={2.5} shadowColor="#000" shadowBlur={6} shadowOpacity={0.6} listening={false} />
   )
 }
 

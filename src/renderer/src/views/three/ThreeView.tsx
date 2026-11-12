@@ -11,8 +11,8 @@ import { useCourtPlayers } from '@renderer/store/selectors'
 import { CylinderPlayerFactory, placePlayer, visualKey, type PlayerMeshFactory } from './players'
 import { useVisibleTrajectories } from '@renderer/store/selectors'
 import { usePlay } from '@renderer/store/playStore'
-import { currentBall, usePlayback } from '@renderer/store/playbackStore'
-import { buildBall, buildTrajectories, placeBall } from './trajectories'
+import { currentBall, currentTimeline, usePlayback } from '@renderer/store/playbackStore'
+import { ballOrientation, buildBall, buildTrajectories, placeBall } from './trajectories'
 
 /** Zeichenfläche der laufenden 3D-Ansicht (für den Video-Export) */
 export let activeThreeCanvas: HTMLCanvasElement | null = null
@@ -92,8 +92,10 @@ export function ThreeView() {
 
     sceneRef.current = { scene, net: null, trajectories: null, ball, camera, controls }
 
-    // Ball folgt der Uhr ohne React-Neuzeichnung
-    const updateBall = () => placeBall(ball, currentBall())
+    // Ball folgt der Uhr ohne React-Neuzeichnung (Position und Drall)
+    const spin = new THREE.Quaternion()
+    const updateBall = () =>
+      placeBall(ball, currentBall(), ballOrientation(currentTimeline(), usePlayback.getState().t, spin))
     updateBall()
     const unsubA = usePlayback.subscribe(updateBall)
     const unsubB = usePlay.subscribe(updateBall)

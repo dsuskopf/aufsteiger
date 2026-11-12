@@ -3,6 +3,7 @@ import type Konva from 'konva'
 import { TRAJECTORY_LABELS } from '@shared/types'
 import { netProject, pxToNet, type NetViewport } from '@renderer/core/geometry/transform'
 import {
+  BALL_RADIUS,
   moveHitAlongParabola,
   pointAt,
   projectToFallingBranch,
@@ -109,7 +110,7 @@ export function NetTrajectories({ vp, interactive = true, showBall = true }: { v
             </Group>
           )
         })}
-      {showBall && ball && <Ball {...at(ball.x, ball.y, ball.z)} r={Math.max(6, 0.105 * vp.scale)} />}
+      {showBall && ball && <Ball {...at(ball.x, ball.y, ball.z)} r={Math.max(6, BALL_RADIUS * vp.scale)} />}
     </>
   )
 }

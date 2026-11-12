@@ -17,6 +17,13 @@ export const COLORS = {
   net: '#9a9aa2',
   /** Standardfarbe (Auswahl, Referenzlinien) – festgelegt in defaultColor.ts */
   accent: DEFAULT_COLOR,
-  /** Flugbahnen und Ball nutzen die Standardfarbe */
+  /** Flugbahnen nutzen die Standardfarbe (der Ball hat eigene Farben, siehe BALL_COLORS) */
   trajectory: DEFAULT_COLOR
+} as const
+
+/** Ball: klassischer Hallenball in Gelb/Blau (3D-Panels und 2D-Markierung) */
+export const BALL_COLORS = {
+  yellow: '#f2c418',
+  blue: '#1f4fb4',
+  seam: '#2a2a2e'
 } as const

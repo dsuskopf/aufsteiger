@@ -70,7 +70,7 @@ Es gibt zwei Flugbahn-Typen: **Annahme** und **Zuspiel**. Beide funktionieren na
 - Checkbox "Flugbahn nach Schlagpunkt anzeigen" (Standard: aus): zeigt den weiteren Verlauf hinter dem Schlagpunkt gestrichelt bzw. verblasst bis zum Aufprall auf dem Boden. Hilft beim Einstellen des Schlagpunkts.
 
 ### Physik
-- Realistische Wurfparabel mit g = 9,81 m/s², ohne Luftwiderstand.
+- Realistische Flugbahn mit g = 9,81 m/s² und Luftwiderstand (offizieller Hallenball: Umfang 66 cm, Masse 270 g, c_w ≈ 0,45, Luftdichte 1,204 kg/m³). Der Ball wird horizontal langsamer und fällt steiler, als er steigt. Numerisch gelöst (RK4), die Bahn geht exakt durch Start, Scheitel und Schlagpunkt.
 - Aus Startpunkt, Scheitelhöhe und Schlagpunkt ergibt sich die Flugbahn eindeutig. Geschwindigkeit und Flugdauer werden automatisch berechnet, es gibt KEINE manuelle Geschwindigkeitseinstellung.
 
 ### Anzeige-Optionen
@@ -80,7 +80,7 @@ Es gibt zwei Flugbahn-Typen: **Annahme** und **Zuspiel**. Beide funktionieren na
 - Feld, Netz, Spieler und Flugbahnen in 3D mit echten Maßen.
 - Kamera (Orbit) beschränkt auf die obere Halbkugel: von parallel zum Feld (Augenhöhe) bis senkrecht von oben, mit allen Zwischenwinkeln. Niemals unter das Feld.
 - Feld frei um 360° drehbar, Zoom und Verschieben (Touch, Stift, Maus).
-- Ein Ball (Kugel) fliegt bei der Animation entlang der Flugbahn: Start, Scheitel, Schlagpunkt.
+- Ein Ball fliegt bei der Animation entlang der Flugbahn: Start, Scheitel, Schlagpunkt. Modell: klassischer Hallen-Volleyball mit 18 Panels in Gelb/Blau, eingetieften Nähten und offiziellem Durchmesser (~21 cm). Er dreht sich beim Flug (Rückwärtsdrall: Annahme ca. 1,4 U/s, Zuspiel ca. 0,35 U/s; rein optisch, kein Magnus-Effekt).
 
 ## Animation & Playbar
 - Abspielen in der 3D-Ansicht (Ball bewegt sich auch in den 2D-Ansichten mit).

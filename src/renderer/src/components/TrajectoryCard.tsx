@@ -4,6 +4,7 @@ import {
   APEX_EPS,
   APEX_H_MAX,
   START_H_MAX,
+  distAtHeightFalling,
   moveHitAlongParabola,
   solveTrajectory
 } from '@renderer/core/physics/trajectory'
@@ -41,10 +42,10 @@ export function TrajectoryCard() {
   const sol = solveTrajectory(t)
   const speed = Math.hypot(sol.vH, sol.vZ0) * 3.6
   const minApex = Math.max(t.start.h, t.hitH) + APEX_EPS
-  // Schlagpunkt über seine Höhe auf dem fallenden Ast (Distanz folgt)
+  // Schlagpunkt über seine Höhe auf dem fallenden Ast (Distanz folgt aus der Bahn)
   const setHitH = (h: number) => {
     const hc = Math.min(sol.apexH - APEX_EPS, Math.max(0, h))
-    setTrajectory(selected, moveHitAlongParabola(t, sol.sA + Math.sqrt((sol.apexH - hc) / sol.k)))
+    setTrajectory(selected, moveHitAlongParabola(t, distAtHeightFalling(sol, hc)))
   }
 
   return (

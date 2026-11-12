@@ -2,19 +2,43 @@
  * Flugbahn-Physik (reine Logik, keine UI-Abhängigkeiten).
  *
  * Eine Flugbahn ist in der Draufsicht eine Gerade von start (x, y) nach end (x, y) – end ist der Schlagpunkt.
- * Im Profil (s = Distanz entlang der Geraden, z = Höhe) ist sie eine Wurfparabel ohne Luftwiderstand:
- *   z(s) = apexH − k · (s − sA)²
- * Sie geht durch (0, h0) und (D, h1); der Scheitel liegt dazwischen, der Schlagpunkt auf dem fallenden Ast.
- * Geschwindigkeit und Flugdauer folgen aus g = 9,81 m/s².
+ * Im Profil (s = Distanz entlang der Geraden, z = Höhe) fliegt der Ball unter Schwerkraft UND Luftwiderstand
+ * (quadratisch in der Geschwindigkeit, Werte eines offiziellen Hallenballs):
+ *   ds/dt = vs,  dz/dt = vz,  dvs/dt = −K·|v|·vs,  dvz/dt = −g − K·|v|·vz
+ * Dadurch wird der Ball horizontal langsamer und fällt steiler, als er steigt – wie ein echter Volleyball.
+ *
+ * Lösung: Am Scheitel ist vz = 0, unbekannt ist nur die horizontale Geschwindigkeit u dort. Von diesem Zustand aus
+ * wird rückwärts bis zur Starthöhe und vorwärts bis zur Schlagpunkthöhe integriert; u wird so gesucht, dass beide
+ * Äste zusammen genau die Distanz D ergeben. Die Bahn geht damit exakt durch Start, Scheitel und Schlagpunkt.
+ * Geschwindigkeit und Flugdauer ergeben sich daraus, es gibt keine manuelle Geschwindigkeit.
  */
 
 export const G = 9.81
+
+/** Offizieller Hallenball (FIVB): Umfang 65–67 cm, Masse 260–280 g – jeweils der Mittelwert. */
+export const BALL_CIRCUMFERENCE = 0.66
+export const BALL_MASS = 0.27
+export const BALL_RADIUS = BALL_CIRCUMFERENCE / (2 * Math.PI)
+/** Luftdichte in der Halle (~20 °C, kg/m³) */
+export const AIR_DENSITY = 1.204
+/** Widerstandsbeiwert eines Volleyballs im Bereich normaler Pass-/Zuspielgeschwindigkeiten (gemessen ca. 0,4–0,5). */
+export const DRAG_COEFF = 0.45
+/** K = ½ · ρ · c_w · A / m  (1/m) */
+export const DRAG_K = (0.5 * AIR_DENSITY * DRAG_COEFF * Math.PI * BALL_RADIUS ** 2) / BALL_MASS
+
 /** Scheitel mindestens so weit über Start und Schlagpunkt (m) – sonst wäre die Bahn eine Gerade (unendlich schnell). */
 export const APEX_EPS = 0.05
 /** Kürzeste Flugbahn (m); darunter gilt die Eingabe als Klick */
 export const MIN_DIST = 0.2
 export const START_H_MAX = 6
 export const APEX_H_MAX = 15
+
+/** Integrationsschritt: höchstens 1/600 s und höchstens 4 cm Flugweg pro Schritt */
+const DT_MAX = 1 / 600
+const STEP_LEN = 0.04
+/** Darüber gilt eine Bahn als unspielbar schnell (m/s) – schützt die Rückwärts-Integration */
+const V_LIMIT = 400
+const MAX_STEPS = 200_000
 
 export interface TrajectoryInput {
   start: { x: number; y: number; h: number }
@@ -26,6 +50,17 @@ export interface TrajectoryInput {
   hitH: number
 }
 
+/** Dicht abgetastete Bahn vom Abwurf bis zum Bodenaufprall (Zeit ab Abwurf, Distanz ab Start). */
+export interface TrajectorySamples {
+  t: Float64Array
+  s: Float64Array
+  z: Float64Array
+  vs: Float64Array
+  vz: Float64Array
+  /** Index des Scheitels */
+  iApex: number
+}
+
 export interface SolvedTrajectory {
   /** Distanz Start → Schlagpunkt (Draufsicht) */
   D: number
@@ -34,32 +69,236 @@ export interface SolvedTrajectory {
   h0: number
   h1: number
   apexH: number
-  /** Parabelkonstante */
-  k: number
   /** Distanz des Scheitels vom Start */
   sA: number
   /** Distanz, bei der der Ball den Boden erreicht */
   sGround: number
-  /** Horizontale Geschwindigkeit (m/s) */
+  /** Horizontale Abfluggeschwindigkeit (m/s) */
   vH: number
-  /** Vertikale Startgeschwindigkeit (m/s) */
+  /** Vertikale Abfluggeschwindigkeit (m/s) */
   vZ0: number
+  /** Geschwindigkeit am Schlagpunkt (m/s) */
+  vHit: number
+  /** Zeit bis zum Scheitel (s) */
+  tApex: number
   /** Flugdauer bis zum Schlagpunkt (s) */
   tHit: number
   /** Flugdauer bis zum Bodenaufprall (s) */
   tGround: number
+  samples: TrajectorySamples
+}
+
+// ---------------------------------------------------------------------------------------------
+// Integration
+
+type State = [s: number, z: number, vs: number, vz: number]
+
+function deriv(st: State): State {
+  const [, , vs, vz] = st
+  const kv = DRAG_K * Math.hypot(vs, vz)
+  return [vs, vz, -kv * vs, -G - kv * vz]
+}
+
+function rk4(st: State, dt: number): State {
+  const k1 = deriv(st)
+  const a: State = [st[0] + (dt / 2) * k1[0], st[1] + (dt / 2) * k1[1], st[2] + (dt / 2) * k1[2], st[3] + (dt / 2) * k1[3]]
+  const k2 = deriv(a)
+  const b: State = [st[0] + (dt / 2) * k2[0], st[1] + (dt / 2) * k2[1], st[2] + (dt / 2) * k2[2], st[3] + (dt / 2) * k2[3]]
+  const k3 = deriv(b)
+  const c: State = [st[0] + dt * k3[0], st[1] + dt * k3[1], st[2] + dt * k3[2], st[3] + dt * k3[3]]
+  const k4 = deriv(c)
+  return [
+    st[0] + (dt / 6) * (k1[0] + 2 * k2[0] + 2 * k3[0] + k4[0]),
+    st[1] + (dt / 6) * (k1[1] + 2 * k2[1] + 2 * k3[1] + k4[1]),
+    st[2] + (dt / 6) * (k1[2] + 2 * k2[2] + 2 * k3[2] + k4[2]),
+    st[3] + (dt / 6) * (k1[3] + 2 * k2[3] + 2 * k3[3] + k4[3])
+  ]
+}
+
+interface Branch {
+  /** Zustände inkl. exaktem Endpunkt auf der Zielhöhe; t relativ zum Scheitel */
+  t: number[]
+  st: State[]
+  ok: boolean
+}
+
+/**
+ * Integriert vom Scheitel (s = 0, z = H, vs = u, vz = 0) vorwärts (sign = 1) oder rückwärts (sign = −1),
+ * bis die Höhe targetZ erreicht ist. Der letzte Zustand wird linear auf targetZ interpoliert.
+ */
+function integrateFromApex(u: number, H: number, sign: 1 | -1, targetZ: number, record: boolean): Branch {
+  let st: State = [0, H, u, 0]
+  let t = 0
+  const ts = [0]
+  const sts: State[] = [st]
+  if (targetZ >= H) return { t: ts, st: sts, ok: true }
+  for (let i = 0; i < MAX_STEPS; i++) {
+    const v = Math.hypot(st[2], st[3])
+    if (v > V_LIMIT) return { t: ts, st: sts, ok: false }
+    const dt = Math.min(DT_MAX, STEP_LEN / Math.max(v, 1e-9))
+    const next = rk4(st, sign * dt)
+    const tn = t + sign * dt
+    if (next[1] <= targetZ) {
+      const f = (st[1] - targetZ) / (st[1] - next[1])
+      const end: State = [
+        st[0] + f * (next[0] - st[0]),
+        targetZ,
+        st[2] + f * (next[2] - st[2]),
+        st[3] + f * (next[3] - st[3])
+      ]
+      if (record) {
+        ts.push(t + f * (tn - t))
+        sts.push(end)
+      } else {
+        ts[0] = t + f * (tn - t)
+        sts[0] = end
+      }
+      return { t: ts, st: sts, ok: true }
+    }
+    st = next
+    t = tn
+    if (record) {
+      ts.push(t)
+      sts.push(st)
+    }
+  }
+  return { t: ts, st: sts, ok: false }
+}
+
+/** Horizontale Distanz beider Äste (Start → Scheitel → Schlagpunkt) für die Scheitelgeschwindigkeit u */
+function spanFor(u: number, h0: number, H: number, h1: number): number {
+  const up = integrateFromApex(u, H, -1, h0, false)
+  if (!up.ok) return Infinity
+  const down = integrateFromApex(u, H, 1, h1, false)
+  if (!down.ok) return Infinity
+  const sUp = -up.st[up.st.length - 1][0]
+  const sDown = down.st[down.st.length - 1][0]
+  return sUp + sDown
+}
+
+/** Sucht u mit spanFor(u) = D (monoton steigend in u): Klammer aufweiten, dann Illinois-Verfahren. */
+function solveApexSpeed(D: number, h0: number, H: number, h1: number): number {
+  // Startwert aus der Lösung ohne Luft
+  const a0 = Math.sqrt(H - h0)
+  const a1 = Math.sqrt(H - h1)
+  const kVac = ((a0 + a1) / D) ** 2
+  let hi = Math.sqrt(G / (2 * kVac))
+  let lo = 0
+  let flo = -D
+  let fhi = spanFor(hi, h0, H, h1) - D
+  for (let i = 0; i < 60 && fhi < 0; i++) {
+    lo = hi
+    flo = fhi
+    hi *= 1.6
+    fhi = spanFor(hi, h0, H, h1) - D
+  }
+  let side = 0
+  for (let i = 0; i < 80; i++) {
+    let x: number
+    if (!Number.isFinite(fhi)) x = (lo + hi) / 2
+    else x = (lo * fhi - hi * flo) / (fhi - flo)
+    if (!(x > lo && x < hi)) x = (lo + hi) / 2
+    const fx = spanFor(x, h0, H, h1) - D
+    if (Math.abs(fx) < 1e-9 || hi - lo < 1e-12) return x
+    if (fx > 0) {
+      hi = x
+      fhi = fx
+      if (side === 1) flo /= 2
+      side = 1
+    } else {
+      lo = x
+      flo = fx
+      if (side === -1 && Number.isFinite(fhi)) fhi /= 2
+      side = -1
+    }
+  }
+  return (lo + hi) / 2
+}
+
+// ---------------------------------------------------------------------------------------------
+// Lösen (mit Zwischenspeicher – die Bahn wird pro Frame mehrfach gebraucht)
+
+type Profile = Omit<SolvedTrajectory, 'dir'>
+
+const cache = new Map<string, Profile>()
+const CACHE_MAX = 96
+
+function solveProfile(D: number, h0: number, H: number, h1: number): Profile {
+  const key = `${D}|${h0}|${H}|${h1}`
+  const hit = cache.get(key)
+  if (hit) {
+    cache.delete(key)
+    cache.set(key, hit)
+    return hit
+  }
+  const u = solveApexSpeed(D, h0, H, h1)
+  const up = integrateFromApex(u, H, -1, h0, true)
+  const down = integrateFromApex(u, H, 1, 0, true)
+  const nUp = up.t.length
+  const n = nUp + down.t.length - 1
+  const t = new Float64Array(n)
+  const s = new Float64Array(n)
+  const z = new Float64Array(n)
+  const vs = new Float64Array(n)
+  const vz = new Float64Array(n)
+  const tLaunch = up.t[nUp - 1]
+  const sLaunch = up.st[nUp - 1][0]
+  // Aufsteigender Ast rückwärts gespeichert → umdrehen
+  for (let i = 0; i < nUp; i++) {
+    const j = nUp - 1 - i
+    t[i] = up.t[j] - tLaunch
+    s[i] = up.st[j][0] - sLaunch
+    z[i] = up.st[j][1]
+    vs[i] = up.st[j][2]
+    vz[i] = up.st[j][3]
+  }
+  for (let i = 1; i < down.t.length; i++) {
+    const k = nUp - 1 + i
+    t[k] = down.t[i] - tLaunch
+    s[k] = down.st[i][0] - sLaunch
+    z[k] = down.st[i][1]
+    vs[k] = down.st[i][2]
+    vz[k] = down.st[i][3]
+  }
+  // Exakte Randwerte (gegen Rundung)
+  s[0] = 0
+  z[0] = h0
+  z[n - 1] = 0
+  const samples: TrajectorySamples = { t, s, z, vs, vz, iApex: nUp - 1 }
+  const tHit = timeAtDist(samples, D)
+  const iHit = segmentIndex(s, D)
+  const fHit = s[iHit + 1] > s[iHit] ? (D - s[iHit]) / (s[iHit + 1] - s[iHit]) : 0
+  const vHit = Math.hypot(lerp(vs[iHit], vs[iHit + 1], fHit), lerp(vz[iHit], vz[iHit + 1], fHit))
+  const p: Profile = {
+    D,
+    h0,
+    h1,
+    apexH: H,
+    sA: s[nUp - 1],
+    sGround: s[n - 1],
+    vH: vs[0],
+    vZ0: vz[0],
+    vHit,
+    tApex: t[nUp - 1],
+    tHit,
+    tGround: t[n - 1],
+    samples
+  }
+  cache.set(key, p)
+  if (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value!)
+  return p
 }
 
 /** Klemmt die Eingabe auf physikalisch mögliche Werte (Scheitel über Start und Schlagpunkt, Höhen ≥ 0). */
 export function clampInput(t: TrajectoryInput): TrajectoryInput {
-  const h0 = Math.min(START_H_MAX, Math.max(0, t.start.h))
-  const hitH = Math.max(0, t.hitH)
+  const h0 = Math.min(START_H_MAX, Math.max(0, Number.isFinite(t.start.h) ? t.start.h : 0))
+  const hitH = Math.max(0, Number.isFinite(t.hitH) ? t.hitH : 0)
   const minApex = Math.max(h0, hitH) + APEX_EPS
   const apexH = Math.min(Math.max(APEX_H_MAX, minApex), Math.max(minApex, Number.isFinite(t.apexH) ? t.apexH : minApex))
   return { start: { ...t.start, h: h0 }, end: { ...t.end }, apexH, hitH }
 }
 
-/** Löst die Parabel aus Start, Scheitelhöhe und Schlagpunkt. */
+/** Löst die Flugbahn aus Start, Scheitelhöhe und Schlagpunkt. */
 export function solveTrajectory(input: TrajectoryInput): SolvedTrajectory {
   const t = clampInput(input)
   const ex = t.end.x - t.start.x
@@ -67,22 +306,87 @@ export function solveTrajectory(input: TrajectoryInput): SolvedTrajectory {
   const rawD = Math.hypot(ex, ey)
   const D = Math.max(MIN_DIST, rawD)
   const dir = rawD > 1e-9 ? { dx: ex / rawD, dy: ey / rawD } : { dx: 1, dy: 0 }
-  const h0 = t.start.h
-  const h1 = t.hitH
-  const apexH = t.apexH
-  const a0 = Math.sqrt(apexH - h0)
-  const a1 = Math.sqrt(apexH - h1)
-  const k = ((a0 + a1) / D) ** 2
-  const sA = a0 / Math.sqrt(k)
-  const sGround = sA + Math.sqrt(apexH / k)
-  const vH = Math.sqrt(G / (2 * k))
-  const vZ0 = Math.sqrt(2 * G * (apexH - h0))
-  return { D, dir, h0, h1, apexH, k, sA, sGround, vH, vZ0, tHit: D / vH, tGround: sGround / vH }
+  return { ...solveProfile(D, t.start.h, t.apexH, t.hitH), dir }
 }
 
-/** Höhe bei Distanz s */
+// ---------------------------------------------------------------------------------------------
+// Abfragen
+
+const lerp = (a: number, b: number, f: number) => a + (b - a) * f
+
+/** Index i mit arr[i] ≤ x < arr[i+1] (geklemmt auf 0 … n−2); arr ist aufsteigend. */
+function segmentIndex(arr: Float64Array, x: number): number {
+  let lo = 0
+  let hi = arr.length - 1
+  if (x <= arr[0]) return 0
+  if (x >= arr[hi]) return Math.max(0, hi - 1)
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1
+    if (arr[mid] <= x) lo = mid
+    else hi = mid
+  }
+  return lo
+}
+
+/** Kubische Hermite-Interpolation von p mit Ableitungen m auf einem Intervall der Länge h */
+function hermite(p0: number, p1: number, m0: number, m1: number, h: number, f: number): number {
+  const f2 = f * f
+  const f3 = f2 * f
+  return (2 * f3 - 3 * f2 + 1) * p0 + (f3 - 2 * f2 + f) * h * m0 + (-2 * f3 + 3 * f2) * p1 + (f3 - f2) * h * m1
+}
+
+function timeAtDist(sm: TrajectorySamples, s: number): number {
+  const i = segmentIndex(sm.s, s)
+  const ds = sm.s[i + 1] - sm.s[i]
+  const f = ds > 0 ? (s - sm.s[i]) / ds : 0
+  return lerp(sm.t[i], sm.t[i + 1], f)
+}
+
+/** Höhe bei Distanz s (außerhalb der Bahn linear fortgesetzt) */
 export function heightAt(sol: SolvedTrajectory, s: number): number {
-  return sol.apexH - sol.k * (s - sol.sA) ** 2
+  const { s: S, z: Z, vs: VS, vz: VZ } = sol.samples
+  const n = S.length
+  if (s <= 0) return Z[0] + (s * VZ[0]) / VS[0]
+  if (s >= S[n - 1]) return Z[n - 1] + ((s - S[n - 1]) * VZ[n - 1]) / VS[n - 1]
+  const i = segmentIndex(S, s)
+  const h = S[i + 1] - S[i]
+  if (h <= 0) return Z[i]
+  return hermite(Z[i], Z[i + 1], VZ[i] / VS[i], VZ[i + 1] / VS[i + 1], h, (s - S[i]) / h)
+}
+
+/** Distanz auf dem fallenden Ast, bei der der Ball die Höhe h erreicht (h zwischen Boden und Scheitel). */
+export function distAtHeightFalling(sol: SolvedTrajectory, h: number): number {
+  const { s: S, z: Z, iApex } = sol.samples
+  const n = S.length
+  if (h >= Z[iApex]) return S[iApex]
+  if (h <= 0) return S[n - 1]
+  // z fällt hinter dem Scheitel streng monoton
+  let lo = iApex
+  let hi = n - 1
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1
+    if (Z[mid] >= h) lo = mid
+    else hi = mid
+  }
+  const dz = Z[lo] - Z[hi]
+  return dz > 0 ? lerp(S[lo], S[hi], (Z[lo] - h) / dz) : S[lo]
+}
+
+/** Profilzustand (Distanz, Höhe, Geschwindigkeit) zur Zeit t seit dem Abwurf */
+export function stateAt(sol: SolvedTrajectory, t: number): { s: number; z: number; vs: number; vz: number } {
+  const { t: T, s: S, z: Z, vs: VS, vz: VZ } = sol.samples
+  const n = T.length
+  if (t <= 0) return { s: 0, z: Z[0], vs: VS[0], vz: VZ[0] }
+  if (t >= T[n - 1]) return { s: S[n - 1], z: 0, vs: 0, vz: 0 }
+  const i = segmentIndex(T, t)
+  const h = T[i + 1] - T[i]
+  const f = h > 0 ? (t - T[i]) / h : 0
+  return {
+    s: hermite(S[i], S[i + 1], VS[i], VS[i + 1], h, f),
+    z: Math.max(0, hermite(Z[i], Z[i + 1], VZ[i], VZ[i + 1], h, f)),
+    vs: lerp(VS[i], VS[i + 1], f),
+    vz: lerp(VZ[i], VZ[i + 1], f)
+  }
 }
 
 /** Ballposition (Welt) zur Zeit t seit dem Abwurf; über tGround hinaus bleibt er am Boden. */
@@ -91,8 +395,8 @@ export function positionAt(
   start: { x: number; y: number },
   t: number
 ): { x: number; y: number; z: number } {
-  const s = Math.min(sol.sGround, Math.max(0, t * sol.vH))
-  return { x: start.x + sol.dir.dx * s, y: start.y + sol.dir.dy * s, z: Math.max(0, heightAt(sol, s)) }
+  const st = stateAt(sol, t)
+  return { x: start.x + sol.dir.dx * st.s, y: start.y + sol.dir.dy * st.s, z: st.z }
 }
 
 /** Punkt auf der Bahn bei Distanz s (Welt) */
@@ -115,11 +419,11 @@ export function sampleTrajectory(
 
 /** Kleinste erlaubte Schlagpunkt-Distanz (knapp hinter dem Scheitel) */
 export function minHitDist(sol: SolvedTrajectory): number {
-  return sol.sA + Math.sqrt(APEX_EPS / sol.k)
+  return distAtHeightFalling(sol, sol.apexH - APEX_EPS)
 }
 
 /**
- * Schlagpunkt entlang der (festen) Parabel verschieben: neue Distanz s wird auf den fallenden Ast geklemmt.
+ * Schlagpunkt entlang der (festen) Bahn verschieben: neue Distanz s wird auf den fallenden Ast geklemmt.
  * Gibt die neue Eingabe zurück (Ende wandert in gleicher Richtung, Höhe = z(s)).
  */
 export function moveHitAlongParabola(input: TrajectoryInput, s: number): TrajectoryInput {

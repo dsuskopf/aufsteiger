@@ -1,10 +1,17 @@
 import * as THREE from 'three'
-import { sampleTrajectory } from '@renderer/core/physics/trajectory'
+import { BALL_RADIUS, sampleTrajectory } from '@renderer/core/physics/trajectory'
 import { worldToThree } from '@renderer/core/geometry/transform'
+import type { Timeline } from '@renderer/core/timeline/timeline'
 import { COLORS } from '@renderer/theme/colors'
 import type { TrajectoryView } from '@renderer/store/selectors'
+import type { TrajectoryType } from '@shared/types'
+import { createVolleyballMesh } from './ballModel'
 
-const BALL_R = 0.105
+/**
+ * Drall in Umdrehungen pro Sekunde (Rückwärtsdrall). Eine Annahme mit den Unterarmen dreht deutlich,
+ * ein sauberes Pritschen fast gar nicht. Rein optisch – die Flugbahn rechnet ohne Magnus-Effekt.
+ */
+const SPIN_RPS: Record<TrajectoryType, number> = { annahme: 1.4, zuspiel: 0.35 }
 
 function curve(points: { x: number; y: number; z: number }[]): THREE.CatmullRomCurve3 {
   return new THREE.CatmullRomCurve3(points.map((p) => new THREE.Vector3(...worldToThree(p.x, p.y, p.z))))
@@ -49,18 +56,15 @@ export function buildTrajectories(list: TrajectoryView[], showAfterHit: boolean,
   return g
 }
 
-/** Ball mit Bodenschatten */
+/** Ball (offizieller Durchmesser, 18 Panels) mit Bodenschatten */
 export function buildBall(): THREE.Group {
   const g = new THREE.Group()
   g.name = 'ball'
-  const ball = new THREE.Mesh(
-    new THREE.SphereGeometry(BALL_R, 28, 20),
-    new THREE.MeshStandardMaterial({ color: '#f4efe4', emissive: COLORS.trajectory, emissiveIntensity: 0.25, roughness: 0.6 })
-  )
+  const ball = createVolleyballMesh()
   ball.name = 'sphere'
   g.add(ball)
   const shadow = new THREE.Mesh(
-    new THREE.CircleGeometry(BALL_R * 1.1, 24),
+    new THREE.CircleGeometry(BALL_RADIUS * 1.1, 24),
     new THREE.MeshBasicMaterial({ color: '#000000', transparent: true, opacity: 0.45, depthWrite: false })
   )
   shadow.name = 'shadow'
@@ -70,9 +74,32 @@ export function buildBall(): THREE.Group {
   return g
 }
 
-export function placeBall(g: THREE.Group, p: { x: number; y: number; z: number } | null): void {
+const _axis = new THREE.Vector3()
+const _q = new THREE.Quaternion()
+
+/**
+ * Lage des Balls zur Zeit t: Jede Flugbahn dreht ihn um die waagrechte Achse quer zur Flugrichtung
+ * (Rückwärtsdrall); die Drehungen der vorherigen Flugbahnen bleiben erhalten, so springt der Ball nie.
+ */
+export function ballOrientation(tl: Timeline<TrajectoryType>, t: number, out = new THREE.Quaternion()): THREE.Quaternion {
+  out.identity()
+  for (const seg of tl.segments) {
+    if (t <= seg.t0) break
+    const local = Math.min(t, seg.t1) - seg.t0
+    const { dx, dy } = seg.sol.dir
+    // Achse links der Flugrichtung; negative Drehung = Oberseite läuft nach hinten (Rückwärtsdrall)
+    _axis.set(...worldToThree(-dy, dx, 0)).normalize()
+    _q.setFromAxisAngle(_axis, -2 * Math.PI * SPIN_RPS[seg.type] * local)
+    out.premultiply(_q)
+  }
+  return out
+}
+
+export function placeBall(g: THREE.Group, p: { x: number; y: number; z: number } | null, orientation?: THREE.Quaternion): void {
   g.visible = !!p
   if (!p) return
-  g.getObjectByName('sphere')!.position.set(...worldToThree(p.x, p.y, p.z))
+  const sphere = g.getObjectByName('sphere')!
+  sphere.position.set(...worldToThree(p.x, p.y, Math.max(BALL_RADIUS, p.z)))
+  if (orientation) sphere.quaternion.copy(orientation)
   g.getObjectByName('shadow')!.position.set(...worldToThree(p.x, p.y, 0.006))
 }

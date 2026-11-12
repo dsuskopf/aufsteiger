@@ -22,12 +22,12 @@ describe('timeline', () => {
     ])
     const b0 = ballAt(tl, 0)!
     expect(b0.type).toBe('annahme')
-    expect(b0.z).toBeCloseTo(0.8, 9)
+    expect(b0.z).toBeCloseTo(0.8, 6)
     const mid = ballAt(tl, tl.segments[0].t1 + 1e-6)!
     expect(mid.type).toBe('zuspiel')
     const end = ballAt(tl, tl.total + 3)!
-    expect(end.x).toBeCloseTo(-1, 9)
-    expect(end.z).toBeCloseTo(3, 9)
+    expect(end.x).toBeCloseTo(-1, 5)
+    expect(end.z).toBeCloseTo(3, 5)
   })
 
   it('leere Timeline', () => {

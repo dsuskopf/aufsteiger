@@ -148,26 +148,30 @@ input[type='range'] { width: 150px; height: var(--touch); accent-color: var(--ac
 }
 .pane.pip .canvas-host { border-radius: inherit; overflow: hidden; }
 .pane.pip.dragging { box-shadow: 0 0 0 2px var(--accent), 0 20px 50px rgba(0, 0, 0, 0.6); }
-/* Titelleiste = Griff zum Verschieben (groß genug für den Finger) */
+/* Ganze Kopfleiste = Griff zum Verschieben (Bedienelemente liegen darüber); Inhalt beginnt darunter */
 .pip-handle {
   position: absolute;
-  top: 4px;
-  left: 4px;
+  top: 0;
+  left: 0;
+  right: 0;
   z-index: 4;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 40px;
-  padding: 0 12px 0 10px;
-  border-radius: 999px;
-  background: var(--glass);
-  backdrop-filter: blur(16px);
+  height: 48px;
+  padding: 0 12px 0 12px;
+  border-radius: var(--radius-m) var(--radius-m) 0 0;
+  background: var(--elevated);
+  border-bottom: 1px solid var(--separator);
   color: var(--label-2);
   font-size: 12px;
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
   cursor: grab;
   touch-action: none;
 }
+.pane.pip .canvas-host { top: 48px; border-radius: 0 0 var(--radius-m) var(--radius-m); }
 .pip-handle:active { cursor: grabbing; }
 .pip-handle .grip {
   width: 10px;
@@ -195,21 +199,19 @@ input[type='range'] { width: 150px; height: var(--touch); accent-color: var(--ac
   position: absolute;
   top: 4px;
   right: 4px;
-  z-index: 3;
+  z-index: 5;
   display: flex;
   align-items: center;
   gap: 2px;
-  padding: 2px;
-  border-radius: 999px;
-  background: var(--glass);
-  backdrop-filter: blur(16px);
+  padding: 0 0 0 8px;
+  background: var(--elevated);
 }
 .pip-bar button { min-height: 40px; width: 40px; border-radius: 999px; background: transparent; }
 .pip-bar button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08); }
 .pip-chip {
   position: absolute;
-  right: 18px;
-  bottom: 18px;
+  right: 76px;
+  top: 10px;
   z-index: 5;
   border-radius: 999px;
   padding: 0 16px 0 12px;

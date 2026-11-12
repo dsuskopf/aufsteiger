@@ -23,8 +23,8 @@ const Z_MAX = 25
 const PAD_X = 16
 const PAD_T = 44
 const PAD_B = 28
-/** Kompakt (Bild-im-Bild): weniger Rand, die Bedienleiste liegt unten über dem Boden */
-const PAD_T_COMPACT = 52
+/** Kompakt (Pop-up): wenig Rand, die Bedienleiste liegt in der Kopfleiste darüber */
+const PAD_T_COMPACT = 12
 const PAD_B_COMPACT = 12
 /** Kompakt: sichtbare Höhe, an die das Netz angepasst wird (Netz, Antennen und typische Flugkurven) */
 const Z_COMPACT = 8

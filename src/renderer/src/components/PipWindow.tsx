@@ -3,15 +3,20 @@ import type { PxRect } from '@renderer/core/geometry/transform'
 import { useUi } from '@renderer/store/settingsStore'
 
 const MIN_W = 260
-const MIN_H = 170
+const MIN_H = 200
 const EDGE = 12
 
-/** Standardlage: unten rechts, etwa ein Drittel breit (hochkant knapp die Hälfte), Seitenverhältnis 16:10 */
+/** Rechter Abstand: Platz für die Zoom-Leiste der großen Ansicht oben rechts */
+const RIGHT_GAP = 76
+const TOP_GAP = 10
+
+/** Standardlage: oben rechts (neben der Zoom-Leiste), etwa ein Drittel breit (hochkant knapp die Hälfte) */
 export function defaultPipRect(viewsW: number, viewsH: number): PxRect {
   const share = viewsH > viewsW ? 0.46 : 0.34
   const w = Math.min(520, Math.max(280, viewsW * share))
-  const h = w * 0.625
-  return { x0: viewsW - w - 18, y0: viewsH - h - 18, x1: viewsW - 18, y1: viewsH - 18 }
+  const h = w * 0.625 + 48
+  const x1 = viewsW - RIGHT_GAP
+  return { x0: x1 - w, y0: TOP_GAP, x1, y1: TOP_GAP + h }
 }
 
 /** Hält das Fenster im Ansichtsbereich und über der Mindestgröße */

@@ -86,6 +86,7 @@ function SideCard({ side }: { side: CourtSide }) {
             {team.players.map((p) => {
               const onCourt = s.players.find((c) => c.playerId === p.id)
               const replaced = s.liberoFor === p.id
+              const idle = s.liberoIdle === p.id
               const role: Role = onCourt?.role ?? (replaced ? s.liberoRole : undefined) ?? p.positions[0] ?? 'A'
               const jersey = jerseyFor(team, role)
               const roles = selectableRoles(p)
@@ -108,7 +109,8 @@ function SideCard({ side }: { side: CourtSide }) {
                     </span>
                     <span className="name">{p.name || <span className="secondary">Ohne Namen</span>}</span>
                     {replaced && <span className="pos">ersetzt durch Libero</span>}
-                    {!onCourt && !replaced && <span className="pos">{p.positions.join(' · ')}</span>}
+                    {idle && <span className="pos">in dieser Rotation draußen</span>}
+                    {!onCourt && !replaced && !idle && <span className="pos">{p.positions.join(' · ')}</span>}
                     {onCourt?.slot && (
                       <span className="slot-tag" title={`Position ${onCourt.slot}`}>
                         {onCourt.slot}

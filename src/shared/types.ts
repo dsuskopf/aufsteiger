@@ -34,6 +34,16 @@ export const PLAYER_HEIGHT = { default: 1.75, min: 1.0, max: 2.3 } as const
 /** Kopf (Kreis bzw. Schild) als Teil der Körpergröße: Durchmesser in Metern */
 export const HEAD_DIAMETER = 0.4
 
+/** Annahme (Gegner schlägt auf) oder eigener Aufschlag */
+export type Situation = 'annahme' | 'aufschlag'
+
+/** Gespeicherte Aufstellung eines Läufers: Plätze je Spieler (Seite-A-Koordinaten) und wen der Libero ersetzt */
+export interface Formation {
+  pos: Record<string, { x: number; y: number }>
+  /** null = Libero in dieser Aufstellung draußen; fehlt = Standard (MB hinten) */
+  liberoFor?: string | null
+}
+
 export interface Team {
   id: string
   name: string
@@ -42,6 +52,8 @@ export interface Team {
   /** Libero-Trikotfarbe (Hex) – ein Spieler in der Rolle L trägt automatisch diese Farbe */
   liberoColor: string
   players: Player[]
+  /** Läufersystem: gespeicherte Aufstellungen je „Läufer-Situation“ (z. B. „1-annahme“) */
+  rotations?: Record<string, Formation>
 }
 
 export interface TeamsFile {
@@ -72,6 +84,10 @@ export interface PlaySide {
   liberoFor?: string
   /** Rolle des ersetzten Spielers (für die Rückkehr aufs Feld) */
   liberoRole?: Role
+  /** Libero, der in dieser Rotation draußen ist (z. B. der Mittelblocker schlägt auf) */
+  liberoIdle?: string
+  /** Zuletzt gewählter Läufer (Position des Stellers) und Situation */
+  laeufer?: { n: number; situation: Situation }
 }
 
 export const MAX_PLAYERS_PER_SIDE = 6

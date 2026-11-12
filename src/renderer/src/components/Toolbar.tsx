@@ -6,6 +6,7 @@ import { usePlay } from '@renderer/store/playStore'
 import { Icon, type IconName } from './Icon'
 import { ConfirmButton } from './ConfirmButton'
 import { usePlayback } from '@renderer/store/playbackStore'
+import { LaeuferBar } from './LaeuferBar'
 
 const TOOLS: { id: Tool; label: string; icon: IconName; title: string }[] = [
   { id: 'select', label: 'Auswählen', icon: 'pointer', title: 'Auswählen und ziehen (Spieler, Griffe)' },
@@ -164,6 +165,7 @@ export function Toolbar() {
             </div>
           )}
         </div>
+        <LaeuferBar />
       </div>
     </header>
   )

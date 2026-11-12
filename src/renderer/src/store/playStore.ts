@@ -5,6 +5,7 @@ import {
   type PlayDisplay,
   type PlaySide,
   type Role,
+  type Situation,
   type Trajectory,
   type TrajectoryType
 } from '@shared/types'
@@ -19,6 +20,8 @@ import {
   syncWithTeam
 } from '@renderer/core/lineup/lineup'
 import { useSettings } from './appSettings'
+import { formationKey, formationOf, laeuferLineup } from '@renderer/core/lineup/rotation'
+import { tween } from '@renderer/components/tween'
 import { clampInput, coupleTrajectories } from '@renderer/core/physics/trajectory'
 import { useTeams } from './teamsStore'
 
@@ -32,6 +35,12 @@ interface PlayState {
   setRole: (side: CourtSide, playerId: string, role: Role) => void
   /** Libero für einen anderen Hinterfeldspieler einwechseln */
   setLiberoFor: (side: CourtSide, playerId: string) => void
+  /** Läufersystem: zur Aufstellung „Läufer n“ in der Situation springen (Spieler laufen weich hin) */
+  applyLaeufer: (side: CourtSide, n: number, situation: Situation) => void
+  /** Aktuelle Plätze als Aufstellung des aktiven Läufers im Team speichern */
+  saveFormation: (side: CourtSide) => void
+  /** Gespeicherte Aufstellung des aktiven Läufers löschen (zurück zu den Standardplätzen) */
+  resetFormation: (side: CourtSide) => void
   movePlayer: (side: CourtSide, playerId: string, x: number, y: number) => void
 
   /** Höchstens eine Annahme und ein Zuspiel; das Zuspiel startet am Schlagpunkt der Annahme */
@@ -57,9 +66,29 @@ const teamById = (id: string | null) => useTeams.getState().teams.find((t) => t.
 const rulesOn = () => useSettings.getState().settings.lineupRules
 
 /** Der aktuelle Spielzug: Aufstellung, Flugbahnen und Anzeige-Optionen. */
-export const usePlay = create<PlayState>((set) => {
+export const usePlay = create<PlayState>((set, get) => {
   const mapSide = (side: CourtSide, fn: (s: PlaySide) => PlaySide) =>
     set((st) => ({ sides: { ...st.sides, [side]: fn(st.sides[side]) } }))
+
+  /** Weicher Wechsel zu einer neuen Aufstellung: Aufbau sofort, Plätze gleiten (neu Eingewechselte stehen gleich da). */
+  const cancelAnim: Partial<Record<CourtSide, () => void>> = {}
+  const animateTo = (side: CourtSide, target: PlaySide) => {
+    cancelAnim[side]?.()
+    const from = new Map(get().sides[side].players.map((c) => [c.playerId, { x: c.x, y: c.y }]))
+    const frame = (k: number) =>
+      mapSide(side, () => ({
+        ...target,
+        players: target.players.map((c) => {
+          const f = from.get(c.playerId)
+          return f ? { ...c, x: f.x + (c.x - f.x) * k, y: f.y + (c.y - f.y) * k } : c
+        })
+      }))
+    frame(0)
+    cancelAnim[side] = tween(500, frame, () => {
+      mapSide(side, () => target)
+      delete cancelAnim[side]
+    })
+  }
 
   return {
     sides: { A: emptySide(), B: emptySide() },
@@ -102,6 +131,23 @@ export const usePlay = create<PlayState>((set) => {
         if (rulesOn() && player && !allowedRoles(player, s.players, true).includes(role)) return s
         return { ...s, players: s.players.map((c) => (c.playerId === playerId ? { ...c, role } : c)) }
       }),
+    applyLaeufer: (side, n, situation) => {
+      const s = get().sides[side]
+      const team = teamById(s.teamId)
+      if (!team) return
+      animateTo(side, laeuferLineup(s, team, side, n, situation))
+    },
+    saveFormation: (side) => {
+      const s = get().sides[side]
+      if (!s.teamId || !s.laeufer) return
+      useTeams.getState().setFormation(s.teamId, formationKey(s.laeufer.n, s.laeufer.situation), formationOf(s, side))
+    },
+    resetFormation: (side) => {
+      const s = get().sides[side]
+      if (!s.teamId || !s.laeufer) return
+      useTeams.getState().setFormation(s.teamId, formationKey(s.laeufer.n, s.laeufer.situation), null)
+      get().applyLaeufer(side, s.laeufer.n, s.laeufer.situation)
+    },
     setLiberoFor: (side, playerId) =>
       mapSide(side, (s) => {
         const team = teamById(s.teamId)

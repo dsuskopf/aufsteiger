@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { PLAYER_HEIGHT, type Player, type Role, type Team } from '@shared/types'
+import { PLAYER_HEIGHT, type Formation, type Player, type Role, type Team } from '@shared/types'
 import { clampHeight, clampNumber } from '@shared/validate'
 import {
   DEFAULT_LIBERO_COLOR,
@@ -27,6 +27,8 @@ interface TeamsState {
   updatePlayer: (teamId: string, playerId: string, patch: Partial<Omit<Player, 'id'>>) => void
   togglePosition: (teamId: string, playerId: string, role: Role) => void
   deletePlayer: (teamId: string, playerId: string) => void
+  /** Läufer-Aufstellung speichern (null = löschen, zurück zum Standard) */
+  setFormation: (teamId: string, key: string, formation: Formation | null) => void
 }
 
 const newId = () => crypto.randomUUID()
@@ -54,6 +56,19 @@ function exampleTeam(): Team {
       p('Libero', 1, 'L')
     ]
   }
+}
+
+/** Gelöschten Spieler aus allen gespeicherten Läufer-Aufstellungen entfernen */
+function withoutPlayer(rotations: Team['rotations'], playerId: string): Pick<Team, 'rotations'> {
+  if (!rotations) return {}
+  const out: Record<string, Formation> = {}
+  for (const [key, f] of Object.entries(rotations)) {
+    const pos = { ...f.pos }
+    delete pos[playerId]
+    out[key] = { ...f, pos, ...(f.liberoFor === playerId ? { liberoFor: undefined } : {}) }
+    if (out[key].liberoFor === undefined) delete out[key].liberoFor
+  }
+  return { rotations: out }
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | undefined
@@ -154,7 +169,16 @@ export const useTeams = create<TeamsState>((set, get) => {
         positions: p.positions.includes(role) ? p.positions.filter((r) => r !== role) : [...p.positions, role]
       })),
     deletePlayer: (teamId, playerId) =>
-      mapTeam(teamId, (t) => ({ ...t, players: t.players.filter((p) => p.id !== playerId) }))
+      mapTeam(teamId, (t) => ({ ...t, players: t.players.filter((p) => p.id !== playerId), ...withoutPlayer(t.rotations, playerId) })),
+    setFormation: (teamId, key, formation) =>
+      mapTeam(teamId, (t) => {
+        const rotations = { ...(t.rotations ?? {}) }
+        if (formation) rotations[key] = formation
+        else delete rotations[key]
+        const next: Team = { ...t, rotations }
+        if (Object.keys(rotations).length === 0) delete next.rotations
+        return next
+      })
   }
 })
 

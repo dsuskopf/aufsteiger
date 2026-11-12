@@ -112,7 +112,9 @@ export function defaultLiberoTarget(players: CourtPlayer[]): CourtPlayer | undef
 }
 
 /** Libero aufs Feld: auf eine freie Hinterfeldposition, sonst für einen Hinterfeldspieler (Standard: Mittelblocker). */
-function placeLibero(side: PlaySide, libero: Player, courtSide: CourtSide, replace?: string): PlaySide {
+function placeLibero(input: PlaySide, libero: Player, courtSide: CourtSide, replace?: string): PlaySide {
+  const side: PlaySide = { ...input }
+  delete side.liberoIdle
   const players = side.players.filter((c) => c.playerId !== libero.id)
   const target = replace ? players.find((c) => c.playerId === replace && isBackRow(c.slot)) : undefined
   const freeBack = BACK_ROW.find((s) => !players.some((c) => c.slot === s))
@@ -187,7 +189,7 @@ export function autoLineup(team: Team, side: CourtSide, rules = true): PlaySide 
 export function addBlocker(side: PlaySide, player: Player, rules: boolean): string | null {
   if (side.players.some((c) => c.playerId === player.id)) return null
   if (side.liberoFor === player.id) return null
-  if (rules && isLiberoPlayer(player)) {
+  if (rules && (isLiberoPlayer(player) || side.liberoIdle === player.id)) {
     if (side.players.some((c) => c.role === 'L')) return 'Es ist schon ein Libero auf dem Feld'
     return side.players.some((c) => isBackRow(c.slot)) || freeSlots(side.players).some(isBackRow) ? null : 'Kein Hinterfeldspieler zum Ersetzen'
   }
@@ -206,7 +208,7 @@ export function addToLineup(side: PlaySide, player: Player, courtSide: CourtSide
   if (side.players.some((c) => c.playerId === player.id)) return side
   if (side.liberoFor === player.id) return liberoOut(side)
   if (addBlocker(side, player, rules)) return side
-  if (rules && isLiberoPlayer(player)) return placeLibero(side, player, courtSide)
+  if (rules && (isLiberoPlayer(player) || side.liberoIdle === player.id)) return placeLibero(side, player, courtSide)
   const role = (rules ? allowedRoles(player, side.players, true).filter((r) => r !== 'L') : selectableRoles(player))[0] ?? primaryRole(player)
   const free = freeSlots(side.players)
   const slot = free.find((s) => SLOT_ROLES[s] === role || (s === 5 && role === 'S')) ?? free[0] ?? 1
@@ -262,9 +264,12 @@ export function syncWithTeam(side: PlaySide, team: Team | undefined): PlaySide {
   let liberoFor = side.liberoFor
   // Ersetzter Spieler gelöscht oder kein Libero mehr auf dem Feld: Verweis aufheben
   if (liberoFor && (!byId.has(liberoFor) || !players.some((c) => c.role === 'L'))) liberoFor = undefined
-  const changed = players.length !== side.players.length || players.some((c, i) => c !== side.players[i]) || liberoFor !== side.liberoFor
+  const idleGone = !!side.liberoIdle && !byId.has(side.liberoIdle)
+  const changed =
+    players.length !== side.players.length || players.some((c, i) => c !== side.players[i]) || liberoFor !== side.liberoFor || idleGone
   if (!changed) return side
   const next: PlaySide = { ...side, players }
+  if (idleGone) delete next.liberoIdle
   if (liberoFor) next.liberoFor = liberoFor
   else {
     delete next.liberoFor

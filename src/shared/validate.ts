@@ -8,6 +8,7 @@ import {
   TRAJECTORY_TYPES,
   ZONE_STYLES,
   type CourtPlayer,
+  type Formation,
   type NetPresetId,
   type PlayDoc,
   type PlaySideDoc,
@@ -47,16 +48,35 @@ export function sanitizeTeams(raw: unknown): Team[] {
       })
     }
     const color = isHexColor(t.color) ? t.color.toLowerCase() : DEFAULT_TEAM_COLOR
-    teams.push({
+    const team: Team = {
       id: t.id,
       name: typeof t.name === 'string' ? t.name.slice(0, 80) : 'Team',
       color,
       // Ohne gespeicherte Libero-Farbe: der passende Partner der Trikotfarbe
       liberoColor: isHexColor(t.liberoColor) ? t.liberoColor.toLowerCase() : (pairedLibero(color) ?? DEFAULT_LIBERO_COLOR),
       players
-    })
+    }
+    const rotations = sanitizeRotations(t.rotations, new Set(players.map((p) => p.id)))
+    if (rotations) team.rotations = rotations
+    teams.push(team)
   }
   return teams
+}
+
+/** Läufersystem eines Teams: nur gültige Schlüssel („1-annahme“ … „6-aufschlag“) und Spieler des Teams */
+function sanitizeRotations(raw: unknown, ids: Set<string>): Record<string, Formation> | undefined {
+  if (!isObj(raw)) return undefined
+  const out: Record<string, Formation> = {}
+  for (const [key, f] of Object.entries(raw)) {
+    if (!/^[1-6]-(annahme|aufschlag)$/.test(key) || !isObj(f) || !isObj(f.pos)) continue
+    const pos: Formation['pos'] = {}
+    for (const [id, p] of Object.entries(f.pos)) if (ids.has(id) && isObj(p)) pos[id] = { x: num(p.x, 0, -11, 11), y: num(p.y, 0, -6.5, 6.5) }
+    const formation: Formation = { pos }
+    if (f.liberoFor === null) formation.liberoFor = null
+    else if (typeof f.liberoFor === 'string' && ids.has(f.liberoFor)) formation.liberoFor = f.liberoFor
+    out[key] = formation
+  }
+  return Object.keys(out).length ? out : undefined
 }
 
 /** Körpergröße auf 1,0–2,3 m begrenzen, auf Zentimeter runden; ohne Angabe 1,75 m */
@@ -142,6 +162,12 @@ function sanitizeSide(raw: unknown): PlaySideDoc {
     teamId: typeof r.teamId === 'string' ? r.teamId : null,
     players: players.slice(0, MAX_PLAYERS_PER_SIDE),
     teamSnapshot: snap
+  }
+  if (typeof r.liberoIdle === 'string' && !side.players.some((c) => c.playerId === r.liberoIdle)) side.liberoIdle = r.liberoIdle
+  if (isObj(r.laeufer)) {
+    const n = Math.round(Number(r.laeufer.n))
+    const situation = r.laeufer.situation === 'aufschlag' ? 'aufschlag' : 'annahme'
+    if (n >= 1 && n <= 6) side.laeufer = { n, situation }
   }
   // Libero ersetzt einen Spieler, der nicht auf dem Feld steht
   if (typeof r.liberoFor === 'string' && !side.players.some((c) => c.playerId === r.liberoFor) && side.players.some((c) => c.role === 'L')) {

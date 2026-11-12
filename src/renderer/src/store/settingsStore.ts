@@ -12,6 +12,9 @@ export type Main2D = 'top' | 'net'
 export type Tool = 'select' | 'annahme' | 'zuspiel'
 
 interface UiState {
+  /** Zonen auf dem Feldboden einblenden (welche Art: Einstellungen → Zonen) */
+  showZones: boolean
+  setShowZones: (show: boolean) => void
   tool: Tool
   setTool: (t: Tool) => void
   /** Netzhöhe in der zweiten Toolbar-Reihe ausgeklappt */
@@ -57,6 +60,8 @@ interface UiState {
 
 /** Anzeige-Zustand der Oberfläche (nicht dauerhaft gespeichert; dauerhafte Einstellungen: appSettings.ts). */
 export const useUi = create<UiState>((set) => ({
+  showZones: false,
+  setShowZones: (showZones) => set({ showZones }),
   tool: 'select',
   setTool: (tool) => set({ tool }),
   netBarOpen: true,

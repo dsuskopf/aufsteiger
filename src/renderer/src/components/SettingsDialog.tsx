@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import type { NetPresetId } from '@shared/types'
+import type { NetPresetId, ZoneStyle } from '@shared/types'
 import { NET_PRESETS, presetForHeight } from '@renderer/core/geometry/court'
 import { SPEEDS } from '@renderer/core/timeline/timeline'
 import { useSettings } from '@renderer/store/appSettings'
@@ -77,6 +77,20 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
                     {speedLabel(v)}
                   </option>
                 ))}
+              </select>
+            </label>
+          </section>
+          <section>
+            <h3 className="section-title">Zonen</h3>
+            <label className="setting-row">
+              <span className="grow">
+                Zonen auf dem Feld
+                <span className="caption block">Ein- und ausblenden mit dem Zonen-Button an der Ansicht.</span>
+              </span>
+              <select aria-label="Art der Zonen" value={s.zoneStyle} onChange={(e) => update({ zoneStyle: e.target.value as ZoneStyle })}>
+                <option value="standard">Standard · 1–6</option>
+                <option value="advanced">Erweitert · 1–9</option>
+                <option value="letters">Erweitert · 1–9 mit A–D</option>
               </select>
             </label>
           </section>

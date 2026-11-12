@@ -128,7 +128,13 @@ export interface Settings {
   defaultSpeed: number
   /** Finger zeichnet Flugbahnen auf leerem Feld (sonst nur Stift und Maus) */
   fingerDraws: boolean
+  /** Art der Zonen auf dem Feldboden (eingeblendet per Button in der Ansicht) */
+  zoneStyle: ZoneStyle
 }
+
+/** Zonen: Standard 1–6, erweitert 1–9, erweitert mit Unterzonen A–D */
+export type ZoneStyle = 'standard' | 'advanced' | 'letters'
+export const ZONE_STYLES: ZoneStyle[] = ['standard', 'advanced', 'letters']
 
 export const DEFAULT_SETTINGS: Settings = {
   schemaVersion: SCHEMA_VERSION,
@@ -142,7 +148,8 @@ export const DEFAULT_SETTINGS: Settings = {
   defaultApexOffsetAnnahme: 5,
   defaultLoop: true,
   defaultSpeed: 1,
-  fingerDraws: false
+  fingerDraws: false,
+  zoneStyle: 'standard'
 }
 
 /* ---------- Gespeicherter Spielzug ---------- */

@@ -153,7 +153,12 @@ export function disposeObject(obj: THREE.Object3D): void {
     const m = o as THREE.Mesh
     if (m.geometry) m.geometry.dispose()
     const mat = m.material as THREE.Material | THREE.Material[] | undefined
-    if (Array.isArray(mat)) mat.forEach((x) => x.dispose())
-    else mat?.dispose()
+    // Texturen (z. B. Beschriftungen) mit freigeben
+    const free = (x: THREE.Material) => {
+      ;(x as THREE.MeshBasicMaterial).map?.dispose()
+      x.dispose()
+    }
+    if (Array.isArray(mat)) mat.forEach(free)
+    else if (mat) free(mat)
   })
 }

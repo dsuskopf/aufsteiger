@@ -25,6 +25,8 @@ const PATHS = {
   sidebar: 'M4 5h16v14H4zM15 5v14',
   // Grundaufstellung: Raster aus Positionen
   formation: 'M6 8h.01M12 8h.01M18 8h.01M6 16h.01M12 16h.01M18 16h.01',
+  // Zonen: Feld mit Raster
+  zones: 'M3 5h18v14H3zM9 5v14M15 5v14M3 12h18',
   net: 'M3 6h18M3 6v12M21 6v12M3 10h18M7 6v6M11 6v6M15 6v6M19 6v6',
   play: 'M7 4.5v15l12.5-7.5z',
   chevronRight: 'M9 6l6 6-6 6',

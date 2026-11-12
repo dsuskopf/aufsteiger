@@ -6,6 +6,7 @@ import {
   ROLES,
   SCHEMA_VERSION,
   TRAJECTORY_TYPES,
+  ZONE_STYLES,
   type CourtPlayer,
   type NetPresetId,
   type PlayDoc,
@@ -14,7 +15,8 @@ import {
   type Role,
   type Settings,
   type Team,
-  type Trajectory
+  type Trajectory,
+  type ZoneStyle
 } from './types'
 import { DEFAULT_LIBERO_COLOR, DEFAULT_TEAM_COLOR, isHexColor, pairedLibero } from './teamColors'
 
@@ -102,7 +104,8 @@ export function sanitizeSettings(raw: unknown): Settings {
     defaultApexOffsetAnnahme: num(r.defaultApexOffsetAnnahme, d.defaultApexOffsetAnnahme, 0, 10),
     defaultLoop: bool(r.defaultLoop, d.defaultLoop),
     defaultSpeed: SPEED_STEPS.includes(speed) ? speed : d.defaultSpeed,
-    fingerDraws: bool(r.fingerDraws, d.fingerDraws)
+    fingerDraws: bool(r.fingerDraws, d.fingerDraws),
+    zoneStyle: ZONE_STYLES.includes(r.zoneStyle as ZoneStyle) ? (r.zoneStyle as ZoneStyle) : d.zoneStyle
   }
 }
 

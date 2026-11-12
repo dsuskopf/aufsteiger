@@ -6,6 +6,7 @@ import { useUi } from '@renderer/store/settingsStore'
 import { buildCourt, buildNet, disposeObject } from './courtScene'
 import { CAMERA_LIMITS, clampTarget } from './camera'
 import { ViewControls } from '@renderer/components/ViewControls'
+import { ZonesButton } from '@renderer/components/ZonesButton'
 import { ZOOM_DURATION_MS, ZOOM_STEP, tween } from '@renderer/components/tween'
 import { useCourtPlayers } from '@renderer/store/selectors'
 import { CylinderPlayerFactory, placePlayer, visualKey, type PlayerMeshFactory } from './players'
@@ -13,6 +14,8 @@ import { useVisibleTrajectories } from '@renderer/store/selectors'
 import { usePlay } from '@renderer/store/playStore'
 import { currentBall, currentTimeline, usePathsHidden, usePlayback } from '@renderer/store/playbackStore'
 import { ballOrientation, buildBall, buildTrajectories, placeBall } from './trajectories'
+import { buildZones, orientZoneLabels } from './zones'
+import { useSettings } from '@renderer/store/appSettings'
 
 /** Zeichenfläche der laufenden 3D-Ansicht (für den Video-Export) */
 export let activeThreeCanvas: HTMLCanvasElement | null = null
@@ -33,6 +36,7 @@ export function ThreeView() {
     scene: THREE.Scene
     net: THREE.Group | null
     trajectories: THREE.Group | null
+    zones: THREE.Group | null
     ball: THREE.Group
     camera: THREE.PerspectiveCamera
     controls: OrbitControls
@@ -44,6 +48,8 @@ export function ThreeView() {
   const showAfterHit = usePlay((s) => s.display.showAfterHit)
   const selected = usePlay((s) => s.selected)
   const hidePaths = usePathsHidden()
+  const showZones = useUi((s) => s.showZones)
+  const zoneStyle = useSettings((s) => s.settings.zoneStyle)
 
   useEffect(() => {
     const host = hostRef.current!
@@ -91,7 +97,10 @@ export function ThreeView() {
     })
     controls.update()
 
-    sceneRef.current = { scene, net: null, trajectories: null, ball, camera, controls }
+    sceneRef.current = { scene, net: null, trajectories: null, zones: null, ball, camera, controls }
+    // Nur für automatische Tests (?test): Kamera steuerbar
+    const testHook = (window as unknown as { __vbp?: Record<string, unknown> }).__vbp
+    if (testHook) testHook.three = { camera, controls }
 
     // Ball folgt der Uhr ohne React-Neuzeichnung (Position und Drall)
     const spin = new THREE.Quaternion()
@@ -116,6 +125,9 @@ export function ThreeView() {
 
     renderer.setAnimationLoop(() => {
       controls.update()
+      // Zonen-Beschriftung immer zur Kamera ausrichten (lesbar aus jedem Winkel)
+      const zones = sceneRef.current?.zones
+      if (zones) orientZoneLabels(zones, camera, controls.target)
       renderer.render(scene, camera)
     })
 
@@ -183,6 +195,21 @@ export function ThreeView() {
     const ref = sceneRef.current
     if (ref?.trajectories) ref.trajectories.visible = !hidePaths
   }, [hidePaths])
+
+  // Zonen auf dem Boden ein-/ausblenden bzw. neu aufbauen, wenn sich die Art ändert
+  useEffect(() => {
+    const ref = sceneRef.current
+    if (!ref) return
+    if (ref.zones) {
+      ref.scene.remove(ref.zones)
+      disposeObject(ref.zones)
+      ref.zones = null
+    }
+    if (!showZones) return
+    ref.zones = buildZones(zoneStyle)
+    orientZoneLabels(ref.zones, ref.camera, ref.controls.target)
+    ref.scene.add(ref.zones)
+  }, [showZones, zoneStyle])
 
   // Netz neu aufbauen, wenn sich die Netzhöhe ändert
   useEffect(() => {
@@ -265,7 +292,9 @@ export function ThreeView() {
         onZoomIn={() => zoom(1 / ZOOM_STEP)}
         onZoomOut={() => zoom(ZOOM_STEP)}
         onReset={resetView}
-      />
+      >
+        <ZonesButton />
+      </ViewControls>
     </>
   )
 }

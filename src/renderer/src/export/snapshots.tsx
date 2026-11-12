@@ -11,6 +11,8 @@ import { TrajectoryLayer } from '@renderer/views/top/TrajectoryLayer'
 import { Floor, HALF_W, Net, PlayerFigure } from '@renderer/views/net/NetView'
 import { NetTrajectories } from '@renderer/views/net/NetTrajectories'
 import { buildCourt, buildNet, disposeObject } from '@renderer/views/three/courtScene'
+import { buildZones, orientZoneLabels } from '@renderer/views/three/zones'
+import { useSettings } from '@renderer/store/appSettings'
 import { CylinderPlayerFactory, placePlayer } from '@renderer/views/three/players'
 import { buildTrajectories } from '@renderer/views/three/trajectories'
 import { courtPlayers, visibleTrajectories } from '@renderer/store/selectors'
@@ -100,6 +102,9 @@ export function snapshotsThree(width = 900, height = 560): { label: string; url:
   scene.add(sun)
   scene.add(buildCourt())
   scene.add(buildNet(useUi.getState().netHeight))
+  // Eingeblendete Zonen kommen mit ins Bild
+  const zones = useUi.getState().showZones ? buildZones(useSettings.getState().settings.zoneStyle) : null
+  if (zones) scene.add(zones)
   const factory = new CylinderPlayerFactory()
   const created: THREE.Object3D[] = []
   for (const p of courtPlayers(usePlay.getState().sides, useTeams.getState().teams)) {
@@ -118,6 +123,7 @@ export function snapshotsThree(width = 900, height = 560): { label: string; url:
     const [tx, ty, tz] = preset.target
     camera.position.set(x, z, -y)
     camera.lookAt(tx, tz, -ty)
+    if (zones) orientZoneLabels(zones, camera, new THREE.Vector3(tx, tz, -ty))
     renderer.render(scene, camera)
     out.push({ label: preset.label, url: renderer.domElement.toDataURL('image/png') })
   }

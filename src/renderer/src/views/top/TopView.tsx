@@ -19,6 +19,8 @@ import { useZoomPan } from '@renderer/components/useZoomPan'
 import { ViewControls } from '@renderer/components/ViewControls'
 import { Icon } from '@renderer/components/Icon'
 import { PipBar } from '@renderer/components/PipBar'
+import { ZoneMarks } from './ZoneMarks'
+import { ZonesButton } from '@renderer/components/ZonesButton'
 import { useUi } from '@renderer/store/settingsStore'
 
 export const WORLD_W = COURT.length + 2 * COURT.freeZone
@@ -100,6 +102,7 @@ export function TopView({ compact = false }: { compact?: boolean }) {
         <button title="Feld um 90° drehen" aria-label="Feld um 90 Grad drehen" onClick={rotateTop}>
           <Icon name="rotate" />
         </button>
+        <ZonesButton />
       </ViewControls>
       )}
     </>
@@ -165,6 +168,7 @@ export function CourtLayer({ vp }: { vp: TopViewport }) {
           lineCap="square"
         />
       ))}
+      <ZoneMarks vp={vp} />
       {/* Netz (über die Mittellinie hinaus bis zu den Pfosten) */}
       <Line
         points={[...P(0, -postY), ...P(0, postY)]}

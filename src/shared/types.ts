@@ -25,13 +25,13 @@ export interface Player {
   number: number
   /** Eine oder mehrere Positionen; die erste gilt als Hauptposition. */
   positions: Role[]
-  /** Körpergröße in Metern (inkl. Kopf), bestimmt die Figur in Netz- und 3D-Ansicht */
+  /** Körpergröße in Metern; der Körper (Zylinder) der Figur ist genau so hoch, das Schild sitzt obendrauf */
   height: number
 }
 
 /** Körpergröße: Standard und erlaubter Bereich (Meter) */
-export const PLAYER_HEIGHT = { default: 1.75, min: 1.0, max: 2.3 } as const
-/** Kopf (Kreis bzw. Schild) als Teil der Körpergröße: Durchmesser in Metern */
+export const PLAYER_HEIGHT = { default: 1.75, min: 1.0, max: 2.5 } as const
+/** Kopf (Kreis bzw. Schild mit Rolle und Nummer) über dem Körper: Durchmesser in Metern */
 export const HEAD_DIAMETER = 0.4
 
 /** Annahme (Gegner schlägt auf) oder eigener Aufschlag */

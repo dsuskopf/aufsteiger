@@ -79,7 +79,7 @@ function sanitizeRotations(raw: unknown, ids: Set<string>): Record<string, Forma
   return Object.keys(out).length ? out : undefined
 }
 
-/** Körpergröße auf 1,0–2,3 m begrenzen, auf Zentimeter runden; ohne Angabe 1,75 m */
+/** Körpergröße auf 1,0–2,5 m begrenzen, auf Zentimeter runden; ohne Angabe 1,75 m */
 export function clampHeight(h: unknown): number {
   const v = Number(h)
   if (h === undefined || h === null || h === '' || !Number.isFinite(v)) return PLAYER_HEIGHT.default

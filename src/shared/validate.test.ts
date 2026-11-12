@@ -40,7 +40,8 @@ describe('sanitizeTeams', () => {
     expect(clampHeight(undefined)).toBe(1.75)
     expect(clampHeight('abc')).toBe(1.75)
     expect(clampHeight(0.5)).toBe(1)
-    expect(clampHeight(3)).toBe(2.3)
+    expect(clampHeight(3)).toBe(2.5)
+    expect(clampHeight(2.45)).toBe(2.45)
     expect(clampHeight(1.874)).toBe(1.87)
   })
 

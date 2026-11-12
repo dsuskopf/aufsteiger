@@ -293,7 +293,8 @@ export function PlayerFigure({ vp, p, dim = false }: { vp: NetViewport; p: Court
   const foot = netProject(vp, p.x, p.y, p.lift ?? 0)
   const w = BODY_WIDTH * s
   const headR = (HEAD_DIAMETER / 2) * s
-  const h = Math.max(0.2, p.height - HEAD_DIAMETER) * s
+  // Körper = echte Körpergröße, der Kopf (Schild) sitzt darüber
+  const h = Math.max(0.2, p.height) * s
   // Der Kopf wächst nur für die Lesbarkeit über die echte Größe hinaus (min. 12 px Radius)
   const r = Math.max(12, headR)
   return (

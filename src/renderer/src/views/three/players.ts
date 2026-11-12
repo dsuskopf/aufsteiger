@@ -38,7 +38,8 @@ export class CylinderPlayerFactory implements PlayerMeshFactory {
   private geometry = new THREE.CylinderGeometry(BODY_RADIUS, BODY_RADIUS, 1, 24)
 
   create(v: PlayerVisual): THREE.Object3D {
-    const bodyHeight = Math.max(0.2, v.height - HEAD_DIAMETER)
+    // Der Zylinder zeigt die echte Körpergröße, das Schild (Kopf) sitzt darüber
+    const bodyHeight = Math.max(0.2, v.height)
     const colors = v.jersey
     const g = new THREE.Group()
     const body = new THREE.Mesh(
@@ -58,7 +59,7 @@ export class CylinderPlayerFactory implements PlayerMeshFactory {
     const label = new THREE.Sprite(
       new THREE.SpriteMaterial({ map: labelTexture(v), transparent: true, depthWrite: false })
     )
-    // Schild = Kopf: Durchmesser HEAD_DIAMETER, sitzt direkt auf dem Körper
+    // Schild = Kopf: Durchmesser HEAD_DIAMETER, sitzt direkt auf dem Körper (über der echten Größe)
     label.scale.set(HEAD_DIAMETER, HEAD_DIAMETER, 1)
     label.position.y = bodyHeight + HEAD_DIAMETER / 2
     g.add(label)
@@ -70,7 +71,7 @@ export class CylinderPlayerFactory implements PlayerMeshFactory {
       const tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }))
       const h = 0.26
       tag.scale.set(h * aspect, h, 1)
-      tag.position.y = v.height + 0.22
+      tag.position.y = v.height + HEAD_DIAMETER + 0.22
       tag.name = NAME_TAG
       tag.visible = false
       g.add(tag)

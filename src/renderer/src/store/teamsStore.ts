@@ -7,6 +7,8 @@ interface TeamsState {
   loaded: boolean
   saveError: string | null
   load: () => Promise<void>
+  /** Ausstehende Speicherung sofort ausführen (z. B. beim Schließen) */
+  flush: () => void
   addTeam: (name?: string) => string
   renameTeam: (teamId: string, name: string) => void
   deleteTeam: (teamId: string) => void
@@ -36,17 +38,22 @@ function exampleTeam(): Team {
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | undefined
+let savePending = false
 
 /** Teams werden nach jeder Änderung kurz verzögert in teams.json gespeichert. */
 export const useTeams = create<TeamsState>((set, get) => {
+  const saveNow = () => {
+    clearTimeout(saveTimer)
+    savePending = false
+    window.api.teams
+      .save(get().teams)
+      .then(() => set({ saveError: null }))
+      .catch((e: unknown) => set({ saveError: String(e) }))
+  }
   const persist = () => {
     clearTimeout(saveTimer)
-    saveTimer = setTimeout(() => {
-      window.api.teams
-        .save(get().teams)
-        .then(() => set({ saveError: null }))
-        .catch((e: unknown) => set({ saveError: String(e) }))
-    }, 300)
+    savePending = true
+    saveTimer = setTimeout(saveNow, 300)
   }
   const mutate = (fn: (teams: Team[]) => Team[]) => {
     set({ teams: fn(get().teams) })
@@ -71,6 +78,10 @@ export const useTeams = create<TeamsState>((set, get) => {
       } else {
         set({ teams: file.teams, loaded: true })
       }
+    },
+
+    flush: () => {
+      if (savePending) saveNow()
     },
 
     addTeam: (name) => {
@@ -106,3 +117,6 @@ export const useTeams = create<TeamsState>((set, get) => {
       mapTeam(teamId, (t) => ({ ...t, players: t.players.filter((p) => p.id !== playerId) }))
   }
 })
+
+// Beim Schließen des Fensters nichts verlieren
+window.addEventListener('beforeunload', () => useTeams.getState().flush())

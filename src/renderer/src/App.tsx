@@ -55,7 +55,14 @@ export function App() {
           <LineupPanel onClose={() => setLineupOpen(false)} onManageTeams={() => setTeamsOpen(true)} />
         )}
       </main>
-      {teamsOpen && <TeamManager onClose={() => setTeamsOpen(false)} />}
+      {teamsOpen && (
+        <TeamManager
+          onClose={() => {
+            useTeams.getState().flush()
+            setTeamsOpen(false)
+          }}
+        />
+      )}
     </div>
   )
 }

@@ -6,7 +6,7 @@ import {
   BALL_RADIUS,
   moveHitAlongParabola,
   pointAt,
-  projectToFallingBranch,
+  projectToHitBranches,
   sampleTrajectory,
   solveTrajectory
 } from '@renderer/core/physics/trajectory'
@@ -20,7 +20,7 @@ import { Ball, Handle } from '../top/TrajectoryLayer'
  * Flugbahnen in der Netzansicht (seitliche Parallelprojektion, mit der Ansicht drehbar) mit den Höhen-Griffen:
  *  - Start (hohler Punkt): senkrecht ziehen = Starthöhe
  *  - Scheitel (Raute): senkrecht ziehen = Scheitelhöhe; nie unter Start/Schlagpunkt
- *  - Schlagpunkt: nur entlang der Parabel (fallender Ast); das Ende in der Draufsicht wandert mit
+ *  - Schlagpunkt: nur entlang der Parabel, auf dem steigenden oder fallenden Ast; das Ende in der Draufsicht wandert mit
  */
 export function NetTrajectories({ vp, interactive = true, showBall = true }: { vp: NetViewport; interactive?: boolean; showBall?: boolean }) {
   const visible = useVisibleTrajectories()
@@ -63,7 +63,7 @@ export function NetTrajectories({ vp, interactive = true, showBall = true }: { v
   const dragHit = (tv: TrajectoryView) => (e: Konva.KonvaEventObject<DragEvent>) => {
     const t = current(tv)
     if (!t) return
-    const s = projectToFallingBranch(solveTrajectory(t), t.start, (p) => netProject(vp, p.x, p.y, p.z), e.target.x(), e.target.y())
+    const s = projectToHitBranches(solveTrajectory(t), t.start, (p) => netProject(vp, p.x, p.y, p.z), e.target.x(), e.target.y())
     const next = moveHitAlongParabola(t, s)
     setTrajectory(tv.type, next)
     e.target.position(at(next.end.x, next.end.y, next.hitH))
@@ -81,6 +81,10 @@ export function NetTrajectories({ vp, interactive = true, showBall = true }: { v
             {display.showAfterHit && (
               // Strichmuster am Start verankert: beim Verschieben des Schlagpunkts bleiben die Striche stehen
               <Line points={pts(tv, sol.D, sol.sGround)} stroke={COLORS.trajectory} strokeWidth={2} dash={DASH} dashOffset={polyLength(pts(tv, 0, sol.D))} opacity={0.45} listening={false} />
+            )}
+            {sol.rising && !display.showAfterHit && (
+              // Schlagpunkt vor dem Scheitel: Weg bis zum Scheitel angedeutet, damit der Scheitel-Griff auf der Bahn liegt
+              <Line points={pts(tv, sol.D, sol.sA)} stroke={COLORS.trajectory} strokeWidth={2} dash={[3, 6]} opacity={0.4} listening={false} />
             )}
             <Line
               points={pts(tv, 0, sol.D)}

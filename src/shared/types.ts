@@ -96,6 +96,8 @@ export interface Trajectory {
   end: { x: number; y: number }
   apexH: number
   hitH: number
+  /** Schlagpunkt auf dem steigenden Ast (vor dem Scheitel) */
+  rising?: boolean
 }
 
 /** Anzeige-Optionen eines Spielzugs */

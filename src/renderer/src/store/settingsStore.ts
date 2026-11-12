@@ -80,7 +80,8 @@ export const useUi = create<UiState>((set) => ({
   setNetAngle: (deg) => set({ netAngle: Math.max(-90, Math.min(90, Number.isFinite(deg) ? deg : 0)) }),
   toggleNetViewFrom: () => set((s) => ({ netViewFrom: s.netViewFrom === 'A' ? 'B' : 'A' })),
   setNetShowPlayers: (netShowPlayers) => set({ netShowPlayers }),
-  netPipCollapsed: false,
+  // Pop-up (Netzansicht) startet eingeklappt
+  netPipCollapsed: true,
   setNetPipCollapsed: (netPipCollapsed) => set({ netPipCollapsed }),
   netPipRect: null,
   setNetPipRect: (netPipRect) => set({ netPipRect }),

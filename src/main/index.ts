@@ -4,6 +4,8 @@ import { registerIpc } from './ipc'
 
 // Für Tests: eigenes Datenverzeichnis, damit echte Teams/Spielzüge unberührt bleiben
 if (process.env['VBP_USER_DATA']) app.setPath('userData', process.env['VBP_USER_DATA'])
+/** Automatische Tests: unsichtbares Offscreen-Fenster, Renderer mit ?test (Zugriff auf die Stores) */
+const TEST = !!process.env['VBP_TEST']
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -21,11 +23,13 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true
+      sandbox: true,
+      ...(TEST ? { offscreen: true } : {})
     }
   })
 
   win.once('ready-to-show', () => {
+    if (TEST) return
     win.maximize()
     win.show()
   })
@@ -39,7 +43,7 @@ function createWindow(): void {
   if (!app.isPackaged && process.env['ELECTRON_RENDERER_URL']) {
     void win.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
-    void win.loadFile(join(__dirname, '../renderer/index.html'))
+    void win.loadFile(join(__dirname, '../renderer/index.html'), TEST ? { search: 'test' } : undefined)
   }
 }
 

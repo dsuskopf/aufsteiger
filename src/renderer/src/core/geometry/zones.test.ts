@@ -5,19 +5,21 @@ const find = (style: Parameters<typeof zoneLayout>[0], text: string, side: 'A' |
   zoneLayout(style).labels.filter((l) => l.text === text && (side === 'A' ? l.x < 0 : l.x > 0))
 
 describe('Zonen', () => {
-  it('Standard: 6 Zonen je Seite, Zone 1 hinten rechts aus Sicht des Teams', () => {
+  it('Standard: 6 gleich große Zonen (3 × 4,5 m) je Seite, Zone 1 hinten rechts aus Sicht des Teams', () => {
+    // Trennlinie zwischen vorne und hinten bei 4,5 m
+    expect(zoneLayout('standard').lines.some((l) => l.kind === 'zone' && Math.abs(l.a.x + 4.5) < 1e-9 && Math.abs(l.b.x + 4.5) < 1e-9)).toBe(true)
     const labels = zoneLayout('standard').labels
     expect(labels).toHaveLength(12)
     // Seite A schaut in +x: rechts = −y
     const [a1] = find('standard', '1', 'A')
-    expect(a1.x).toBeCloseTo(-6)
+    expect(a1.x).toBeCloseTo(-6.75)
     expect(a1.y).toBeCloseTo(-3)
     const [a4] = find('standard', '4', 'A')
-    expect(a4.x).toBeCloseTo(-1.5)
+    expect(a4.x).toBeCloseTo(-2.25)
     expect(a4.y).toBeCloseTo(3)
     // Seite B schaut in −x: rechts = +y
     const [b1] = find('standard', '1', 'B')
-    expect(b1.x).toBeCloseTo(6)
+    expect(b1.x).toBeCloseTo(6.75)
     expect(b1.y).toBeCloseTo(3)
   })
 

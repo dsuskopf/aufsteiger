@@ -3,7 +3,8 @@ import { COURT } from './court'
 
 /**
  * Zonen auf dem Feldboden, je Feldhälfte aus Sicht des Teams, das aufs Netz schaut:
- *  - Standard (1–6): vorne (bis 3-m-Linie) links 4, Mitte 3, rechts 2; hinten links 5, Mitte 6, rechts 1.
+ *  - Standard (1–6): sechs gleich große Zonen à 3 m × 4,5 m – vorne (Netz bis 4,5 m) links 4, Mitte 3, rechts 2;
+ *    hinten links 5, Mitte 6, rechts 1. Die vorderen Zonen reichen also über die 3-m-Linie hinaus.
  *  - Erweitert (1–9): drei Reihen à 3 m – vorne 4 3 2, Mitte 7 8 9, hinten 5 6 1 (3 × 3 m je Zone).
  *  - Erweitert mit Unterzonen: jede Zone in vier Quadrate geteilt – am Netz links C, rechts B;
  *    zur Grundlinie links D, rechts A (also 1A = hintere rechte Ecke, 4C = genau gegenüberliegende Ecke).
@@ -69,6 +70,7 @@ export function zoneLayout(style: ZoneStyle): ZoneLayout {
     // Spaltengrenzen über die ganze Hälfte (die 3-m-Linie ist schon eine Feldlinie)
     for (const l of [-1.5, 1.5]) lines.push(line(side, 0, l, L, l, 'zone'))
     if (advanced) lines.push(line(side, 6, -W, 6, W, 'zone'))
+    else lines.push(line(side, L / 2, -W, L / 2, W, 'zone'))
     if (letters) {
       // Kreuz in jeder Zone
       for (const l of COLS) lines.push(line(side, 0, l, L, l, 'sub'))
@@ -82,8 +84,8 @@ export function zoneLayout(style: ZoneStyle): ZoneLayout {
           { depth: 7.5, numbers: BACK }
         ]
       : [
-          { depth: 1.5, numbers: FRONT },
-          { depth: 6, numbers: BACK }
+          { depth: L / 4, numbers: FRONT },
+          { depth: (3 * L) / 4, numbers: BACK }
         ]
     const size = letters ? 0.8 : advanced ? 1.1 : 1.3
     for (const row of rows) {

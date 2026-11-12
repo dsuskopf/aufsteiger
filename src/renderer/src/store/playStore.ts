@@ -96,6 +96,15 @@ export const usePlay = create<PlayState>((set) => {
   }
 })
 
+/**
+ * Leerer Spielzug: noch nichts geplant (keine Flugbahn). Die Aufstellung allein zählt nicht –
+ * dann muss man beim Öffnen eines anderen Spielzugs nicht nachfragen.
+ */
+export function isPlayEmpty(): boolean {
+  const s = usePlay.getState()
+  return !s.trajectories.annahme && !s.trajectories.zuspiel
+}
+
 // Jede inhaltliche Änderung markiert den Spielzug als ungespeichert
 usePlay.subscribe((s, prev) => {
   if (!s.dirty && (s.sides !== prev.sides || s.trajectories !== prev.trajectories || s.display !== prev.display))

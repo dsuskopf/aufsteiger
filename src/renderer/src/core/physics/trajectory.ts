@@ -10,6 +10,8 @@
  * Lösung: Am Scheitel ist vz = 0, unbekannt ist nur die horizontale Geschwindigkeit u dort. Von diesem Zustand aus
  * wird rückwärts bis zur Starthöhe und vorwärts bis zur Schlagpunkthöhe integriert; u wird so gesucht, dass beide
  * Äste zusammen genau die Distanz D ergeben. Die Bahn geht damit exakt durch Start, Scheitel und Schlagpunkt.
+ * Liegt der Schlagpunkt auf dem steigenden Ast (rising), wird er vor dem Scheitel getroffen: dann ist D der Abstand
+ * zwischen Start und dem Punkt der Schlagpunkthöhe auf dem steigenden Ast, der Scheitel liegt dahinter.
  * Geschwindigkeit und Flugdauer ergeben sich daraus, es gibt keine manuelle Geschwindigkeit.
  */
 
@@ -28,6 +30,8 @@ export const DRAG_K = (0.5 * AIR_DENSITY * DRAG_COEFF * Math.PI * BALL_RADIUS **
 
 /** Scheitel mindestens so weit über Start und Schlagpunkt (m) – sonst wäre die Bahn eine Gerade (unendlich schnell). */
 export const APEX_EPS = 0.05
+/** Schlagpunkt auf dem steigenden Ast mindestens so weit über dem Start (m) */
+export const RISE_EPS = 0.02
 /** Kürzeste Flugbahn (m); darunter gilt die Eingabe als Klick */
 export const MIN_DIST = 0.2
 export const START_H_MAX = 6
@@ -48,6 +52,8 @@ export interface TrajectoryInput {
   apexH: number
   /** Höhe des Schlagpunkts */
   hitH: number
+  /** Schlagpunkt auf dem steigenden Ast (vor dem Scheitel); Standard: fallender Ast */
+  rising?: boolean
 }
 
 /** Dicht abgetastete Bahn vom Abwurf bis zum Bodenaufprall (Zeit ab Abwurf, Distanz ab Start). */
@@ -69,6 +75,8 @@ export interface SolvedTrajectory {
   h0: number
   h1: number
   apexH: number
+  /** Schlagpunkt liegt auf dem steigenden Ast (Scheitel hinter dem Schlagpunkt) */
+  rising: boolean
   /** Distanz des Scheitels vom Start */
   sA: number
   /** Distanz, bei der der Ball den Boden erreicht */
@@ -165,10 +173,18 @@ function integrateFromApex(u: number, H: number, sign: 1 | -1, targetZ: number, 
   return { t: ts, st: sts, ok: false }
 }
 
-/** Horizontale Distanz beider Äste (Start → Scheitel → Schlagpunkt) für die Scheitelgeschwindigkeit u */
-function spanFor(u: number, h0: number, H: number, h1: number): number {
+/**
+ * Horizontale Distanz Start → Schlagpunkt für die Scheitelgeschwindigkeit u:
+ * fallend = beide Äste (Start → Scheitel → Schlagpunkt), steigend = Start → Schlagpunkthöhe auf dem steigenden Ast.
+ */
+function spanFor(u: number, h0: number, H: number, h1: number, rising: boolean): number {
   const up = integrateFromApex(u, H, -1, h0, false)
   if (!up.ok) return Infinity
+  if (rising) {
+    const up1 = integrateFromApex(u, H, -1, h1, false)
+    if (!up1.ok) return Infinity
+    return -up.st[up.st.length - 1][0] + up1.st[up1.st.length - 1][0]
+  }
   const down = integrateFromApex(u, H, 1, h1, false)
   if (!down.ok) return Infinity
   const sUp = -up.st[up.st.length - 1][0]
@@ -177,20 +193,20 @@ function spanFor(u: number, h0: number, H: number, h1: number): number {
 }
 
 /** Sucht u mit spanFor(u) = D (monoton steigend in u): Klammer aufweiten, dann Illinois-Verfahren. */
-function solveApexSpeed(D: number, h0: number, H: number, h1: number): number {
+function solveApexSpeed(D: number, h0: number, H: number, h1: number, rising: boolean): number {
   // Startwert aus der Lösung ohne Luft
   const a0 = Math.sqrt(H - h0)
   const a1 = Math.sqrt(H - h1)
-  const kVac = ((a0 + a1) / D) ** 2
+  const kVac = ((rising ? Math.max(1e-6, a0 - a1) : a0 + a1) / D) ** 2
   let hi = Math.sqrt(G / (2 * kVac))
   let lo = 0
   let flo = -D
-  let fhi = spanFor(hi, h0, H, h1) - D
+  let fhi = spanFor(hi, h0, H, h1, rising) - D
   for (let i = 0; i < 60 && fhi < 0; i++) {
     lo = hi
     flo = fhi
     hi *= 1.6
-    fhi = spanFor(hi, h0, H, h1) - D
+    fhi = spanFor(hi, h0, H, h1, rising) - D
   }
   let side = 0
   for (let i = 0; i < 80; i++) {
@@ -198,7 +214,7 @@ function solveApexSpeed(D: number, h0: number, H: number, h1: number): number {
     if (!Number.isFinite(fhi)) x = (lo + hi) / 2
     else x = (lo * fhi - hi * flo) / (fhi - flo)
     if (!(x > lo && x < hi)) x = (lo + hi) / 2
-    const fx = spanFor(x, h0, H, h1) - D
+    const fx = spanFor(x, h0, H, h1, rising) - D
     if (Math.abs(fx) < 1e-9 || hi - lo < 1e-12) return x
     if (fx > 0) {
       hi = x
@@ -223,15 +239,15 @@ type Profile = Omit<SolvedTrajectory, 'dir'>
 const cache = new Map<string, Profile>()
 const CACHE_MAX = 96
 
-function solveProfile(D: number, h0: number, H: number, h1: number): Profile {
-  const key = `${D}|${h0}|${H}|${h1}`
+function solveProfile(D: number, h0: number, H: number, h1: number, rising: boolean): Profile {
+  const key = `${D}|${h0}|${H}|${h1}|${rising ? 1 : 0}`
   const hit = cache.get(key)
   if (hit) {
     cache.delete(key)
     cache.set(key, hit)
     return hit
   }
-  const u = solveApexSpeed(D, h0, H, h1)
+  const u = solveApexSpeed(D, h0, H, h1, rising)
   const up = integrateFromApex(u, H, -1, h0, true)
   const down = integrateFromApex(u, H, 1, 0, true)
   const nUp = up.t.length
@@ -274,6 +290,7 @@ function solveProfile(D: number, h0: number, H: number, h1: number): Profile {
     h0,
     h1,
     apexH: H,
+    rising,
     sA: s[nUp - 1],
     sGround: s[n - 1],
     vH: vs[0],
@@ -289,13 +306,20 @@ function solveProfile(D: number, h0: number, H: number, h1: number): Profile {
   return p
 }
 
-/** Klemmt die Eingabe auf physikalisch mögliche Werte (Scheitel über Start und Schlagpunkt, Höhen ≥ 0). */
+/**
+ * Klemmt die Eingabe auf physikalisch mögliche Werte (Scheitel über Start und Schlagpunkt, Höhen ≥ 0).
+ * Auf dem steigenden Ast liegt der Schlagpunkt zusätzlich über dem Start.
+ */
 export function clampInput(t: TrajectoryInput): TrajectoryInput {
   const h0 = Math.min(START_H_MAX, Math.max(0, Number.isFinite(t.start.h) ? t.start.h : 0))
-  const hitH = Math.max(0, Number.isFinite(t.hitH) ? t.hitH : 0)
+  const rising = !!t.rising
+  let hitH = Math.max(0, Number.isFinite(t.hitH) ? t.hitH : 0)
+  if (rising) hitH = Math.max(hitH, h0 + RISE_EPS)
   const minApex = Math.max(h0, hitH) + APEX_EPS
   const apexH = Math.min(Math.max(APEX_H_MAX, minApex), Math.max(minApex, Number.isFinite(t.apexH) ? t.apexH : minApex))
-  return { start: { ...t.start, h: h0 }, end: { ...t.end }, apexH, hitH }
+  const out: TrajectoryInput = { start: { ...t.start, h: h0 }, end: { ...t.end }, apexH, hitH }
+  if (rising) out.rising = true
+  return out
 }
 
 /** Löst die Flugbahn aus Start, Scheitelhöhe und Schlagpunkt. */
@@ -306,7 +330,7 @@ export function solveTrajectory(input: TrajectoryInput): SolvedTrajectory {
   const rawD = Math.hypot(ex, ey)
   const D = Math.max(MIN_DIST, rawD)
   const dir = rawD > 1e-9 ? { dx: ex / rawD, dy: ey / rawD } : { dx: 1, dy: 0 }
-  return { ...solveProfile(D, t.start.h, t.apexH, t.hitH), dir }
+  return { ...solveProfile(D, t.start.h, t.apexH, t.hitH, !!t.rising), dir }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -372,6 +396,23 @@ export function distAtHeightFalling(sol: SolvedTrajectory, h: number): number {
   return dz > 0 ? lerp(S[lo], S[hi], (Z[lo] - h) / dz) : S[lo]
 }
 
+/** Distanz auf dem steigenden Ast, bei der der Ball die Höhe h erreicht (h zwischen Start und Scheitel). */
+export function distAtHeightRising(sol: SolvedTrajectory, h: number): number {
+  const { s: S, z: Z, iApex } = sol.samples
+  if (h >= Z[iApex]) return S[iApex]
+  if (h <= Z[0]) return 0
+  // z steigt bis zum Scheitel streng monoton
+  let lo = 0
+  let hi = iApex
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1
+    if (Z[mid] <= h) lo = mid
+    else hi = mid
+  }
+  const dz = Z[hi] - Z[lo]
+  return dz > 0 ? lerp(S[lo], S[hi], (h - Z[lo]) / dz) : S[lo]
+}
+
 /** Profilzustand (Distanz, Höhe, Geschwindigkeit) zur Zeit t seit dem Abwurf */
 export function stateAt(sol: SolvedTrajectory, t: number): { s: number; z: number; vs: number; vz: number } {
   const { t: T, s: S, z: Z, vs: VS, vz: VZ } = sol.samples
@@ -417,50 +458,86 @@ export function sampleTrajectory(
   return out
 }
 
-/** Kleinste erlaubte Schlagpunkt-Distanz (knapp hinter dem Scheitel) */
+/** Kleinste erlaubte Schlagpunkt-Distanz auf dem fallenden Ast (knapp hinter dem Scheitel) */
 export function minHitDist(sol: SolvedTrajectory): number {
   return distAtHeightFalling(sol, sol.apexH - APEX_EPS)
 }
 
 /**
- * Schlagpunkt entlang der (festen) Bahn verschieben: neue Distanz s wird auf den fallenden Ast geklemmt.
- * Gibt die neue Eingabe zurück (Ende wandert in gleicher Richtung, Höhe = z(s)).
+ * Erlaubte Bereiche für den Schlagpunkt entlang der Bahn (Distanz ab Start): steigender Ast (knapp über dem Start
+ * bis knapp vor dem Scheitel) und fallender Ast (knapp hinter dem Scheitel bis zum Boden). Am Scheitel bleibt eine
+ * kleine Lücke, dort wäre die Bahn nicht eindeutig bestimmt.
  */
-export function moveHitAlongParabola(input: TrajectoryInput, s: number): TrajectoryInput {
-  const sol = solveTrajectory(input)
-  const sc = Math.min(sol.sGround, Math.max(minHitDist(sol), MIN_DIST, s))
-  return {
-    start: { ...input.start },
-    end: { x: input.start.x + sol.dir.dx * sc, y: input.start.y + sol.dir.dy * sc },
-    apexH: sol.apexH,
-    hitH: Math.max(0, heightAt(sol, sc))
-  }
+export function hitRanges(sol: SolvedTrajectory): { rising: [number, number] | null; falling: [number, number] } {
+  const r0 = Math.max(MIN_DIST, distAtHeightRising(sol, sol.h0 + RISE_EPS))
+  const r1 = distAtHeightRising(sol, sol.apexH - APEX_EPS)
+  const f0 = Math.max(MIN_DIST, minHitDist(sol))
+  return { rising: r1 > r0 ? [r0, r1] : null, falling: [f0, Math.max(f0, sol.sGround)] }
+}
+
+/** Klemmt eine Distanz auf den nächsten erlaubten Schlagpunkt (steigend oder fallend). */
+function clampHitDist(sol: SolvedTrajectory, s: number): { s: number; rising: boolean } {
+  const { rising, falling } = hitRanges(sol)
+  const fs = Math.min(falling[1], Math.max(falling[0], s))
+  if (!rising) return { s: fs, rising: false }
+  const rs = Math.min(rising[1], Math.max(rising[0], s))
+  return Math.abs(rs - s) < Math.abs(fs - s) ? { s: rs, rising: true } : { s: fs, rising: false }
 }
 
 /**
- * Projiziert einen Bildschirmpunkt auf den fallenden Ast: sucht die Distanz s, deren projizierter Punkt
- * dem Zeiger am nächsten liegt. `project` bildet Weltpunkte auf Bildschirm-Pixel ab.
+ * Schlagpunkt entlang der (festen) Bahn verschieben – auf dem steigenden wie auf dem fallenden Ast.
+ * Gibt die neue Eingabe zurück (Ende wandert in gleicher Richtung, Höhe = z(s), Ast je nach Lage zum Scheitel).
  */
-export function projectToFallingBranch(
+export function moveHitAlongParabola(input: TrajectoryInput, s: number): TrajectoryInput {
+  const sol = solveTrajectory(input)
+  const c = clampHitDist(sol, s)
+  const out: TrajectoryInput = {
+    start: { ...input.start },
+    end: { x: input.start.x + sol.dir.dx * c.s, y: input.start.y + sol.dir.dy * c.s },
+    apexH: sol.apexH,
+    hitH: Math.max(0, heightAt(sol, c.s))
+  }
+  if (c.rising) out.rising = true
+  return out
+}
+
+/** Schlagpunkt auf eine Höhe setzen, auf dem gewünschten Ast (Bahn bleibt gleich, nur der Schlagpunkt wandert). */
+export function setHitHeight(input: TrajectoryInput, h: number, rising: boolean): TrajectoryInput {
+  const sol = solveTrajectory(input)
+  const { rising: r } = hitRanges(sol)
+  if (rising && r) {
+    const hc = Math.min(sol.apexH - APEX_EPS, Math.max(sol.h0 + RISE_EPS, h))
+    return moveHitAlongParabola(input, Math.min(r[1], Math.max(r[0], distAtHeightRising(sol, hc))))
+  }
+  const hc = Math.min(sol.apexH - APEX_EPS, Math.max(0, h))
+  return moveHitAlongParabola(input, Math.max(minHitDist(sol), distAtHeightFalling(sol, hc)))
+}
+
+/**
+ * Projiziert einen Bildschirmpunkt auf die Bahn (beide Äste, ohne die Lücke am Scheitel): sucht die Distanz s,
+ * deren projizierter Punkt dem Zeiger am nächsten liegt. `project` bildet Weltpunkte auf Bildschirm-Pixel ab.
+ */
+export function projectToHitBranches(
   sol: SolvedTrajectory,
   start: { x: number; y: number },
   project: (p: { x: number; y: number; z: number }) => { px: number; py: number },
   px: number,
   py: number
 ): number {
-  const lo = Math.max(MIN_DIST, minHitDist(sol))
-  const hi = sol.sGround
-  if (hi <= lo) return lo
+  const { rising, falling } = hitRanges(sol)
+  const ranges = rising ? [rising, falling] : [falling]
   const N = 200
-  let best = lo
+  let best = falling[0]
   let bestD = Infinity
-  for (let i = 0; i <= N; i++) {
-    const s = lo + ((hi - lo) * i) / N
-    const p = project(pointAt(sol, start, s))
-    const d = (p.px - px) ** 2 + (p.py - py) ** 2
-    if (d < bestD) {
-      bestD = d
-      best = s
+  for (const [lo, hi] of ranges) {
+    for (let i = 0; i <= N; i++) {
+      const s = lo + ((hi - lo) * i) / N
+      const p = project(pointAt(sol, start, s))
+      const d = (p.px - px) ** 2 + (p.py - py) ** 2
+      if (d < bestD) {
+        bestD = d
+        best = s
+      }
     }
   }
   return best
@@ -486,5 +563,9 @@ export function coupleTrajectories<T extends { annahme?: TrajectoryInput; zuspie
   if (!a || !z) return tr
   const start = { x: a.end.x, y: a.end.y, h: a.hitH }
   if (z.start.x === start.x && z.start.y === start.y && z.start.h === start.h) return tr
-  return { ...tr, zuspiel: clampInput({ ...z, start }) }
+  // Ein steigender Schlagpunkt des Zuspiels muss deutlich über dem (neuen) Start liegen, sonst wird er zum fallenden
+  // (sonst entstünde eine fast flache, unrealistisch schnelle Bahn)
+  const next: TrajectoryInput = { ...z, start }
+  if (next.rising && next.hitH < start.h + 0.1) delete next.rising
+  return { ...tr, zuspiel: clampInput(next) }
 }

@@ -116,7 +116,8 @@ function sanitizeTrajectory(raw: unknown): Trajectory | undefined {
     start: { x: c(raw.start.x), y: c(raw.start.y), h: num(raw.start.h, 1, 0, 6) },
     end: { x: c(raw.end.x), y: c(raw.end.y) },
     apexH: num(raw.apexH, 3, 0, 15),
-    hitH: num(raw.hitH, 2, 0, 6)
+    hitH: num(raw.hitH, 2, 0, 6),
+    ...(raw.rising === true ? { rising: true } : {})
   }
 }
 

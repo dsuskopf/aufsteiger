@@ -3,9 +3,10 @@ import { TRAJECTORY_LABELS } from '@shared/types'
 import {
   APEX_EPS,
   APEX_H_MAX,
+  RISE_EPS,
   START_H_MAX,
-  distAtHeightFalling,
-  moveHitAlongParabola,
+  hitRanges,
+  setHitHeight,
   solveTrajectory
 } from '@renderer/core/physics/trajectory'
 import { usePlay } from '@renderer/store/playStore'
@@ -22,6 +23,7 @@ export function TrajectoryCard() {
   const selected = usePlay((s) => s.selected)
   const t = usePlay((s) => (s.selected ? s.trajectories[s.selected] : undefined))
   const coupled = usePlay((s) => s.selected === 'zuspiel' && !!s.trajectories.annahme)
+  const annahme = usePlay((s) => s.trajectories.annahme)
   const { setTrajectory, removeTrajectory, select } = usePlay()
 
   // Entf löscht die gewählte Flugbahn, Esc hebt die Auswahl auf (nicht in Eingabefeldern)
@@ -42,11 +44,24 @@ export function TrajectoryCard() {
   const sol = solveTrajectory(t)
   const speed = Math.hypot(sol.vH, sol.vZ0) * 3.6
   const minApex = Math.max(t.start.h, t.hitH) + APEX_EPS
-  // Schlagpunkt über seine Höhe auf dem fallenden Ast (Distanz folgt aus der Bahn)
-  const setHitH = (h: number) => {
-    const hc = Math.min(sol.apexH - APEX_EPS, Math.max(0, h))
-    setTrajectory(selected, moveHitAlongParabola(t, distAtHeightFalling(sol, hc)))
+  const rising = !!t.rising
+  const canRise = hitRanges(sol).rising !== null
+  // Schlagpunkt über seine Höhe auf dem gewählten Ast (Distanz folgt aus der Bahn)
+  const setHitH = (h: number) => setTrajectory(selected, setHitHeight(t, h, rising))
+  // Ast wechseln: gleiche Höhe auf dem anderen Ast, sonst die Mitte zwischen Start und Scheitel
+  const setBranch = (up: boolean) => {
+    if (up === rising) return
+    const h = up && t.hitH <= t.start.h + RISE_EPS ? (t.start.h + sol.apexH) / 2 : t.hitH
+    setTrajectory(selected, setHitHeight(t, h, up))
   }
+  // Zuspielhöhe = Ende der Annahme: im Zuspiel (gekoppelt) verschiebt sie den Schlagpunkt der Annahme – beide Bahnen folgen
+  const setStartH = (h: number) => {
+    if (coupled && annahme) setTrajectory('annahme', setHitHeight(annahme, h, !!annahme.rising))
+    else setTrajectory(selected, { ...t, start: { ...t.start, h } })
+  }
+  const hitMin = rising ? t.start.h + RISE_EPS : 0
+  const hitMax = Math.max(hitMin + 0.01, sol.apexH - APEX_EPS)
+  const annSol = coupled && annahme ? solveTrajectory(annahme) : null
 
   return (
     <aside className="traj-card" aria-label={`${TRAJECTORY_LABELS[selected]} bearbeiten`}>
@@ -62,20 +77,28 @@ export function TrajectoryCard() {
       <MeterSlider
         label={selected === 'annahme' ? 'Annahme' : 'Zuspiel'}
         value={t.start.h}
-        min={0}
-        max={START_H_MAX}
-        disabled={coupled}
-        onChange={(h) => setTrajectory(selected, { ...t, start: { ...t.start, h } })}
+        min={annSol && annahme?.rising ? annahme.start.h + RISE_EPS : 0}
+        max={annSol ? Math.max(0.01, annSol.apexH - APEX_EPS) : START_H_MAX}
+        hint={coupled ? 'Ende der Annahme – verschiebt beide Flugbahnen' : undefined}
+        onChange={setStartH}
       />
       <MeterSlider label="Höchster Punkt" value={sol.apexH} min={minApex} max={APEX_H_MAX} onChange={(apexH) => setTrajectory(selected, { ...t, apexH })} />
       <MeterSlider
         // Ende der Annahme ist die Höhe, auf der gespielt wird (Zuspiel); beim Zuspiel der Schlagpunkt des Angriffs
         label={selected === 'annahme' ? 'Zuspiel' : 'Schlagpunkt'}
         value={t.hitH}
-        min={0}
-        max={Math.max(0.01, sol.apexH - APEX_EPS)}
+        min={hitMin}
+        max={hitMax}
         onChange={setHitH}
       />
+      <div className="segmented branch" role="radiogroup" aria-label="Schlagpunkt auf der Flugkurve">
+        <button role="radio" aria-checked={rising} className={rising ? 'selected' : ''} disabled={!canRise} title="Schlagpunkt vor dem höchsten Punkt (Ball steigt noch)" onClick={() => setBranch(true)}>
+          Steigend
+        </button>
+        <button role="radio" aria-checked={!rising} className={!rising ? 'selected' : ''} title="Schlagpunkt nach dem höchsten Punkt (Ball fällt)" onClick={() => setBranch(false)}>
+          Fallend
+        </button>
+      </div>
       <dl className="traj-stats">
         <div>
           <dt>Distanz</dt>

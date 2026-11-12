@@ -695,6 +695,9 @@ input.field.hex.invalid { box-shadow: inset 0 0 0 1px var(--danger); }
 .traj-slider .value { font-variant-numeric: tabular-nums; font-weight: 600; }
 .traj-slider input[type='range'] { width: 100%; height: 32px; margin: 0; }
 .traj-slider.disabled { opacity: 0.55; }
+.traj-card .segmented.branch { display: grid; grid-template-columns: 1fr 1fr; margin-top: -4px; }
+.traj-card .segmented.branch button { min-height: 32px; padding: 0 8px; font-size: 13px; }
+.traj-card .segmented.branch button:disabled { opacity: 0.4; }
 .traj-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 2px 0 0; padding-top: 10px; border-top: 1px solid var(--separator); }
 .traj-stats div { display: flex; flex-direction: column; }
 .traj-stats dt { font-size: 11px; color: var(--label-2); }
@@ -769,7 +772,12 @@ input.switch:checked::after { transform: translateX(20px); }
 .search-field { position: relative; flex: 1; display: flex; align-items: center; color: var(--label-2); }
 .search-field .icon { position: absolute; left: 12px; pointer-events: none; }
 .search-field input.field { flex: 1; padding-left: 40px; }
-.discard-banner { display: flex; align-items: center; gap: 8px; margin: 12px 20px 0; padding: 8px 8px 8px 16px; border-radius: var(--radius-m); background: var(--surface); box-shadow: inset 0 0 0 1px var(--danger-fill); }
+.sheet.library { position: relative; }
+.discard-overlay { position: absolute; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center; padding: 24px; border-radius: inherit; background: rgba(0, 0, 0, 0.45); animation: fade 160ms ease; }
+.discard-pop { display: flex; flex-direction: column; gap: 10px; width: min(440px, 100%); padding: 20px; border-radius: var(--radius-l, 16px); background: var(--elevated, var(--panel)); box-shadow: 0 0 0 1px var(--separator), 0 16px 48px rgba(0, 0, 0, 0.55); }
+.discard-pop h3 { margin: 0; font-size: 17px; }
+.discard-pop p { margin: 0; }
+.discard-actions { justify-content: flex-end; margin-top: 6px; }
 .library-error { margin: 12px 20px 0; }
 .library-list { flex: 1; overflow-y: auto; padding: 12px 20px 20px; display: flex; flex-direction: column; gap: 6px; }
 .library-row { display: flex; align-items: center; gap: 4px; padding-right: 6px; border-radius: var(--radius-m); background: var(--surface); }

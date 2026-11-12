@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { PlaySummary } from '@shared/types'
-import { usePlay } from '@renderer/store/playStore'
+import { isPlayEmpty, usePlay } from '@renderer/store/playStore'
 import { deletePlay, duplicatePlay, newPlay, openDoc, renamePlay } from '@renderer/store/playDocs'
 import { ConfirmButton } from './ConfirmButton'
 import { Icon } from './Icon'
@@ -46,7 +46,8 @@ export function Library({ onClose }: { onClose: () => void }) {
     )
   }, [plays, query, field])
 
-  const guarded = (label: string, run: () => void) => (dirty ? setPending({ label, run }) : run())
+  // Nur nachfragen, wenn wirklich etwas verloren ginge (ungespeichert und nicht leer)
+  const guarded = (label: string, run: () => void) => (dirty && !isPlayEmpty() ? setPending({ label, run }) : run())
 
   const open = (id: string) =>
     guarded('öffnen', async () => {
@@ -106,21 +107,27 @@ export function Library({ onClose }: { onClose: () => void }) {
         </div>
 
         {pending && (
-          <div className="discard-banner" role="alertdialog" aria-label="Ungespeicherte Änderungen">
-            <span className="grow">Der aktuelle Spielzug hat ungespeicherte Änderungen.</span>
-            <button className="plain" onClick={() => setPending(null)}>
-              Abbrechen
-            </button>
-            <button
-              className="danger armed"
-              onClick={() => {
-                const p = pending
-                setPending(null)
-                p.run()
-              }}
-            >
-              Verwerfen und {pending.label}
-            </button>
+          // Pop-up über der Liste – die Liste selbst verschiebt sich nicht
+          <div className="discard-overlay" onPointerDown={(e) => e.target === e.currentTarget && setPending(null)}>
+            <div className="discard-pop" role="alertdialog" aria-modal="true" aria-labelledby="discard-title">
+              <h3 id="discard-title">Ungespeicherte Änderungen</h3>
+              <p className="secondary">Der aktuelle Spielzug hat ungespeicherte Änderungen. Sie gehen verloren.</p>
+              <div className="row discard-actions">
+                <button className="plain" autoFocus onClick={() => setPending(null)}>
+                  Abbrechen
+                </button>
+                <button
+                  className="danger armed"
+                  onClick={() => {
+                    const p = pending
+                    setPending(null)
+                    p.run()
+                  }}
+                >
+                  Verwerfen und {pending.label}
+                </button>
+              </div>
+            </div>
           </div>
         )}
         {error && <p className="error library-error">{error}</p>}

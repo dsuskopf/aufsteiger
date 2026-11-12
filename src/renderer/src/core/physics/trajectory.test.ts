@@ -7,12 +7,15 @@ import {
   clampInput,
   coupleTrajectories,
   distAtHeightFalling,
+  distAtHeightRising,
   heightAt,
+  hitRanges,
   minHitDist,
   moveHitAlongParabola,
   newTrajectory,
   positionAt,
-  projectToFallingBranch,
+  projectToHitBranches,
+  setHitHeight,
   solveTrajectory,
   stateAt,
   type TrajectoryInput
@@ -128,11 +131,62 @@ describe('Schlagpunkt verschieben', () => {
     for (const h of [3.9, 3, 2.4, 1, 0.2]) expect(heightAt(s, distAtHeightFalling(s, h))).toBeCloseTo(h, 4)
   })
 
-  it('nur auf dem fallenden Ast und nicht unter den Boden', () => {
+  it('nicht vor den Start, nicht in die Lücke am Scheitel und nicht unter den Boden', () => {
     const s0 = solveTrajectory(base)
-    expect(solveTrajectory(moveHitAlongParabola(base, 0)).D).toBeCloseTo(minHitDist(s0), 6)
+    const r = hitRanges(s0)
+    expect(r.rising).not.toBeNull()
+    const near = moveHitAlongParabola(base, 0)
+    expect(near.rising).toBe(true)
+    expect(solveTrajectory(near).D).toBeCloseTo(r.rising![0], 6)
+    // Knapp hinter dem Scheitel → fallender Ast, knapp davor → steigender
+    expect(moveHitAlongParabola(base, s0.sA + 0.001).rising).toBeUndefined()
+    expect(solveTrajectory(moveHitAlongParabola(base, s0.sA + 0.001)).D).toBeCloseTo(minHitDist(s0), 6)
+    expect(moveHitAlongParabola(base, r.rising![1] - 0.01).rising).toBe(true)
     const far = moveHitAlongParabola(base, 100)
     expect(far.hitH).toBeCloseTo(0, 6)
+  })
+
+  it('über den Scheitel auf den steigenden Ast: dieselbe Flugkurve', () => {
+    const s0 = solveTrajectory(base)
+    const moved = moveHitAlongParabola(base, s0.sA * 0.5)
+    expect(moved.rising).toBe(true)
+    const s1 = solveTrajectory(moved)
+    expect(s1.rising).toBe(true)
+    expect(s1.D).toBeCloseTo(s0.sA * 0.5, 9)
+    expect(s1.sA).toBeCloseTo(s0.sA, 4)
+    expect(s1.vH).toBeCloseTo(s0.vH, 4)
+    expect(s1.vZ0).toBeCloseTo(s0.vZ0, 4)
+    expect(s1.sGround).toBeCloseTo(s0.sGround, 3)
+    // Schlagpunkt liegt vor dem Scheitel und wird früher erreicht
+    expect(s1.tHit).toBeLessThan(s1.tApex)
+    expect(heightAt(s1, s1.D)).toBeCloseTo(moved.hitH, 4)
+    // und zurück auf den fallenden Ast
+    const back = solveTrajectory(moveHitAlongParabola(moved, s0.D))
+    expect(back.rising).toBe(false)
+    expect(back.vH).toBeCloseTo(s0.vH, 4)
+  })
+
+  it('steigender Schlagpunkt direkt gelöst: Höhe stimmt, Scheitel dahinter', () => {
+    const r: TrajectoryInput = { start: { x: 0, y: 0, h: 1 }, end: { x: 3, y: 0 }, apexH: 5, hitH: 3, rising: true }
+    const s = solveTrajectory(r)
+    expect(heightAt(s, 3)).toBeCloseTo(3, 4)
+    expect(s.sA).toBeGreaterThan(3)
+    expect(heightAt(s, s.sA)).toBeCloseTo(5, 5)
+    // Ball steigt am Schlagpunkt noch
+    expect(heightAt(s, 3.05)).toBeGreaterThan(heightAt(s, 3))
+    // Schlagpunkt unter dem Start ist auf dem steigenden Ast unmöglich → wird über den Start gehoben
+    expect(clampInput({ ...r, hitH: 0.5 }).hitH).toBeGreaterThan(1)
+  })
+
+  it('Höhe setzen auf dem gewählten Ast', () => {
+    const s0 = solveTrajectory(base)
+    const up = setHitHeight(base, 3, true)
+    expect(up.rising).toBe(true)
+    expect(up.hitH).toBeCloseTo(3, 3)
+    expect(solveTrajectory(up).D).toBeCloseTo(distAtHeightRising(s0, 3), 3)
+    const down = setHitHeight(up, 3, false)
+    expect(down.rising).toBeUndefined()
+    expect(solveTrajectory(down).D).toBeCloseTo(distAtHeightFalling(s0, 3), 3)
   })
 
   it('Projektion ist monoton und im Bereich', () => {
@@ -144,9 +198,9 @@ describe('Schlagpunkt verschieben', () => {
     })
     let last = -Infinity
     for (let px = 0; px <= s.sGround * 50; px += 10) {
-      const v = projectToFallingBranch(s, base.start, project, px, -heightAt(s, px / 50) * 50)
+      const v = projectToHitBranches(s, base.start, project, px, -heightAt(s, px / 50) * 50)
       expect(v).toBeGreaterThanOrEqual(last - 1e-9)
-      expect(v).toBeGreaterThanOrEqual(minHitDist(s) - 1e-9)
+      expect(v).toBeGreaterThan(0)
       expect(v).toBeLessThanOrEqual(s.sGround + 1e-9)
       last = v
     }
@@ -187,5 +241,16 @@ describe('Kopplung Annahme → Zuspiel', () => {
     const zuspiel: TrajectoryInput = { start: { x: 0, y: 0, h: 1 }, end: { x: -0.8, y: -3.5 }, apexH: 4.2, hitH: 3 }
     const tr = { zuspiel }
     expect(coupleTrajectories(tr)).toBe(tr)
+  })
+})
+
+describe('Kopplung mit steigendem Zuspiel', () => {
+  it('liegt der neue Start zu hoch, wird der steigende Schlagpunkt zum fallenden', () => {
+    const annahme: TrajectoryInput = { start: { x: -7, y: 1, h: 0.8 }, end: { x: -1.5, y: 0 }, apexH: 5.8, hitH: 3.2 }
+    const zuspiel: TrajectoryInput = { start: { x: -1.5, y: 0, h: 2.5 }, end: { x: -1.2, y: 0.3 }, apexH: 4, hitH: 3, rising: true }
+    const c = coupleTrajectories({ annahme, zuspiel })
+    expect(c.zuspiel!.start.h).toBe(3.2)
+    expect(c.zuspiel!.rising).toBeUndefined()
+    expect(c.zuspiel!.hitH).toBe(3)
   })
 })

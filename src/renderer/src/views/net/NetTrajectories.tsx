@@ -76,7 +76,8 @@ export function NetTrajectories({ vp, interactive = true, showBall = true }: { v
         return (
           <Group key={type} opacity={type === 'annahme' ? 0.8 : 1}>
             {display.showAfterHit && (
-              <Line points={pts(tv, sol.D, sol.sGround)} stroke={COLORS.trajectory} strokeWidth={2} dash={[8, 6]} opacity={0.45} listening={false} />
+              // Strichmuster am Start verankert: beim Verschieben des Schlagpunkts bleiben die Striche stehen
+              <Line points={pts(tv, sol.D, sol.sGround)} stroke={COLORS.trajectory} strokeWidth={2} dash={DASH} dashOffset={polyLength(pts(tv, 0, sol.D))} opacity={0.45} listening={false} />
             )}
             <Line
               points={pts(tv, 0, sol.D)}
@@ -111,4 +112,14 @@ export function NetTrajectories({ vp, interactive = true, showBall = true }: { v
       {showBall && ball && <Ball {...at(ball.x, ball.y, ball.z)} r={Math.max(6, 0.105 * vp.scale)} />}
     </>
   )
+}
+
+/** Strichmuster der Bahn nach dem Schlagpunkt (px) */
+const DASH = [8, 6]
+
+/** Länge eines Linienzugs [x0, y0, x1, y1, …] in Pixeln */
+export function polyLength(pts: number[]): number {
+  let len = 0
+  for (let i = 2; i < pts.length; i += 2) len += Math.hypot(pts[i] - pts[i - 2], pts[i + 1] - pts[i - 1])
+  return len
 }

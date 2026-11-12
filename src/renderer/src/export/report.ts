@@ -69,7 +69,7 @@ export async function buildReport(code: string, title: string): Promise<string> 
     </div>
     ${
       rows
-        ? `<table><thead><tr><th>Flugbahn</th><th>Starthöhe</th><th>Scheitel</th><th>Schlagpunkt</th><th>Distanz</th><th>Flugzeit</th><th>Abflug</th></tr></thead><tbody>${rows}</tbody></table>`
+        ? `<table><thead><tr><th>Flugbahn</th><th>Annahme-/Zuspielhöhe</th><th>Höchster Punkt</th><th>Schlagpunkt</th><th>Distanz</th><th>Flugzeit</th><th>Abflug</th></tr></thead><tbody>${rows}</tbody></table>`
         : '<p class="empty">Keine Flugbahnen eingezeichnet.</p>'
     }
   </section>

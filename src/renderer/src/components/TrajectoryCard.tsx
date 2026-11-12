@@ -59,7 +59,7 @@ export function TrajectoryCard() {
         </button>
       </header>
       <MeterSlider
-        label="Starthöhe"
+        label={selected === 'annahme' ? 'Annahmehöhe' : 'Zuspielhöhe'}
         value={t.start.h}
         min={0}
         max={START_H_MAX}
@@ -67,7 +67,7 @@ export function TrajectoryCard() {
         hint={coupled ? 'folgt dem Schlagpunkt der Annahme' : undefined}
         onChange={(h) => setTrajectory(selected, { ...t, start: { ...t.start, h } })}
       />
-      <MeterSlider label="Scheitel" value={sol.apexH} min={minApex} max={APEX_H_MAX} onChange={(apexH) => setTrajectory(selected, { ...t, apexH })} />
+      <MeterSlider label="Höchster Punkt" value={sol.apexH} min={minApex} max={APEX_H_MAX} onChange={(apexH) => setTrajectory(selected, { ...t, apexH })} />
       <MeterSlider
         label="Schlagpunkt"
         value={t.hitH}

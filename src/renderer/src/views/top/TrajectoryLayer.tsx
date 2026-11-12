@@ -69,6 +69,8 @@ export function TrajectoryLayer({
                 stroke={COLORS.trajectory}
                 strokeWidth={2}
                 dash={[8, 6]}
+                // Muster am Start verankert, damit die Striche beim Verschieben des Schlagpunkts stehen bleiben
+                dashOffset={Math.hypot(P(input.end.x, input.end.y)[0] - P(input.start.x, input.start.y)[0], P(input.end.x, input.end.y)[1] - P(input.start.x, input.start.y)[1])}
                 opacity={0.45}
                 listening={false}
               />

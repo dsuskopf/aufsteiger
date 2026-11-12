@@ -27,7 +27,8 @@ const PAD_T = 44
 const PAD_B = 64
 /** Kompakt (Pop-up): wenig Rand, die Bedienleiste liegt in der Kopfleiste darüber */
 const PAD_T_COMPACT = 12
-const PAD_B_COMPACT = 12
+/** Kompakt unten: Platz für den Dreh-Regler */
+const PAD_B_COMPACT = 52
 /** Kompakt: sichtbare Höhe, an die das Netz angepasst wird (Netz, Antennen und typische Flugkurven) */
 const Z_COMPACT = 8
 
@@ -86,7 +87,7 @@ export function NetView({ compact = false }: { compact?: boolean }) {
   zoomedRef.current = view.z > 1.001
   useEffect(() => {
     const el = ref.current
-    if (!el || compact) return
+    if (!el) return
     let drag: { id: number; x: number; a0: number } | null = null
     const onDown = (e: PointerEvent) => {
       const ok = (e.pointerType === 'touch' && !zoomedRef.current) || (e.pointerType !== 'touch' && e.button === 0)
@@ -143,7 +144,8 @@ export function NetView({ compact = false }: { compact?: boolean }) {
         )}
       </div>
       {compact ? (
-        /* Kompakte Leiste im Pop-up: Spieler, Blickseite, Tauschen, Minimieren */
+        <>
+        {/* Kompakte Leiste im Pop-up: Spieler, Blickseite, Tauschen, Minimieren; unten Drehen */}
         <PipBar>
           <label className="pip-check">
             <input type="checkbox" checked={showPlayers} onChange={(e) => setShowPlayers(e.target.checked)} />
@@ -158,26 +160,15 @@ export function NetView({ compact = false }: { compact?: boolean }) {
             <Icon name="flip" />
           </button>
         </PipBar>
+        <AngleSlider value={angleDeg} onChange={setAngle} compact />
+        </>
       ) : (
         <>
       <label className="pane-check">
         <input type="checkbox" checked={showPlayers} onChange={(e) => setShowPlayers(e.target.checked)} />
         Spieler
       </label>
-      <label className="net-angle" title="Blickwinkel drehen (auch: waagerecht ziehen) · Doppelklick = frontal">
-        <span>Drehen</span>
-        <input
-          type="range"
-          min={-90}
-          max={90}
-          step={1}
-          value={angleDeg}
-          aria-label="Blickwinkel der Netzansicht in Grad"
-          onChange={(e) => setAngle(Number(e.target.value))}
-          onDoubleClick={() => setAngle(0)}
-        />
-        <span className="value">{angleDeg}°</span>
-      </label>
+      <AngleSlider value={angleDeg} onChange={setAngle} />
       <ViewControls onZoomIn={zoomIn} onZoomOut={zoomOut} onReset={resetAll}>
         <button
           title={`Von Seite ${from === 'A' ? 'B' : 'A'} aufs Netz schauen`}
@@ -305,5 +296,39 @@ export function PlayerFigure({ vp, p, dim = false }: { vp: NetViewport; p: Court
       <Text x={foot.px - r} y={foot.py - h - r - r * 0.55} width={2 * r} align="center" text={p.role} fontSize={r * 0.62} fontStyle="bold" fill={p.jersey.text} />
       <Text x={foot.px - r} y={foot.py - h - r + r * 0.1} width={2 * r} align="center" text={String(p.number)} fontSize={r * 0.5} fill={p.jersey.text} />
     </Group>
+  )
+}
+
+/** Markierungen auf dem Dreh-Regler; in deren Nähe rastet der Regler ein */
+const ANGLE_STOPS = [-90, -45, 0, 45, 90]
+const SNAP_DEG = 4
+
+/** Regler für den Blickwinkel mit Markierungen bei −90°, −45°, 0°, 45°, 90° */
+function AngleSlider({ value, onChange, compact = false }: { value: number; onChange: (deg: number) => void; compact?: boolean }) {
+  const snap = (v: number) => ANGLE_STOPS.find((s) => Math.abs(s - v) <= SNAP_DEG) ?? v
+  return (
+    <label className={`net-angle ${compact ? 'compact' : ''}`} title="Blickwinkel drehen (auch: waagerecht ziehen) · Doppelklick = frontal">
+      {!compact && <span>Drehen</span>}
+      <span className="angle-track">
+        <input
+          type="range"
+          min={-90}
+          max={90}
+          step={1}
+          value={value}
+          aria-label="Blickwinkel der Netzansicht in Grad"
+          onChange={(e) => onChange(snap(Number(e.target.value)))}
+          onDoubleClick={() => onChange(0)}
+        />
+        <span className="angle-ticks" aria-hidden="true">
+          {ANGLE_STOPS.map((s) => (
+            <span key={s} className={`tick ${s === value ? 'on' : ''}`} style={{ left: `${((s + 90) / 180) * 100}%` }}>
+              <span className="tick-label">{s}°</span>
+            </span>
+          ))}
+        </span>
+      </span>
+      <span className="value">{value}°</span>
+    </label>
   )
 }

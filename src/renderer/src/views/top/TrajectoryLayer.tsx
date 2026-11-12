@@ -99,13 +99,19 @@ export function TrajectoryLayer({
               fill={COLORS.trajectory}
               listening={false}
             />
-            {interactive && !tv.coupled && (
-              <Handle {...xy(vp, input.start.x, input.start.y)} onDrag={drag(tv, 'start')} onPick={() => select(type)} hollow />
-            )}
-            {interactive && <Handle {...xy(vp, input.end.x, input.end.y)} onDrag={drag(tv, 'end')} onPick={() => select(type)} />}
           </Group>
         )
       })}
+      {/* Griffe über allen Linien (das Ende der Annahme liegt unter dem Start des Zuspiels) */}
+      {interactive &&
+        list.map((tv) => (
+          <Group key={`h-${tv.type}`}>
+            {!tv.coupled && (
+              <Handle {...xy(vp, tv.input.start.x, tv.input.start.y)} onDrag={drag(tv, 'start')} onPick={() => select(tv.type)} hollow />
+            )}
+            <Handle {...xy(vp, tv.input.end.x, tv.input.end.y)} onDrag={drag(tv, 'end')} onPick={() => select(tv.type)} />
+          </Group>
+        ))}
       {preview && (
         <Arrow
           points={[...P(preview.a.x, preview.a.y), ...P(preview.b.x, preview.b.y)]}

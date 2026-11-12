@@ -7,6 +7,8 @@ export interface AppApi {
     load: () => Promise<TeamsFile | null>
     save: (teams: Team[]) => Promise<void>
   }
+  /** Synchrones Sichern beim Schließen des Fensters */
+  flushSync: (kind: 'teams' | 'settings', data: unknown) => boolean
   settings: {
     load: () => Promise<Settings>
     save: (s: Settings) => Promise<void>

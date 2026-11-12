@@ -10,6 +10,7 @@ const api: AppApi = {
     load: () => ipcRenderer.invoke('teams:load'),
     save: (teams) => ipcRenderer.invoke('teams:save', teams)
   },
+  flushSync: (kind, data) => ipcRenderer.sendSync('flush:sync', kind, data),
   settings: {
     load: () => ipcRenderer.invoke('settings:load'),
     save: (s) => ipcRenderer.invoke('settings:save', s)

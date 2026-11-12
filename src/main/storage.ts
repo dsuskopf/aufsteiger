@@ -1,5 +1,5 @@
 import { app } from 'electron'
-import { promises as fs } from 'node:fs'
+import { promises as fs, mkdirSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 
 /** Dateien liegen im App-Datenverzeichnis (z. B. %APPDATA%\volleyball-playbook). */
@@ -30,4 +30,13 @@ export async function writeJsonAtomic(file: string, data: unknown): Promise<void
   const tmp = `${target}.${process.pid}.${Date.now()}.tmp`
   await fs.writeFile(tmp, JSON.stringify(data, null, 2), 'utf-8')
   await fs.rename(tmp, target)
+}
+
+/** Synchron und atomar schreiben – für das Sichern beim Schließen des Fensters (darf nicht abgeschnitten werden). */
+export function writeJsonAtomicSync(file: string, data: unknown): void {
+  const target = dataPath(file)
+  mkdirSync(dirname(target), { recursive: true })
+  const tmp = `${target}.${process.pid}.${Date.now()}.tmp`
+  writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf-8')
+  renameSync(tmp, target)
 }

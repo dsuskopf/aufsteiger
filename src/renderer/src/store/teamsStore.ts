@@ -158,5 +158,10 @@ export const useTeams = create<TeamsState>((set, get) => {
   }
 })
 
-// Beim Schließen des Fensters nichts verlieren
-window.addEventListener('beforeunload', () => useTeams.getState().flush())
+// Beim Schließen des Fensters nichts verlieren: synchron speichern (asynchron würde das Beenden es abschneiden)
+window.addEventListener('beforeunload', () => {
+  if (!savePending) return
+  clearTimeout(saveTimer)
+  savePending = false
+  window.api.flushSync('teams', useTeams.getState().teams)
+})

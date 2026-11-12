@@ -48,7 +48,8 @@ export function useDrawTrajectory(hostRef: RefObject<HTMLElement | null>, vp: To
       pendingRef.current = null
       setPreview(null)
       if (Math.hypot(b.x - a.x, b.y - a.y) < MIN_DIST) return
-      const t = newTrajectory(a, b, trajectoryDefaults(active))
+      const play0 = usePlay.getState()
+      const t = newTrajectory(a, b, trajectoryDefaults(active, useSettings.getState().settings, play0.trajectories.annahme))
       const play = usePlay.getState()
       play.setTrajectory(active, t)
       play.select(active)

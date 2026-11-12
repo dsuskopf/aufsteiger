@@ -91,12 +91,22 @@ export function NetTrajectories({ vp, interactive = true, showBall = true }: { v
               onTap={() => select(type)}
             />
             <Text x={label.x - 40} y={label.y - 30} width={80} align="center" text={TRAJECTORY_LABELS[type]} fontSize={12} fontStyle="bold" fill={COLORS.trajectory} listening={false} />
-            {interactive && !tv.coupled && <Handle {...at(input.start.y, input.start.h)} onDrag={dragStart(tv)} onPick={() => select(type)} hollow />}
-            {interactive && <Handle {...at(apex.y, apex.z)} onDrag={dragApex(tv)} onPick={() => select(type)} diamond />}
-            {interactive && <Handle {...at(input.end.y, input.hitH)} onDrag={dragHit(tv)} onPick={() => select(type)} />}
           </Group>
         )
       })}
+      {/* Griffe über allen Linien, damit keine Bahn einen Griff verdeckt (Annahme-Schlagpunkt = Zuspiel-Start) */}
+      {interactive &&
+        list.map((tv) => {
+          const { sol, input, type } = tv
+          const apex = pointAt(sol, input.start, sol.sA)
+          return (
+            <Group key={`h-${type}`}>
+              {!tv.coupled && <Handle {...at(input.start.y, input.start.h)} onDrag={dragStart(tv)} onPick={() => select(type)} hollow />}
+              <Handle {...at(apex.y, apex.z)} onDrag={dragApex(tv)} onPick={() => select(type)} diamond />
+              <Handle {...at(input.end.y, input.hitH)} onDrag={dragHit(tv)} onPick={() => select(type)} />
+            </Group>
+          )
+        })}
       {showBall && ball && <Ball {...at(ball.y, ball.z)} r={Math.max(6, 0.105 * vp.scale)} />}
     </>
   )

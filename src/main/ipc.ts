@@ -3,7 +3,7 @@ import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
 import { SCHEMA_VERSION, type PlayDoc, type PlaySummary, type Settings, type TeamsFile } from '@shared/types'
 import { safeFileName, sanitizePlay, sanitizeSettings, sanitizeTeams } from '@shared/validate'
-import { dataPath, readJson, writeJsonAtomic } from './storage'
+import { dataPath, readJson, writeJsonAtomic, writeJsonAtomicSync } from './storage'
 
 const TEAMS_FILE = 'teams.json'
 const SETTINGS_FILE = 'settings.json'
@@ -40,6 +40,17 @@ export function registerIpc(): void {
   ipcMain.handle('teams:save', async (_e, data: unknown): Promise<void> => {
     const file: TeamsFile = { schemaVersion: SCHEMA_VERSION, teams: sanitizeTeams(data) }
     await writeJsonAtomic(TEAMS_FILE, file)
+  })
+
+  // Beim Schließen: synchron speichern, damit das Beenden der App nichts abschneidet
+  ipcMain.on('flush:sync', (e, kind: unknown, data: unknown) => {
+    try {
+      if (kind === 'teams') writeJsonAtomicSync(TEAMS_FILE, { schemaVersion: SCHEMA_VERSION, teams: sanitizeTeams(data) })
+      if (kind === 'settings') writeJsonAtomicSync(SETTINGS_FILE, sanitizeSettings(data))
+      e.returnValue = true
+    } catch {
+      e.returnValue = false
+    }
   })
 
   ipcMain.handle('settings:load', async (): Promise<Settings> => sanitizeSettings(await readJson<unknown>(SETTINGS_FILE)))

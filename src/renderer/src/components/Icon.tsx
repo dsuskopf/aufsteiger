@@ -27,6 +27,8 @@ const PATHS = {
   formation: 'M6 8h.01M12 8h.01M18 8h.01M6 16h.01M12 16h.01M18 16h.01',
   net: 'M3 6h18M3 6v12M21 6v12M3 10h18M7 6v6M11 6v6M15 6v6M19 6v6',
   play: 'M7 4.5v15l12.5-7.5z',
+  chevronRight: 'M9 6l6 6-6 6',
+  chevronDown: 'M6 9l6 6 6-6',
   pause: 'M8 5v14M16 5v14',
   loop: 'M17 2l3 3-3 3M4 11V9a4 4 0 0 1 4-4h12M7 22l-3-3 3-3M20 13v2a4 4 0 0 1-4 4H4',
   pointer: 'M5 3l6 16 2.2-6.8L20 10z',

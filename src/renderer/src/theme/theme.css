@@ -120,12 +120,21 @@ input[type='range'] { width: 150px; height: var(--touch); accent-color: var(--ac
 
 .toolbar {
   display: flex;
-  align-items: center;
-  gap: 24px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 6px;
   padding: 8px 12px;
   background: var(--window);
 }
+.toolbar-row { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+.toolbar-end { margin-left: auto; }
+/* Schmal (z. B. hochkant): rechte Gruppe nur mit Icons, damit alles in die erste Reihe passt */
+@media (max-width: 1100px) {
+  .toolbar-end .btn-label { display: none; }
+  .toolbar-end button { width: var(--touch); padding: 0; }
+}
+.toolbar-row.second { gap: 12px; }
+.net-toggle { gap: 6px; padding: 0 10px 0 6px; font-size: 13px; font-weight: 600; color: var(--label-2); }
+.net-summary { font-weight: 500; color: var(--label); font-variant-numeric: tabular-nums; }
 .toolbar .spacer { flex: 1; }
 .toolbar-group { display: flex; align-items: center; gap: 8px; }
 .toolbar-label { color: var(--label-2); font-size: 13px; }
@@ -134,7 +143,7 @@ input[type='range'] { width: 150px; height: var(--touch); accent-color: var(--ac
 @media (max-width: 1240px) { .toolbar input.net-slider { width: 72px; } }
 /* Schmales Fenster: Toolbar verdichten statt umbrechen */
 @media (max-width: 1040px) {
-  .toolbar { gap: 12px; }
+  .toolbar-row { gap: 12px; }
   .toolbar label.toolbar-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .segmented button { padding: 0 10px; }
 }

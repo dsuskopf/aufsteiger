@@ -19,17 +19,19 @@ const VIEW_MODES: { id: ViewMode; label: string; title: string }[] = [
 const fmt = (v: number) => v.toFixed(2).replace('.', ',')
 
 /**
- * Toolbar: vorne Spielzug (Bibliothek, Speichern), Ansicht und Werkzeug;
- * hinten Netz, Panels (Aufstellung, Teams), Export und Einstellungen.
+ * Toolbar in zwei Reihen. Oben links Spielzug (Bibliothek, Speichern), Ansicht und Werkzeug,
+ * oben rechts immer Aufstellung, Teams, Export, Einstellungen. Zweite Reihe links: Netzhöhe (einklappbar).
  */
 export function Toolbar() {
   const { viewMode, setViewMode, netPreset, setNetPreset, netHeight, setNetHeight } = useUi()
   const { lineupOpen, setLineupOpen, setTeamsOpen, tool, setTool, setSettingsOpen, setDialog } = useUi()
+  const { netBarOpen, setNetBarOpen } = useUi()
   const current = usePlay((s) => s.current)
   const dirty = usePlay((s) => s.dirty)
 
   return (
     <header className="toolbar">
+      <div className="toolbar-row">
       <div className="toolbar-group">
         <button className="doc-button" title="Bibliothek: gespeicherte Spielzüge" onClick={() => setDialog('library')}>
           <Icon name="library" />
@@ -77,47 +79,21 @@ export function Toolbar() {
         ))}
       </div>
 
-      <div className="spacer" />
-
-      <div className="toolbar-group">
-        <label className="toolbar-label" htmlFor="net-preset">
-          Netzhöhe
-        </label>
-        <select id="net-preset" value={netPreset} onChange={(e) => setNetPreset(e.target.value as NetPresetId)}>
-          {Object.entries(NET_PRESETS).map(([id, p]) => (
-            <option key={id} value={id}>
-              {p.label} · {fmt(p.height)} m
-            </option>
-          ))}
-          <option value="custom">Frei</option>
-        </select>
-        {/* Regler und Feld immer da (Toolbar bleibt gleich): ein Preset stellt sie ein, Ziehen/Tippen wählt „Frei“ */}
-        <input
-          type="range"
-          className="net-slider"
-          aria-label="Netzhöhe"
-          min={NET_HEIGHT_MIN}
-          max={NET_HEIGHT_MAX}
-          step={0.01}
-          value={netHeight}
-          onChange={(e) => setNetHeight(Number(e.target.value))}
-        />
-        <NetHeightInput value={netHeight} onCommit={setNetHeight} />
-        <span className="toolbar-label">m</span>
-      </div>
-
-      <div className="toolbar-group">
+      {/* Rechts oben, immer an derselben Stelle: Panels, Export, Einstellungen */}
+      <div className="toolbar-group toolbar-end">
         <button
           className={lineupOpen ? 'selected' : ''}
           aria-pressed={lineupOpen}
+          aria-label="Aufstellung"
+          title="Aufstellung"
           onClick={() => setLineupOpen(!lineupOpen)}
         >
           <Icon name="sidebar" />
-          Aufstellung
+          <span className="btn-label">Aufstellung</span>
         </button>
-        <button onClick={() => setTeamsOpen(true)}>
+        <button aria-label="Teams" title="Teams" onClick={() => setTeamsOpen(true)}>
           <Icon name="people" />
-          Teams
+          <span className="btn-label">Teams</span>
         </button>
         <button className="icon-only" title="Exportieren (PDF, Video)" aria-label="Exportieren" onClick={() => setDialog('export')}>
           <Icon name="share" />
@@ -125,6 +101,53 @@ export function Toolbar() {
         <button className="icon-only" title="Einstellungen" aria-label="Einstellungen" onClick={() => setSettingsOpen(true)}>
           <Icon name="settings" />
         </button>
+      </div>
+      </div>
+
+      {/* Zweite Reihe links: Netzhöhe, einklappbar */}
+      <div className="toolbar-row second">
+        <div className="toolbar-group net-group">
+          <button
+            className="plain net-toggle"
+            aria-expanded={netBarOpen}
+            aria-controls="net-controls"
+            title={netBarOpen ? 'Netzhöhe einklappen' : 'Netzhöhe ausklappen'}
+            onClick={() => setNetBarOpen(!netBarOpen)}
+          >
+            <Icon name={netBarOpen ? 'chevronDown' : 'chevronRight'} size={16} />
+            Netzhöhe
+            {!netBarOpen && (
+              <span className="net-summary">
+                {netPreset === 'custom' ? 'Frei' : NET_PRESETS[netPreset].label} · {fmt(netHeight)} m
+              </span>
+            )}
+          </button>
+          {netBarOpen && (
+            <div id="net-controls" className="toolbar-group">
+              <select id="net-preset" aria-label="Netzhöhe Vorgabe" value={netPreset} onChange={(e) => setNetPreset(e.target.value as NetPresetId)}>
+                {Object.entries(NET_PRESETS).map(([id, p]) => (
+                  <option key={id} value={id}>
+                    {p.label} · {fmt(p.height)} m
+                  </option>
+                ))}
+                <option value="custom">Frei</option>
+              </select>
+              {/* Regler und Feld immer da: ein Preset stellt sie ein, Ziehen/Tippen wählt „Frei“ */}
+              <input
+                type="range"
+                className="net-slider"
+                aria-label="Netzhöhe"
+                min={NET_HEIGHT_MIN}
+                max={NET_HEIGHT_MAX}
+                step={0.01}
+                value={netHeight}
+                onChange={(e) => setNetHeight(Number(e.target.value))}
+              />
+              <NetHeightInput value={netHeight} onCommit={setNetHeight} />
+              <span className="toolbar-label">m</span>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   )

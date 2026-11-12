@@ -14,6 +14,9 @@ export type Tool = 'select' | 'annahme' | 'zuspiel'
 interface UiState {
   tool: Tool
   setTool: (t: Tool) => void
+  /** Netzhöhe in der zweiten Toolbar-Reihe ausgeklappt */
+  netBarOpen: boolean
+  setNetBarOpen: (open: boolean) => void
   settingsOpen: boolean
   setSettingsOpen: (open: boolean) => void
   /** Offenes Fenster: Bibliothek, Speichern-Dialog, Export */
@@ -53,6 +56,8 @@ interface UiState {
 export const useUi = create<UiState>((set) => ({
   tool: 'select',
   setTool: (tool) => set({ tool }),
+  netBarOpen: true,
+  setNetBarOpen: (netBarOpen) => set({ netBarOpen }),
   settingsOpen: false,
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
   dialog: null,

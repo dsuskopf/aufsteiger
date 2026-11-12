@@ -1,0 +1,115 @@
+:root {
+  --bg-deep: #0b0b0d;
+  --bg: #121214;
+  --panel: #1c1c20;
+  --panel-raised: #25252b;
+  --border: #2e2e35;
+  --text: #d8d8de;
+  --text-dim: #8a8a93;
+  --violet: #5b2a86;
+  --violet-light: #7e4bb0;
+  --touch: 44px;
+  --radius: 8px;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  background: var(--bg-deep);
+  color: var(--text);
+  font: 14px/1.4 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+  overflow: hidden;
+  user-select: none;
+}
+
+.app { display: flex; flex-direction: column; height: 100%; }
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.toolbar .brand { font-weight: 600; letter-spacing: 0.02em; margin-right: 8px; }
+.toolbar .brand span { color: var(--violet-light); }
+.toolbar .spacer { flex: 1; }
+
+.group { display: flex; align-items: center; gap: 6px; }
+.group label { color: var(--text-dim); }
+
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.seg button { border: 0; border-radius: 0; }
+.seg button + button { border-left: 1px solid var(--border); }
+
+button, select, input.num {
+  min-height: var(--touch);
+  min-width: var(--touch);
+  padding: 0 14px;
+  background: var(--panel-raised);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font: inherit;
+  touch-action: manipulation;
+}
+input.num { width: 72px; padding: 0 8px; text-align: right; }
+button:hover { background: #2d2d34; }
+button.active { background: var(--violet); border-color: var(--violet-light); color: #fff; }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--violet-light); outline-offset: 1px; }
+
+input[type='range'] { width: 140px; height: var(--touch); accent-color: var(--violet-light); touch-action: none; }
+
+.views { flex: 1; display: flex; gap: 6px; padding: 6px; min-height: 0; }
+/* Hochkant: Ansichten untereinander statt nebeneinander */
+@media (orientation: portrait) {
+  .views { flex-direction: column; }
+}
+.pane {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.pane-title {
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  z-index: 2;
+  color: var(--text-dim);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+.pane-hint {
+  position: absolute;
+  bottom: 8px;
+  right: 12px;
+  z-index: 2;
+  color: var(--text-dim);
+  font-size: 12px;
+  pointer-events: none;
+}
+.canvas-host { position: absolute; inset: 0; touch-action: none; }
+.canvas-host canvas { display: block; }
+
+.view-buttons {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.view-buttons button { padding: 0; font-size: 20px; opacity: 0.9; }

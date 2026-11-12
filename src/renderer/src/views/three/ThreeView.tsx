@@ -9,7 +9,7 @@ import { ViewControls } from '@renderer/components/ViewControls'
 import { NamesButton, ZonesButton } from '@renderer/components/ViewToggles'
 import { ZOOM_DURATION_MS, ZOOM_STEP, tween } from '@renderer/components/tween'
 import { useCourtPlayers } from '@renderer/store/selectors'
-import { CylinderPlayerFactory, placePlayer, showNameTag, visualKey, type PlayerMeshFactory } from './players'
+import { CylinderPlayerFactory, placePlayer, setLaeuferMark, showNameTag, visualKey, type PlayerMeshFactory } from './players'
 import { useVisibleTrajectories } from '@renderer/store/selectors'
 import { usePlay } from '@renderer/store/playStore'
 import { currentBall, currentTimeline, usePathsHidden, usePlayback } from '@renderer/store/playbackStore'
@@ -17,7 +17,7 @@ import { ballOrientation, buildBall, buildTrajectories, placeBall } from './traj
 import { buildZones, orientZoneLabels } from './zones'
 import { playerAt, pathCurve } from '@renderer/core/motion/motion'
 import { worldToThree } from '@renderer/core/geometry/transform'
-import type { CourtPlayerView } from '@renderer/store/selectors'
+import { useLaeuferMarkers, type CourtPlayerView } from '@renderer/store/selectors'
 import { useSettings } from '@renderer/store/appSettings'
 
 /** Zeichenfläche der laufenden 3D-Ansicht (für den Video-Export) */
@@ -54,6 +54,7 @@ export function ThreeView() {
   const hidePaths = usePathsHidden()
   const showZones = useUi((s) => s.showZones)
   const showNames = useUi((s) => s.showNames)
+  const markers = useLaeuferMarkers()
   const zoneStyle = useSettings((s) => s.settings.zoneStyle)
 
   useEffect(() => {
@@ -177,6 +178,7 @@ export function ThreeView() {
       }
       placePlayer(item.obj, p.x, p.y)
       showNameTag(item.obj, showNames)
+      setLaeuferMark(item.obj, markers.get(p.key), COLORS.accent)
     }
     applyMotion(pr)
     for (const [key, item] of pr.items) {
@@ -185,7 +187,7 @@ export function ThreeView() {
       pr.factory.dispose(item.obj)
       pr.items.delete(key)
     }
-  }, [players, showNames])
+  }, [players, showNames, markers])
 
   // Flugbahnen neu aufbauen, wenn sie sich ändern
   useEffect(() => {

@@ -4,6 +4,7 @@ import { solveTrajectory, type SolvedTrajectory } from '@renderer/core/physics/t
 import { jerseyFor, type JerseyStyle } from '@shared/teamColors'
 import { usePlay } from './playStore'
 import { useTeams } from './teamsStore'
+import { laeuferMarker } from '@renderer/core/lineup/rotation'
 
 /** Alles, was eine Ansicht zum Zeichnen eines Spielers braucht. */
 export interface CourtPlayerView {
@@ -48,6 +49,23 @@ export function courtPlayers(sides: Record<CourtSide, PlaySide>, teams: Team[]):
     }
   }
   return out
+}
+
+/** Bezugs-Steller des Läufersystems je Seite (zum Hervorheben), Schlüssel wie CourtPlayerView.key */
+export function laeuferMarkers(sides: Record<CourtSide, PlaySide>, teams: Team[]): Map<string, { standIn: boolean }> {
+  const out = new Map<string, { standIn: boolean }>()
+  for (const side of ['A', 'B'] as const) {
+    const team = teams.find((t) => t.id === sides[side].teamId)
+    const m = team ? laeuferMarker(sides[side], team) : null
+    if (m) out.set(`${side}:${m.playerId}`, { standIn: m.standIn })
+  }
+  return out
+}
+
+export function useLaeuferMarkers(): Map<string, { standIn: boolean }> {
+  const sides = usePlay((s) => s.sides)
+  const teams = useTeams((s) => s.teams)
+  return useMemo(() => laeuferMarkers(sides, teams), [sides, teams])
 }
 
 /** Spieler beider Seiten mit Nummer und Name aus dem Team. */

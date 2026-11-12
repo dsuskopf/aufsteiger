@@ -2,7 +2,7 @@ import { Circle, Group, Layer, Text } from 'react-konva'
 import type Konva from 'konva'
 import { topToWorld, worldToTop, type TopViewport } from '@renderer/core/geometry/transform'
 import { clampToArea } from '@renderer/core/lineup/lineup'
-import { useCourtPlayers, type CourtPlayerView } from '@renderer/store/selectors'
+import { useCourtPlayers, useLaeuferMarkers, type CourtPlayerView } from '@renderer/store/selectors'
 import { usePlay } from '@renderer/store/playStore'
 import { useUi } from '@renderer/store/settingsStore'
 import { usePlayback } from '@renderer/store/playbackStore'
@@ -27,6 +27,7 @@ export function PlayersLayer({ vp, interactive = true }: { vp: TopViewport; inte
   const showNames = useUi((s) => s.showNames)
   const selectPlayer = usePlay((s) => s.selectPlayer)
   const selected = usePlay((s) => s.selectedPlayer)
+  const markers = useLaeuferMarkers()
   const r = Math.max(MIN_RADIUS_PX, RADIUS_M * vp.scale)
   // Nur mit Laufwegen/Sprüngen der Uhr folgen (sonst kein Neuzeichnen pro Bild)
   const moving = players.some((p) => p.court.path || p.court.jump)
@@ -76,7 +77,21 @@ export function PlayersLayer({ vp, interactive = true }: { vp: TopViewport; inte
             onMouseEnter={(e) => setCursor(e, 'grab')}
             onMouseLeave={(e) => setCursor(e, '')}
           >
-            {isSel && <Circle radius={r + 5} stroke={COLORS.accent} strokeWidth={2.5} listening={false} />}
+            {markers.has(p.key) && (
+              // Bezugs-Steller des Läufersystems: breiter, leuchtender Ring (gestrichelt, wenn der Libero für ihn steht)
+              <Circle
+                radius={r + 8}
+                stroke={COLORS.accent}
+                strokeWidth={4}
+                opacity={0.9}
+                dash={markers.get(p.key)!.standIn ? [7, 5] : undefined}
+                shadowColor={COLORS.accent}
+                shadowBlur={16}
+                shadowOpacity={0.9}
+                listening={false}
+              />
+            )}
+            {isSel && <Circle radius={r + 3} stroke="#ffffff" strokeWidth={1.5} opacity={0.9} listening={false} />}
             <Circle
               radius={r}
               fill={colors.fill}

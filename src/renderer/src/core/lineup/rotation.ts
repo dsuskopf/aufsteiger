@@ -48,6 +48,20 @@ export function referencePlayer(order: Regular[], team: Team | undefined): Regul
   return sorted.find((r) => r.role === 'S') ?? sorted.find((r) => r.role !== 'L')
 }
 
+/**
+ * Wer wird als Bezugs-Steller des Läufersystems hervorgehoben: der Steller selbst – oder, wenn der Libero
+ * gerade für ihn steht, der Libero (standIn = gestrichelt). null ohne Positionen.
+ */
+export function laeuferMarker(side: PlaySide, team: Team | undefined): { playerId: string; standIn: boolean } | null {
+  const ref = referencePlayer(rotationOrder(side), team)
+  if (!ref) return null
+  if (ref.playerId === side.liberoFor) {
+    const libero = side.players.find((c) => c.role === 'L')
+    return libero ? { playerId: libero.playerId, standIn: true } : null
+  }
+  return side.players.some((c) => c.playerId === ref.playerId) ? { playerId: ref.playerId, standIn: false } : null
+}
+
 /** Aktueller Läufer (Position des Stellers) oder null ohne Positionen */
 export function currentLaeufer(side: PlaySide, team: Team | undefined): number | null {
   return referencePlayer(rotationOrder(side), team)?.slot ?? null

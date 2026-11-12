@@ -137,6 +137,44 @@ function nameTexture(name: string): { tex: THREE.Texture; aspect: number } {
   return { tex, aspect: w / h }
 }
 
+const MARK = 'laeuferMark'
+
+/**
+ * Bezugs-Steller des Läufersystems: leuchtender Ring auf dem Boden unter dem Spieler (gestrichelt wirkt in 3D
+ * unruhig – der Libero als Vertreter bekommt einen schmaleren Ring).
+ */
+export function setLaeuferMark(obj: THREE.Object3D, mark: { standIn: boolean } | undefined, color: string): void {
+  const old = obj.getObjectByName(MARK)
+  if (old && (!mark || old.userData.standIn !== mark.standIn)) {
+    obj.remove(old)
+    old.traverse((o) => {
+      const m = o as THREE.Mesh
+      m.geometry?.dispose()
+      ;(m.material as THREE.Material | undefined)?.dispose()
+    })
+  }
+  if (!mark || obj.getObjectByName(MARK)) return
+  const g = new THREE.Group()
+  g.name = MARK
+  g.userData.standIn = mark.standIn
+  const inner = mark.standIn ? 0.36 : 0.34
+  const ring = new THREE.Mesh(
+    new THREE.RingGeometry(inner, mark.standIn ? 0.4 : 0.44, 48),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95, depthWrite: false })
+  )
+  const glow = new THREE.Mesh(
+    new THREE.RingGeometry(0.3, 0.62, 48),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.28, depthWrite: false, blending: THREE.AdditiveBlending })
+  )
+  for (const m of [glow, ring]) {
+    m.rotation.x = -Math.PI / 2
+    m.position.y = 0.015
+    m.renderOrder = 3
+    g.add(m)
+  }
+  obj.add(g)
+}
+
 /** Namensschilder eines Spieler-Objekts ein-/ausblenden */
 export function showNameTag(obj: THREE.Object3D, show: boolean): void {
   const tag = obj.getObjectByName(NAME_TAG)

@@ -12,7 +12,7 @@ import { Icon } from '@renderer/components/Icon'
 import { PipBar } from '@renderer/components/PipBar'
 import { useUi } from '@renderer/store/settingsStore'
 import { NamesButton } from '@renderer/components/ViewToggles'
-import { useCourtPlayers, type CourtPlayerView } from '@renderer/store/selectors'
+import { useCourtPlayers, useLaeuferMarkers, type CourtPlayerView } from '@renderer/store/selectors'
 import { useEffect, useRef } from 'react'
 import type Konva from 'konva'
 import { NetTrajectories } from './NetTrajectories'
@@ -287,6 +287,7 @@ export function Net({ vp, netHeight }: { vp: NetViewport; netHeight: number }) {
  */
 export function PlayerFigure({ vp, p, dim = false }: { vp: NetViewport; p: CourtPlayerView & { lift?: number }; dim?: boolean }) {
   const showNames = useUi((st) => st.showNames)
+  const marked = useLaeuferMarkers().get(p.key)
   const s = vp.scale
   // Im Sprung stehen die Füße um die Sprunghöhe über dem Boden
   const foot = netProject(vp, p.x, p.y, p.lift ?? 0)
@@ -304,10 +305,24 @@ export function PlayerFigure({ vp, p, dim = false }: { vp: NetViewport; p: Court
         height={h}
         cornerRadius={Math.min(w / 2, 0.2 * s)}
         fill={p.jersey.fill}
-        stroke={p.jersey.stroke}
-        strokeWidth={1.5}
+        stroke={marked ? COLORS.accent : p.jersey.stroke}
+        strokeWidth={marked ? 3 : 1.5}
+        dash={marked?.standIn ? [6, 4] : undefined}
+        shadowColor={COLORS.accent}
+        shadowBlur={marked ? 14 : 0}
+        shadowOpacity={marked ? 0.9 : 0}
       />
-      <Circle x={foot.px} y={foot.py - h - r} radius={r} fill={p.jersey.fill} stroke={p.jersey.stroke} strokeWidth={2} />
+      <Circle
+        x={foot.px}
+        y={foot.py - h - r}
+        radius={r}
+        fill={p.jersey.fill}
+        stroke={marked ? COLORS.accent : p.jersey.stroke}
+        strokeWidth={marked ? 3 : 2}
+        shadowColor={COLORS.accent}
+        shadowBlur={marked ? 14 : 0}
+        shadowOpacity={marked ? 0.9 : 0}
+      />
       <Text x={foot.px - r} y={foot.py - h - r - r * 0.55} width={2 * r} align="center" text={p.role} fontSize={r * 0.62} fontStyle="bold" fill={p.jersey.text} />
       <Text x={foot.px - r} y={foot.py - h - r + r * 0.1} width={2 * r} align="center" text={String(p.number)} fontSize={r * 0.5} fill={p.jersey.text} />
       {showNames && p.name.trim() && (

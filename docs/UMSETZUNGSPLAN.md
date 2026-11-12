@@ -1,7 +1,7 @@
 # Umsetzungsplan: Volleyball-Spielzugplaner
 
 ## Context
-Das Repo enthält bisher nur `SPEZIFIKATION.md`. Gebaut wird eine Offline-Desktop-App für Windows 11 (Surface Pro 9: Stift, Touch, Maus). Damit plant man Volleyball-Spielzüge, hier Annahme und Zuspiel, mit physikalisch korrekten Parabeln. Es gibt eine Draufsicht und eine Seitenansicht in 2D, eine 3D-Ansicht, eine Animation, eine Bibliothek und einen Export.
+Das Repo enthält bisher nur `SPEZIFIKATION.md`. Gebaut wird eine Offline-Desktop-App für Windows 11 (Surface Pro 9: Stift, Touch, Maus). Damit plant man Volleyball-Spielzüge, hier Annahme und Zuspiel, mit physikalisch korrekten Parabeln. Es gibt eine Draufsicht und eine Netzansicht in 2D, eine 3D-Ansicht, eine Animation, eine Bibliothek und einen Export.
 
 Die Toolchain ist vorhanden: Node 26.13, npm 11.20, git 2.56.
 
@@ -36,7 +36,7 @@ src/
     store/         Zustand: play-, ui-, settings-, library-Slices
     views/
       top/         Draufsicht (Konva)
-      side/        Seitenansicht (Konva)
+      net/         Netzansicht (Konva): frontaler Blick aufs Netz
       three/       3D-Szene, Kamera-Rig, PlayerMesh-Factory
     components/    Playbar, Toolbar, Dialoge, Bibliothek, Einstellungen
     theme/         CSS-Variablen (Farben, Touch-Größen)
@@ -59,7 +59,7 @@ src/
   - Hintergrund `#121214` / `#0b0b0d`
   - Panels `#1c1c20`
   - Feldlinien grau `#6b6b70`
-  - Akzent und Flugbahn violett `#5b2a86`, hell `#7e4bb0`, Fade per Alpha
+  - Akzent und Flugbahn in der Standardfarbe (aktuell Sand `#d8c8a8`, festgelegt nur in `theme/defaultColor.ts`), Fade per Alpha
 - **Bedienung:** Touch-Ziele sind mindestens 44 px groß, Drag-Handles haben einen Trefferradius von etwa 24 px. Das Layout ist für Querformat optimiert.
 
 ---
@@ -87,7 +87,7 @@ Pro Flugbahn:
 Beim Zuspiel werden `start` (mit Höhe) nicht gespeichert, sondern immer aus dem Schlagpunkt der Annahme abgeleitet, falls eine Annahme existiert.
 
 ### Mathematik
-Seitenansicht mit `s` als Distanz und `z` als Höhe: `z(s) = apexH − k·(s − sA)²`.
+Profil entlang der Flugbahn mit `s` als Distanz und `z` als Höhe: `z(s) = apexH − k·(s − sA)²`.
 - **Parabel aus den Eingaben:** Start (0, h0), Schlagpunkt (D, h1) auf dem fallenden Ast und Scheitel apexH ≥ max(h0, h1) ergeben:
   - `k = ((√(apexH−h0) + √(apexH−h1)) / D)²`
   - `sA = √((apexH−h0)/k)`
@@ -214,14 +214,15 @@ Details:
 - **Draufsicht:** Kreise mit Kürzel und Rückennummer, frei ziehbar, Start in Standard-Aufstellung.
 - **3D:** Zylinder über eine `PlayerMeshFactory`-Schnittstelle, damit später echte Modelle eingesetzt werden können.
 
-### Phase 3: Flugbahnen, Physik und Seitenansicht
+### Phase 3: Flugbahnen, Physik und Netzansicht
+> Offen: Wo die Höhen (Start, Scheitel, Schlagpunkt) gezogen werden, nachdem die Profilansicht entfallen ist – vor Phase 3 mit dem Nutzer klären.
 - Das Modul `core/physics` mit allen Tests aus Abschnitt 2 wird zuerst geschrieben.
 - Eingabe in der Draufsicht nach der Policy aus Abschnitt 3, für Annahme und Zuspiel jeweils ein Werkzeug.
-- **Seitenansicht:**
+- **Höhen-Bearbeitung (Ort offen):**
   - Handles für Starthöhe, Scheitel und Schlagpunkt, live gelöst.
   - Die Checkbox „Flugbahn nach Schlagpunkt anzeigen“ zeigt den Rest gestrichelt bzw. verblasst.
 - Toggles für Annahme und Zuspiel.
-- Flugbahnen auch in 3D als Tube oder Linie in Violett.
+- Flugbahnen in der Netzansicht (projiziert auf die Netzebene) und in 3D als Tube oder Linie, jeweils in der Standardfarbe.
 - Einstellungsdialog mit allen Standardhöhen, dauerhaft gespeichert.
 
 ### Phase 4: Animation & Playbar

@@ -1,3 +1,5 @@
+import { DEFAULT_COLOR } from './defaultColor'
+
 /** Farben für Konva und Three (CSS nutzt dieselben Werte in theme.css). */
 export const COLORS = {
   bgDeep: '#0c0c0e',
@@ -13,6 +15,8 @@ export const COLORS = {
   line: '#6b6b70',
   lineDim: '#4a4a50',
   net: '#9a9aa2',
-  /** App-Akzent „Sand“ (Auswahl, Referenzlinien) – Teamfarben bleiben den Teams vorbehalten */
-  accent: '#d8c8a8'
+  /** Standardfarbe (Auswahl, Referenzlinien) – festgelegt in defaultColor.ts */
+  accent: DEFAULT_COLOR,
+  /** Flugbahnen und Ball nutzen die Standardfarbe */
+  trajectory: DEFAULT_COLOR
 } as const

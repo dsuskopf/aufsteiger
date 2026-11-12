@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { COURT, NET_PRESETS, clampNetHeight, courtLines, presetForHeight } from './court'
 import {
   IDENTITY_VIEW,
-  applyViewSide,
   applyViewTop,
   clampView,
   fitViewport,
   zoomAt,
-  pxToSide,
-  sideToPx,
+  netToPx,
+  pxToNet,
+  isNearSide,
   threeToWorld,
   topToWorld,
   worldToThree,
@@ -64,13 +64,6 @@ describe('transform', () => {
     expect(threeToWorld(tx, ty, tz)).toEqual({ x: -4, y: 1.5, z: 2.43 })
   })
 
-  it('Seitenansicht umkehrbar', () => {
-    const vp = { scale: 40, originX: 50, groundY: 500 }
-    const p = sideToPx(vp, 6, 2.43)
-    const q = pxToSide(vp, p.px, p.py)
-    expect(q.s).toBeCloseTo(6)
-    expect(q.z).toBeCloseTo(2.43)
-  })
 })
 
 describe('Draufsicht-Drehung', () => {
@@ -125,20 +118,45 @@ describe('Zoom & Verschieben', () => {
     expect(300 * 4 + d.tx).toBeCloseTo(400)
   })
 
-  it('applyView auf Draufsicht und Seite', () => {
+  it('clampView zentriert im kleineren Rahmen', () => {
+    const content = { x0: 100, y0: 0, x1: 300, y1: 400 }
+    // Rahmen = linke Hälfte (0..400) einer 800 px breiten Fläche → Inhalt mittig bei x = 200
+    const v = clampView({ z: 1, tx: 0, ty: 0 }, content, 800, 400, { x0: 0, y0: 0, x1: 400, y1: 400 })
+    expect((100 + 300) / 2 + v.tx).toBeCloseTo(200)
+  })
+
+  it('applyView auf die Draufsicht', () => {
     const vp = fitViewport(1000, 600, 22, 13)
     const v = zoomAt(IDENTITY_VIEW, 2, 500, 300)
     const p = worldToTop(applyViewTop(vp, v), 0, 0)
     expect(p.px).toBeCloseTo(500)
     expect(p.py).toBeCloseTo(300)
-    const sv = applyViewSide({ scale: 10, originX: 0, groundY: 100 }, { z: 2, tx: 5, ty: -100 })
-    expect(sideToPx(sv, 1, 0)).toEqual({ px: 25, py: 100 })
   })
 
-  it('Seitenansicht spiegeln', () => {
-    const vp = { scale: 10, originX: 0, groundY: 100, mirror: true, mirrorCenter: 9 }
-    expect(sideToPx(vp, 0, 0).px).toBeCloseTo(180)
-    expect(sideToPx(vp, 18, 0).px).toBeCloseTo(0)
-    expect(pxToSide(vp, 180, 100).s).toBeCloseTo(0)
+})
+
+describe('Netzansicht', () => {
+  const vp = { scale: 50, originX: 400, groundY: 600, from: 'A' as const }
+
+  it('von Seite A ist rechts −y, von B gespiegelt', () => {
+    // y = −4.5 (Seitenlinie rechts aus Sicht von A)
+    expect(netToPx(vp, -4.5, 0).px).toBeCloseTo(400 + 225)
+    expect(netToPx({ ...vp, from: 'B' }, -4.5, 0).px).toBeCloseTo(400 - 225)
+    expect(netToPx(vp, 0, 2.43).py).toBeCloseTo(600 - 121.5)
+  })
+
+  it('ist umkehrbar', () => {
+    for (const from of ['A', 'B'] as const) {
+      const p = netToPx({ ...vp, from }, 3.2, 1.7)
+      const w = pxToNet({ ...vp, from }, p.px, p.py)
+      expect(w.y).toBeCloseTo(3.2)
+      expect(w.z).toBeCloseTo(1.7)
+    }
+  })
+
+  it('erkennt die Seite des Betrachters', () => {
+    expect(isNearSide({ from: 'A' }, -3)).toBe(true)
+    expect(isNearSide({ from: 'A' }, 3)).toBe(false)
+    expect(isNearSide({ from: 'B' }, 3)).toBe(true)
   })
 })

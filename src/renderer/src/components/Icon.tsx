@@ -12,6 +12,8 @@ const PATHS = {
   // Seitenansicht spiegeln
   flip: 'M7 7h13l-3-3M17 17H4l3 3',
   close: 'M6 6l12 12M18 6L6 18',
+  // Vergrößern: Pfeile in die Ecken
+  expand: 'M14 4h6v6M10 20H4v-6M20 4l-6.5 6.5M4 20l6.5-6.5',
   // Bearbeiten: Stift
   pencil: 'M4 20h4L19 9a2.83 2.83 0 0 0-4-4L4 16v4zM13.5 6.5l4 4',
   check: 'M5 12.5l4.5 4.5L19 7',

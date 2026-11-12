@@ -10,7 +10,7 @@ Du bist mein Entwickler für dieses Projekt. Lies die gesamte Spezifikation, ers
 
 ## Design
 - Dunkles Theme: Hintergrund anthrazit bis fast schwarz, UI-Elemente dunkel.
-- Flugbahnen, Linien, Akzente und Fade-Effekte in einem düsteren, dunklen Violett ("gloomy dark violet").
+- Flugbahnen, Linien, Akzente und Fade-Effekte in der Standardfarbe der App (aktuell „Sand“ #d8c8a8). Sie ist an genau einer Stelle festgelegt: `src/renderer/src/theme/defaultColor.ts`. Alles Team-Bezogene nutzt stattdessen die jeweilige Teamfarbe.
 - Feldlinien dezent grau, damit Spielzüge sich klar abheben.
 - Gut bedienbar mit Stift und Finger (ausreichend große Touch-Ziele), optimiert für Querformat.
 
@@ -29,7 +29,8 @@ Du bist mein Entwickler für dieses Projekt. Lies die gesamte Spezifikation, ers
 
 ## Hauptansicht: zwei 2D-Ansichten gleichzeitig
 - Links: Draufsicht (von oben) auf das Feld.
-- Rechts: Seitenansicht der ausgewählten Flugbahn (vertikale Ebene entlang der Flugbahn, horizontale Achse = Distanz entlang der Linie, vertikale Achse = Höhe, Netz und Netzhöhe als Referenz eingezeichnet).
+- Rechts (kleiner, ca. 30 %): **Netzansicht** – flacher, maßstabstreuer 2D-Blick frontal aufs Netz aus dem Feld (Standard von Seite A, umschaltbar auf B). Horizontal = Feldbreite, vertikal = Höhe. Zeigt Netz, Antennen, Pfosten, Bodenlinien, Flugbahnen (projiziert auf die Netzebene) und Ball; Spieler per Checkbox einblendbar (standardmäßig aus). So erkennt man Flugkurven parallel zum Netz.
+- Die Draufsicht bekommt in der geteilten Ansicht den größeren Teil (ca. 70 %).
 - Beide Ansichten sind immer synchron: Änderungen in einer werden sofort in der anderen angezeigt.
 - Optional umschaltbar auf nur eine Ansicht, falls der Platz zu eng ist.
 
@@ -44,8 +45,10 @@ Es gibt zwei Flugbahn-Typen: **Annahme** und **Zuspiel**. Beide funktionieren na
 - Klick und Ziehen sauber unterscheiden (Bewegungsschwelle), funktioniert mit Stift, Finger und Maus.
 - Stift-Eingabe (Pointer Events, pointerType "pen") vom Finger unterscheiden, damit man nicht versehentlich verschiebt.
 
-### Höhen in der Seitenansicht
-- Startpunkt: Position kommt aus der Draufsicht, die Höhe wird in der Seitenansicht per Ziehen eingestellt (vom Boden bis weit oben möglich).
+### Höhen einstellen
+> Offen (wird vor Phase 3 geklärt): Die frühere Profilansicht entlang der Flugbahn entfällt. Wo Starthöhe, Scheitel und Schlagpunkt gezogen werden, wird vor der Umsetzung der Flugbahnen festgelegt.
+
+- Startpunkt: Position kommt aus der Draufsicht, die Höhe wird per Ziehen eingestellt (vom Boden bis weit oben möglich).
 - Standardwerte in den Einstellungen (pro Typ getrennt einstellbar):
   - Standard-Starthöhe Zuspiel (Hand des Stellers)
   - Standard-Starthöhe Annahme
@@ -54,7 +57,7 @@ Es gibt zwei Flugbahn-Typen: **Annahme** und **Zuspiel**. Beide funktionieren na
 - Dadurch hat jede neue Flugbahn sofort eine natürliche Kurvenform statt einer Geraden.
 
 ### Scheitelpunkt
-- Wird in der Seitenansicht direkt per Stift/Finger/Maus hoch und runter gezogen, die Parabel wird live neu berechnet, beim Loslassen übernommen.
+- Wird direkt per Stift/Finger/Maus hoch und runter gezogen, die Parabel wird live neu berechnet, beim Loslassen übernommen.
 - Keine Eingabe als Zahl nötig.
 - Der Scheitel darf nur nach oben, niemals unter die gerade Verbindungslinie (muss physikalisch möglich bleiben).
 
@@ -93,7 +96,7 @@ Es gibt zwei Flugbahn-Typen: **Annahme** und **Zuspiel**. Beide funktionieren na
 - Gespeichert werden: Team, Spielerpositionen, alle Flugbahnen mit Start, Scheitel, Schlagpunkt, Einstellungen wie Netzhöhe und Anzeige-Optionen.
 
 ## Export & Teilen
-- PDF-Export pro Spielzug: Titel, Kürzel, Draufsicht, Seitenansicht und mehrere 3D-Ansichten aus verschiedenen Winkeln.
+- PDF-Export pro Spielzug: Titel, Kürzel, Draufsicht, Netzansicht und mehrere 3D-Ansichten aus verschiedenen Winkeln.
 - Optional Video-Export der 3D-Animation (MP4 bevorzugt, sonst WebM).
 
 ## Einstellungen
@@ -108,5 +111,5 @@ Es gibt zwei Flugbahn-Typen: **Annahme** und **Zuspiel**. Beide funktionieren na
 ## Vorgehen
 1. Architektur- und Phasenplan vorschlagen.
 2. Phase 1: Projekt-Setup, Feld in 2D und 3D mit echten Maßen, Kamera-Begrenzung, dunkles Theme.
-3. Danach: Spieler & Teams, Flugbahnen mit Physik (mit Tests), Seitenansicht, Animation & Playbar, Speichern/Bibliothek, Export, Installer.
+3. Danach: Spieler & Teams, Flugbahnen mit Physik (mit Tests), Netzansicht, Animation & Playbar, Speichern/Bibliothek, Export, Installer.
 4. Nach jeder Phase: kurz zusammenfassen, was fertig ist, und wie ich es auf dem Surface testen kann.

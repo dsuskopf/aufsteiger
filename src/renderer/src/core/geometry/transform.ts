@@ -66,30 +66,6 @@ export function threeToWorld(tx: number, ty: number, tz: number): { x: number; y
   return { x: tx, y: -tz, z: ty }
 }
 
-/** Seitenansicht: s = Distanz entlang der Linie, z = Höhe. */
-export interface SideViewport {
-  scale: number
-  /** Pixel-x für s = 0 (ungespiegelt) */
-  originX: number
-  /** Pixel-y für z = 0 (Boden) */
-  groundY: number
-  /** Blick von der anderen Seite: s wird um mirrorCenter gespiegelt. */
-  mirror?: boolean
-  mirrorCenter?: number
-}
-
-function mirrorS(vp: SideViewport, s: number): number {
-  return vp.mirror ? 2 * (vp.mirrorCenter ?? 0) - s : s
-}
-
-export function sideToPx(vp: SideViewport, s: number, z: number): { px: number; py: number } {
-  return { px: vp.originX + mirrorS(vp, s) * vp.scale, py: vp.groundY - z * vp.scale }
-}
-
-export function pxToSide(vp: SideViewport, px: number, py: number): { s: number; z: number } {
-  return { s: mirrorS(vp, (px - vp.originX) / vp.scale), z: (vp.groundY - py) / vp.scale }
-}
-
 /* ---------- Zoom & Verschieben der 2D-Ansichten ---------- */
 
 /** Ansichts-Transformation über den Basis-Pixeln: bildschirm = basis · z + t. */
@@ -119,15 +95,6 @@ export function applyViewTop(vp: TopViewport, v: View2D): TopViewport {
   }
 }
 
-export function applyViewSide(vp: SideViewport, v: View2D): SideViewport {
-  return {
-    ...vp,
-    scale: vp.scale * v.z,
-    originX: vp.originX * v.z + v.tx,
-    groundY: vp.groundY * v.z + v.ty
-  }
-}
-
 /** Zoomt um den Faktor f, wobei der Bildschirmpunkt (ax, ay) fest bleibt. */
 export function zoomAt(
   v: View2D,
@@ -143,22 +110,64 @@ export function zoomAt(
 }
 
 /**
- * Hält den Inhalt (in Basis-Pixeln) im Bild: Ist er größer als die Fläche, darf man nur bis zu seinen Rändern
- * verschieben; ist er kleiner, wird er zentriert.
+ * Hält den Inhalt (in Basis-Pixeln) im Bild: Ist er größer als der Rahmen, darf man nur bis zu seinen Rändern
+ * verschieben; ist er kleiner, wird er im Rahmen zentriert. Der Rahmen ist standardmäßig die ganze Fläche,
+ * kann aber kleiner sein (z. B. Draufsicht neben dem Netz-Bild-im-Bild).
  */
-export function clampView(v: View2D, content: PxRect, width: number, height: number): View2D {
-  const axis = (t: number, c0: number, c1: number, size: number) => {
+export function clampView(
+  v: View2D,
+  content: PxRect,
+  width: number,
+  height: number,
+  frame: PxRect = { x0: 0, y0: 0, x1: width, y1: height }
+): View2D {
+  const axis = (t: number, c0: number, c1: number, f0: number, f1: number) => {
+    const size = f1 - f0
     const span = (c1 - c0) * v.z
-    if (span <= size) return (size - (c0 + c1) * v.z) / 2
-    return Math.min(-c0 * v.z, Math.max(size - c1 * v.z, t))
+    if (span <= size) return f0 + (size - (c0 + c1) * v.z) / 2
+    return Math.min(f0 - c0 * v.z, Math.max(f1 - c1 * v.z, t))
   }
   return {
     z: v.z,
-    tx: axis(v.tx, content.x0, content.x1, width),
-    ty: axis(v.ty, content.y0, content.y1, height)
+    tx: axis(v.tx, content.x0, content.x1, frame.x0, frame.x1),
+    ty: axis(v.ty, content.y0, content.y1, frame.y0, frame.y1)
   }
 }
 
 export function lerpView(a: View2D, b: View2D, k: number): View2D {
   return { z: a.z + (b.z - a.z) * k, tx: a.tx + (b.tx - a.tx) * k, ty: a.ty + (b.ty - a.ty) * k }
+}
+
+/* ---------- Netzansicht: frontaler Blick aufs Netz ---------- */
+
+/**
+ * Flache, maßstabstreue Projektion entlang der Feldlänge (x) auf die Netzebene (y, z).
+ * Von Seite A (x < 0) schaut man Richtung +x: rechts ist dann −y. Von Seite B ist es gespiegelt.
+ */
+export interface NetViewport {
+  scale: number
+  /** Pixel-x der Feldmitte (y = 0) */
+  originX: number
+  /** Pixel-y für z = 0 (Boden) */
+  groundY: number
+  from: 'A' | 'B'
+}
+
+export function netToPx(vp: NetViewport, y: number, z: number): { px: number; py: number } {
+  const side = vp.from === 'A' ? -1 : 1
+  return { px: vp.originX + side * y * vp.scale, py: vp.groundY - z * vp.scale }
+}
+
+export function pxToNet(vp: NetViewport, px: number, py: number): { y: number; z: number } {
+  const side = vp.from === 'A' ? -1 : 1
+  return { y: (side * (px - vp.originX)) / vp.scale, z: (vp.groundY - py) / vp.scale }
+}
+
+/** Liegt ein Punkt auf der Seite des Betrachters (vor dem Netz)? */
+export function isNearSide(vp: Pick<NetViewport, 'from'>, x: number): boolean {
+  return vp.from === 'A' ? x < 0 : x > 0
+}
+
+export function applyViewNet(vp: NetViewport, v: View2D): NetViewport {
+  return { ...vp, scale: vp.scale * v.z, originX: vp.originX * v.z + v.tx, groundY: vp.groundY * v.z + v.ty }
 }

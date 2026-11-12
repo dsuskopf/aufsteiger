@@ -1,12 +1,13 @@
 import { Circle, Layer, Line, Stage, Text } from 'react-konva'
 import { COURT, courtLines } from '@renderer/core/geometry/court'
-import { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import type Konva from 'konva'
 import { PlayersLayer, hitsPlayer } from './PlayersLayer'
 import {
   applyViewTop,
   fitViewport,
   worldToTop,
+  type PxRect,
   type TopViewport
 } from '@renderer/core/geometry/transform'
 import { tween } from '@renderer/components/tween'
@@ -33,7 +34,12 @@ export function TopView() {
   const autoTurns = window.innerHeight > window.innerWidth ? 1 : 0
   const targetAngle = ((autoTurns + topTurns) * Math.PI) / 2
   const angle = useAnimatedAngle(targetAngle)
-  const base = fitViewport(size.width, size.height, WORLD_W, WORLD_H, 16, angle)
+  // Liegt das Netz-Bild-im-Bild über der Draufsicht, wird das Feld im freien Bereich daneben bzw. darüber
+  // ausgerichtet (der Bereich mit dem größeren Maßstab gewinnt), damit nichts verdeckt wird.
+  const pip = usePipRect(ref)
+  const frame = freeFrame(size, pip, angle)
+  const fitted = fitViewport(frame.x1 - frame.x0, frame.y1 - frame.y0, WORLD_W, WORLD_H, 16, angle)
+  const base: TopViewport = { ...fitted, originX: fitted.originX + frame.x0, originY: fitted.originY + frame.y0 }
 
   // Inhalt (Feld + Freizone) in Basis-Pixeln, begrenzt das Verschieben
   const corners = [
@@ -52,6 +58,7 @@ export function TopView() {
   const { view, zoomIn, zoomOut, reset } = useZoomPan(ref, {
     size,
     content,
+    frame,
     // Finger auf einem Spieler zieht den Spieler, nicht die Ansicht
     shouldIgnore: (e) => hitsPlayer(stageRef.current, e.clientX, e.clientY)
   })
@@ -83,6 +90,59 @@ export function TopView() {
       </ViewControls>
     </>
   )
+}
+
+const PIP_GAP = 12
+
+/**
+ * Freier Bereich der Draufsicht: ganze Fläche oder – mit Bild-im-Bild – der größte freie Streifen
+ * links, rechts, über oder unter dem Fenster (der mit dem größten Maßstab gewinnt).
+ */
+function freeFrame(size: { width: number; height: number }, pip: PxRect | null, angle: number): PxRect {
+  const full = { x0: 0, y0: 0, x1: size.width, y1: size.height }
+  if (!pip || size.width <= 0) return full
+  const W = size.width
+  const H = size.height
+  const candidates: PxRect[] = [
+    { x0: 0, y0: 0, x1: pip.x0 - PIP_GAP, y1: H },
+    { x0: pip.x1 + PIP_GAP, y0: 0, x1: W, y1: H },
+    { x0: 0, y0: 0, x1: W, y1: pip.y0 - PIP_GAP },
+    { x0: 0, y0: pip.y1 + PIP_GAP, x1: W, y1: H }
+  ].filter((f) => f.x1 - f.x0 > 120 && f.y1 - f.y0 > 120)
+  if (candidates.length === 0) return full
+  const scaleOf = (f: PxRect) => fitViewport(f.x1 - f.x0, f.y1 - f.y0, WORLD_W, WORLD_H, 16, angle).scale
+  return candidates.reduce((best, f) => (scaleOf(f) > scaleOf(best) ? f : best))
+}
+
+/** Position des Netz-Bild-im-Bild relativ zur Draufsicht (null, wenn nicht sichtbar) */
+function usePipRect(hostRef: React.RefObject<HTMLElement | null>): PxRect | null {
+  const viewMode = useUi((s) => s.viewMode)
+  const collapsed = useUi((s) => s.netPipCollapsed)
+  const storedRect = useUi((s) => s.netPipRect)
+  const [rect, setRect] = useState<PxRect | null>(null)
+  useEffect(() => {
+    const host = hostRef.current
+    const pipEl = document.querySelector<HTMLElement>('.pane.pip')
+    if (!host || !pipEl) {
+      setRect(null)
+      return
+    }
+    const update = () => {
+      const a = host.getBoundingClientRect()
+      const b = pipEl.getBoundingClientRect()
+      const next = { x0: b.left - a.left, y0: b.top - a.top, x1: b.right - a.left, y1: b.bottom - a.top }
+      setRect((r) =>
+        r && Math.abs(r.x0 - next.x0) < 0.5 && Math.abs(r.y0 - next.y0) < 0.5 && Math.abs(r.x1 - next.x1) < 0.5 ? r : next
+      )
+    }
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(host)
+    ro.observe(pipEl)
+    return () => ro.disconnect()
+    // storedRect: nach dem Verschieben/Vergrößern (beim Loslassen) neu messen
+  }, [hostRef, viewMode, collapsed, storedRect])
+  return rect
 }
 
 /** Dreht weich (Animation) zum Zielwinkel; mehrfaches Tippen setzt am aktuellen Winkel an. */

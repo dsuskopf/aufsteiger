@@ -2,8 +2,9 @@
  * Design-Tokens. Bewusst nur dunkel (Spezifikation; HIG dark-mode.md: „In rare cases, consider using only a
  * dark appearance“). Das Feld ist der Inhalt; die Bedienelemente treten zurück.
  * Farbe bedeutet genau eine Sache (HIG color.md):
- *  - Sand (--accent) = Auswahl und Hauptaktion der App. Warm und gering gesättigt, damit er mit keiner
- *    Teamfarbe verwechselt wird (die Teampaletten belegen den Farbkreis).
+ *  - Standardfarbe (--accent …) = Auswahl, Hauptaktion, Flugbahnen. Festgelegt NUR in
+ *    src/renderer/src/theme/defaultColor.ts (aktuell Sand); dort wird sie beim Start in diese Variablen
+ *    geschrieben. Warm und gering gesättigt, damit sie mit keiner Teamfarbe verwechselt wird.
  *  - Teamfarbe (--team, --team-tint, --team-on) = alles, was ein Team betrifft. Gesetzt per teamStyle().
  * Kontraste (WCAG): --label 15.6:1, --label-2 7.2:1 auf --surface; Sand 11.2:1 auf --surface,
  * dunkle Schrift auf Sand 11:1; --team-tint per Test ≥ 4.5:1.
@@ -19,11 +20,7 @@
   --separator-strong: rgba(255, 255, 255, 0.14);
   --label: #ececf0;
   --label-2: #a1a1aa;
-  --accent: #d8c8a8;
-  --accent-hover: #e4d7bd;
-  --accent-ring: #d8c8a8;
-  --accent-text: #d8c8a8;
-  --on-accent: #16161a;
+  /* --accent, --accent-hover, --accent-ring, --accent-text, --on-accent: gesetzt von defaultColor.ts */
   --danger: #ff6b6b;
   --danger-fill: #7a1f2b;
   --glass: rgba(29, 29, 34, 0.72);
@@ -140,6 +137,92 @@ input[type='range'] { width: 150px; height: var(--touch); accent-color: var(--ac
 }
 
 .views { position: relative; flex: 1; display: flex; gap: 8px; padding: 0 8px 8px; min-height: 0; }
+/* Ansicht „Beide“: Netz als freies Bild-im-Bild über der Draufsicht (Lage/Größe per Inline-Style) */
+.pane.pip {
+  position: absolute;
+  z-index: 5;
+  flex: none;
+  box-shadow: 0 0 0 1px var(--separator-strong), 0 16px 40px rgba(0, 0, 0, 0.55);
+}
+.pane.pip.dragging { box-shadow: 0 0 0 2px var(--accent), 0 20px 50px rgba(0, 0, 0, 0.6); }
+/* Titelleiste = Griff zum Verschieben (groß genug für den Finger) */
+.pip-handle {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 12px 0 10px;
+  border-radius: 999px;
+  background: var(--glass);
+  backdrop-filter: blur(16px);
+  color: var(--label-2);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: grab;
+  touch-action: none;
+}
+.pip-handle:active { cursor: grabbing; }
+.pip-handle .grip {
+  width: 10px;
+  height: 14px;
+  background-image: radial-gradient(currentColor 1.2px, transparent 1.3px);
+  background-size: 5px 5px;
+  opacity: 0.8;
+}
+/* Eck-Griffe zum Vergrößern */
+.pip-resize {
+  position: absolute;
+  z-index: 4;
+  width: 28px;
+  height: 28px;
+  touch-action: none;
+}
+.pip-resize::before {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: var(--label-2);
+  border-style: solid;
+  opacity: 0.8;
+}
+.pip-resize.tl { top: -6px; left: -6px; cursor: nwse-resize; }
+.pip-resize.tl::before { top: 6px; left: 6px; border-width: 2px 0 0 2px; border-top-left-radius: 6px; }
+.pip-resize.br { right: -6px; bottom: -6px; cursor: nwse-resize; }
+.pip-resize.br::before { right: 6px; bottom: 6px; border-width: 0 2px 2px 0; border-bottom-right-radius: 6px; }
+.pip-bar {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--glass);
+  backdrop-filter: blur(16px);
+}
+.pip-bar button { min-height: 40px; width: 40px; border-radius: 999px; background: transparent; }
+.pip-bar button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08); }
+.pip-chip {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  z-index: 5;
+  border-radius: 999px;
+  padding: 0 16px 0 12px;
+  background: var(--glass);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 0 0 1px var(--separator-strong), 0 8px 24px rgba(0, 0, 0, 0.45);
+  font-weight: 600;
+}
+.pip-check { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 10px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.pip-check input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
 /* Wenig Breite (z. B. hochkant): Ansichten untereinander */
 @media (max-aspect-ratio: 1/1) {
   .views { flex-direction: column; }
@@ -147,7 +230,7 @@ input[type='range'] { width: 150px; height: var(--touch); accent-color: var(--ac
 
 .pane {
   position: relative;
-  flex: 1;
+  flex: 1 1 0;
   min-width: 0;
   min-height: 0;
   background: var(--surface);
@@ -168,6 +251,27 @@ input[type='range'] { width: 150px; height: var(--touch); accent-color: var(--ac
   font-weight: 600;
   pointer-events: none;
 }
+/* Checkbox unten links in einer Ansicht (z. B. Spieler in der Netzansicht) */
+.pane-check {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--touch);
+  padding: 0 14px 0 12px;
+  border-radius: 999px;
+  background: var(--glass);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 0 0 1px var(--separator);
+  color: var(--label);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pane-check input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); cursor: pointer; }
 .pane-hint {
   position: absolute;
   bottom: 10px;

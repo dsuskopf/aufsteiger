@@ -19,6 +19,8 @@ interface Options {
   resetKey?: unknown
   /** Fixpunkt für den Button-Zoom (Bildschirm-Pixel), Standard: Mitte der Fläche. */
   zoomAnchor?: { x: number; y: number }
+  /** Bereich, in dem der Inhalt zentriert/begrenzt wird (Standard: ganze Fläche) */
+  frame?: PxRect
   /** true = diese Berührung gehört einem Objekt (z. B. Spieler ziehen), nicht der Ansicht. */
   shouldIgnore?: (e: PointerEvent) => boolean
 }
@@ -32,17 +34,17 @@ interface Options {
  * - Buttons: weicher, animierter Zoom zur Mitte bzw. zurück zur Startansicht.
  */
 export function useZoomPan(hostRef: RefObject<HTMLElement | null>, opts: Options) {
-  const { size, content, initial = IDENTITY_VIEW, resetKey, zoomAnchor, shouldIgnore } = opts
+  const { size, content, initial = IDENTITY_VIEW, resetKey, zoomAnchor, shouldIgnore, frame } = opts
   const [view, setViewState] = useState<View2D>(IDENTITY_VIEW)
   const viewRef = useRef(view)
   const goalRef = useRef<View2D | null>(null)
   const cancelRef = useRef<(() => void) | null>(null)
-  const optsRef = useRef({ size, content, initial, zoomAnchor, shouldIgnore })
-  optsRef.current = { size, content, initial, zoomAnchor, shouldIgnore }
+  const optsRef = useRef({ size, content, initial, zoomAnchor, shouldIgnore, frame })
+  optsRef.current = { size, content, initial, zoomAnchor, shouldIgnore, frame }
 
   const clamp = useCallback((v: View2D) => {
     const o = optsRef.current
-    return clampView(v, o.content, o.size.width, o.size.height)
+    return clampView(v, o.content, o.size.width, o.size.height, o.frame)
   }, [])
 
   const setView = useCallback(
@@ -105,7 +107,7 @@ export function useZoomPan(hostRef: RefObject<HTMLElement | null>, opts: Options
     } else if (!goalRef.current) {
       setView(viewRef.current)
     }
-  }, [resetKey, size.width, size.height, content.x0, content.x1, content.y0, content.y1, setView])
+  }, [resetKey, size.width, size.height, content.x0, content.x1, content.y0, content.y1, frame?.x0, frame?.x1, frame?.y0, frame?.y1, setView])
 
   // Zeiger- und Rad-Gesten
   useEffect(() => {

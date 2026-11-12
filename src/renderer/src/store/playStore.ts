@@ -28,6 +28,8 @@ interface PlayState {
   selected: TrajectoryType | null
   setTrajectory: (type: TrajectoryType, t: Trajectory) => void
   removeTrajectory: (type: TrajectoryType) => void
+  /** Annahme und Zuspiel löschen */
+  clearTrajectories: () => void
   select: (type: TrajectoryType | null) => void
   setDisplay: (patch: Partial<PlayDisplay>) => void
 
@@ -61,6 +63,7 @@ export const usePlay = create<PlayState>((set) => {
         delete next[type]
         return { trajectories: next, selected: st.selected === type ? null : st.selected }
       }),
+    clearTrajectories: () => set({ trajectories: {}, selected: null }),
     select: (selected) => set({ selected }),
     setDisplay: (patch) => set((st) => ({ display: { ...st.display, ...patch } })),
 

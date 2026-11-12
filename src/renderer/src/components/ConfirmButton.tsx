@@ -8,13 +8,14 @@ interface Props {
   /** Optional: nur Icon zeigen, bis nachgefragt wird */
   icon?: IconName
   onConfirm: () => void
+  disabled?: boolean
 }
 
 /**
  * Zweistufiger Lösch-Button (Warnung ohne Dialog): erstes Tippen fragt nach, zweites löscht;
  * nach 3 s ohne Bestätigung zurück (= Abbrechen).
  */
-export function ConfirmButton({ label, confirmLabel, icon, onConfirm }: Props) {
+export function ConfirmButton({ label, confirmLabel, icon, onConfirm, disabled = false }: Props) {
   const [armed, setArmed] = useState(false)
   useEffect(() => {
     if (!armed) return
@@ -26,6 +27,7 @@ export function ConfirmButton({ label, confirmLabel, icon, onConfirm }: Props) {
     <button
       className={`danger ${armed ? 'armed' : ''} ${iconOnly ? 'icon-only plain' : ''}`}
       title={label}
+      disabled={disabled}
       aria-label={armed ? confirmLabel : label}
       onClick={() => {
         if (armed) {

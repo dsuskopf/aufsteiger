@@ -4,6 +4,8 @@ import { NET_HEIGHT_MAX, NET_HEIGHT_MIN, NET_PRESETS } from '@renderer/core/geom
 import { useUi, type Tool, type ViewMode } from '@renderer/store/settingsStore'
 import { usePlay } from '@renderer/store/playStore'
 import { Icon, type IconName } from './Icon'
+import { ConfirmButton } from './ConfirmButton'
+import { usePlayback } from '@renderer/store/playbackStore'
 
 const TOOLS: { id: Tool; label: string; icon: IconName; title: string }[] = [
   { id: 'select', label: 'Auswählen', icon: 'pointer', title: 'Auswählen und ziehen (Spieler, Griffe)' },
@@ -28,6 +30,7 @@ export function Toolbar() {
   const { netBarOpen, setNetBarOpen } = useUi()
   const current = usePlay((s) => s.current)
   const dirty = usePlay((s) => s.dirty)
+  const hasTrajectories = usePlay((s) => !!s.trajectories.annahme || !!s.trajectories.zuspiel)
 
   return (
     <header className="toolbar">
@@ -78,6 +81,19 @@ export function Toolbar() {
           </button>
         ))}
       </div>
+
+      {/* Annahme und Zuspiel löschen (zweistufig: erst nachfragen, dann löschen) */}
+      <ConfirmButton
+          label="Flugbahnen löschen"
+          confirmLabel="Annahme und Zuspiel löschen?"
+          icon="trash"
+          disabled={!hasTrajectories}
+          onConfirm={() => {
+            usePlayback.getState().pause()
+            usePlayback.setState({ t: 0 })
+            usePlay.getState().clearTrajectories()
+          }}
+        />
 
       {/* Rechts oben, immer an derselben Stelle: Panels, Export, Einstellungen */}
       <div className="toolbar-group toolbar-end">

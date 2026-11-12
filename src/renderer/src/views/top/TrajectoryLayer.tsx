@@ -21,10 +21,12 @@ const HIT_R = 24
 export function TrajectoryLayer({
   vp,
   interactive,
-  preview
+  preview,
+  showBall = true
 }: {
   vp: TopViewport
   interactive: boolean
+  showBall?: boolean
   preview: { a: { x: number; y: number }; b: { x: number; y: number } } | null
 }) {
   const list = useVisibleTrajectories()
@@ -117,7 +119,7 @@ export function TrajectoryLayer({
           listening={false}
         />
       )}
-      {ball && <Ball {...xy(vp, ball.x, ball.y)} r={Math.max(6, 0.105 * vp.scale)} />}
+      {showBall && ball && <Ball {...xy(vp, ball.x, ball.y)} r={Math.max(6, 0.105 * vp.scale)} />}
     </Layer>
   )
 }

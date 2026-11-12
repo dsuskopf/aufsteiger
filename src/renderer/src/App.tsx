@@ -17,6 +17,7 @@ import { useSettings } from './store/appSettings'
 import { usePlayback } from './store/playbackStore'
 import { SaveDialog } from './components/SaveDialog'
 import { Library } from './components/Library'
+import { ExportDialog } from './components/ExportDialog'
 import './store/playDocs'
 
 const HINTS = {
@@ -123,6 +124,7 @@ export function App() {
       {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} />}
       {dialog === 'save' && <SaveDialog onClose={() => setDialog(null)} />}
       {dialog === 'library' && <Library onClose={() => setDialog(null)} />}
+      {dialog === 'export' && <ExportDialog onClose={() => setDialog(null)} />}
       {teamsOpen && (
         <TeamManager
           onClose={() => {

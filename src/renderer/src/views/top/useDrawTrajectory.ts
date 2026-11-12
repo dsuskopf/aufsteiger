@@ -65,7 +65,11 @@ export function useDrawTrajectory(hostRef: RefObject<HTMLElement | null>, vp: To
       if (down || !canDraw(e)) return
       e.preventDefault()
       e.stopPropagation()
-      el.setPointerCapture(e.pointerId)
+      try {
+        el.setPointerCapture(e.pointerId)
+      } catch {
+        // Ohne Capture funktioniert es auch (Ereignisse kommen weiter am Element an)
+      }
       down = { id: e.pointerId, sx: e.clientX, sy: e.clientY, at: toWorld(e), dragging: false }
     }
     const onMove = (e: PointerEvent) => {

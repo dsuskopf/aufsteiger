@@ -17,7 +17,7 @@ import { NetTrajectories } from './NetTrajectories'
 import { hitsDraggable } from '../top/PlayersLayer'
 
 /** Sichtbare Breite: Feld plus Freizone (Pfosten stehen 1 m neben den Seitenlinien) */
-const HALF_W = COURT.halfWidth + COURT.freeZone
+export const HALF_W = COURT.halfWidth + COURT.freeZone
 /** Maximal darstellbare Höhe in Metern */
 const Z_MAX = 25
 const PAD_X = 16
@@ -137,7 +137,7 @@ export function NetView({ compact = false }: { compact?: boolean }) {
 }
 
 /** Boden: Feldbreite als Linie, Seitenlinien als Markierung, Freizone gedämpft */
-function Floor({ vp }: { vp: NetViewport }) {
+export function Floor({ vp }: { vp: NetViewport }) {
   const P = (y: number, z: number) => {
     const p = netToPx(vp, y, z)
     return [p.px, p.py]
@@ -156,7 +156,7 @@ function Floor({ vp }: { vp: NetViewport }) {
 }
 
 /** Netz frontal: Pfosten, Netzfläche mit Maschen, Bänder, Seitenbänder und rot-weiße Antennen */
-function Net({ vp, netHeight }: { vp: NetViewport; netHeight: number }) {
+export function Net({ vp, netHeight }: { vp: NetViewport; netHeight: number }) {
   const P = (y: number, z: number) => {
     const p = netToPx(vp, y, z)
     return [p.px, p.py]
@@ -218,7 +218,7 @@ function Net({ vp, netHeight }: { vp: NetViewport; netHeight: number }) {
  * Spieler als Säule in Trikotfarbe an seiner Breitenposition, der Kreis mit Kürzel und Nummer ist der Kopf.
  * Körper + Kopf ergeben zusammen genau die Körpergröße.
  */
-function PlayerFigure({ vp, p, dim = false }: { vp: NetViewport; p: CourtPlayerView; dim?: boolean }) {
+export function PlayerFigure({ vp, p, dim = false }: { vp: NetViewport; p: CourtPlayerView; dim?: boolean }) {
   const s = vp.scale
   const foot = netToPx(vp, p.y, 0)
   const w = BODY_WIDTH * s

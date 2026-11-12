@@ -21,7 +21,7 @@ import { Ball, Handle } from '../top/TrajectoryLayer'
  *  - Scheitel (Raute): senkrecht ziehen = Scheitelhöhe; nie unter Start/Schlagpunkt
  *  - Schlagpunkt: nur entlang der Parabel (fallender Ast); das Ende in der Draufsicht wandert mit
  */
-export function NetTrajectories({ vp }: { vp: NetViewport }) {
+export function NetTrajectories({ vp, interactive = true, showBall = true }: { vp: NetViewport; interactive?: boolean; showBall?: boolean }) {
   const list = useVisibleTrajectories()
   const display = usePlay((s) => s.display)
   const selected = usePlay((s) => s.selected)
@@ -91,13 +91,13 @@ export function NetTrajectories({ vp }: { vp: NetViewport }) {
               onTap={() => select(type)}
             />
             <Text x={label.x - 40} y={label.y - 30} width={80} align="center" text={TRAJECTORY_LABELS[type]} fontSize={12} fontStyle="bold" fill={COLORS.trajectory} listening={false} />
-            {!tv.coupled && <Handle {...at(input.start.y, input.start.h)} onDrag={dragStart(tv)} onPick={() => select(type)} hollow />}
-            <Handle {...at(apex.y, apex.z)} onDrag={dragApex(tv)} onPick={() => select(type)} diamond />
-            <Handle {...at(input.end.y, input.hitH)} onDrag={dragHit(tv)} onPick={() => select(type)} />
+            {interactive && !tv.coupled && <Handle {...at(input.start.y, input.start.h)} onDrag={dragStart(tv)} onPick={() => select(type)} hollow />}
+            {interactive && <Handle {...at(apex.y, apex.z)} onDrag={dragApex(tv)} onPick={() => select(type)} diamond />}
+            {interactive && <Handle {...at(input.end.y, input.hitH)} onDrag={dragHit(tv)} onPick={() => select(type)} />}
           </Group>
         )
       })}
-      {ball && <Ball {...at(ball.y, ball.z)} r={Math.max(6, 0.105 * vp.scale)} />}
+      {showBall && ball && <Ball {...at(ball.y, ball.z)} r={Math.max(6, 0.105 * vp.scale)} />}
     </>
   )
 }

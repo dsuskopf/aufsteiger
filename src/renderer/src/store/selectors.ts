@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { TRAJECTORY_TYPES, type CourtSide, type PlayDisplay, type Role, type Trajectory, type TrajectoryType } from '@shared/types'
+import { TRAJECTORY_TYPES, type CourtSide, type PlayDisplay, type PlaySide, type Role, type Team, type Trajectory, type TrajectoryType } from '@shared/types'
 import { solveTrajectory, type SolvedTrajectory } from '@renderer/core/physics/trajectory'
 import { jerseyFor, type JerseyStyle } from '@shared/teamColors'
 import { usePlay } from './playStore'
@@ -21,34 +21,37 @@ export interface CourtPlayerView {
   height: number
 }
 
+/** Spieler beider Seiten mit Nummer und Name aus dem Team (ohne React, z. B. für den Export). */
+export function courtPlayers(sides: Record<CourtSide, PlaySide>, teams: Team[]): CourtPlayerView[] {
+  const out: CourtPlayerView[] = []
+  for (const side of ['A', 'B'] as const) {
+    const team = teams.find((t) => t.id === sides[side].teamId)
+    if (!team) continue
+    for (const c of sides[side].players) {
+      const p = team.players.find((pl) => pl.id === c.playerId)
+      if (!p) continue
+      out.push({
+        key: `${side}:${p.id}`,
+        side,
+        playerId: p.id,
+        role: c.role,
+        number: p.number,
+        name: p.name,
+        x: c.x,
+        y: c.y,
+        jersey: jerseyFor(team, c.role),
+        height: p.height
+      })
+    }
+  }
+  return out
+}
+
 /** Spieler beider Seiten mit Nummer und Name aus dem Team. */
 export function useCourtPlayers(): CourtPlayerView[] {
   const sides = usePlay((s) => s.sides)
   const teams = useTeams((s) => s.teams)
-  return useMemo(() => {
-    const out: CourtPlayerView[] = []
-    for (const side of ['A', 'B'] as const) {
-      const team = teams.find((t) => t.id === sides[side].teamId)
-      if (!team) continue
-      for (const c of sides[side].players) {
-        const p = team.players.find((pl) => pl.id === c.playerId)
-        if (!p) continue
-        out.push({
-          key: `${side}:${p.id}`,
-          side,
-          playerId: p.id,
-          role: c.role,
-          number: p.number,
-          name: p.name,
-          x: c.x,
-          y: c.y,
-          jersey: jerseyFor(team, c.role),
-          height: p.height
-        })
-      }
-    }
-    return out
-  }, [sides, teams])
+  return useMemo(() => courtPlayers(sides, teams), [sides, teams])
 }
 
 /** Eine sichtbare, gelöste Flugbahn */

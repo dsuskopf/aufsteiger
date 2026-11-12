@@ -5,6 +5,8 @@ import type Konva from 'konva'
 import { PlayersLayer, hitsDraggable } from './PlayersLayer'
 import { TrajectoryLayer } from './TrajectoryLayer'
 import { useDrawTrajectory } from './useDrawTrajectory'
+import { useDrawPath } from './useDrawPath'
+import { PathLayer } from './PathLayer'
 import { useSettings } from '@renderer/store/appSettings'
 import {
   applyViewTop,
@@ -78,7 +80,8 @@ export function TopView({ compact = false }: { compact?: boolean }) {
     reset()
   }, [targetAngle])
   const vp = applyViewTop(base, view)
-  const preview = useDrawTrajectory(ref, vp, drawing ? tool : null)
+  const preview = useDrawTrajectory(ref, vp, tool === 'annahme' || tool === 'zuspiel' ? tool : null)
+  const stroke = useDrawPath(ref, vp, tool === 'laufweg')
 
   return (
     <>
@@ -86,6 +89,7 @@ export function TopView({ compact = false }: { compact?: boolean }) {
         {size.width > 0 && (
           <Stage ref={stageRef} width={size.width} height={size.height}>
             <CourtLayer vp={vp} />
+            <PathLayer vp={vp} interactive={!drawing} stroke={stroke} />
             <PlayersLayer vp={vp} interactive={!drawing} />
             <TrajectoryLayer vp={vp} interactive={!drawing} preview={preview} />
           </Stage>

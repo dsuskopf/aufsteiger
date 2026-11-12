@@ -17,6 +17,8 @@ import { useEffect, useRef } from 'react'
 import type Konva from 'konva'
 import { NetTrajectories } from './NetTrajectories'
 import { hitsDraggable } from '../top/PlayersLayer'
+import { usePlayback } from '@renderer/store/playbackStore'
+import { playerAt } from '@renderer/core/motion/motion'
 
 /** Sichtbare Breite: Feld plus Freizone (Pfosten stehen 1 m neben den Seitenlinien) */
 export const HALF_W = COURT.halfWidth + COURT.freeZone
@@ -48,7 +50,16 @@ export function NetView({ compact = false }: { compact?: boolean }) {
   const toggleFrom = useUi((s) => s.toggleNetViewFrom)
   const showPlayers = useUi((s) => s.netShowPlayers)
   const setShowPlayers = useUi((s) => s.setNetShowPlayers)
-  const players = useCourtPlayers()
+  const basePlayers = useCourtPlayers()
+  // Laufwege und Sprünge: Spieler zur aktuellen Zeit (nur mit Bewegungen der Uhr folgen)
+  const moving = basePlayers.some((p) => p.court.path || p.court.jump)
+  const t = usePlayback((s) => (moving ? s.t : 0))
+  const players = moving
+    ? basePlayers.map((p) => {
+        const at = playerAt(p.court, t)
+        return { ...p, x: at.x, y: at.y, lift: at.z }
+      })
+    : basePlayers
   const angleDeg = useUi((s) => s.netAngle)
   const setAngle = useUi((s) => s.setNetAngle)
   const angle = (angleDeg * Math.PI) / 180
@@ -274,10 +285,11 @@ export function Net({ vp, netHeight }: { vp: NetViewport; netHeight: number }) {
  * Spieler als Säule in Trikotfarbe an seiner Breitenposition, der Kreis mit Kürzel und Nummer ist der Kopf.
  * Körper + Kopf ergeben zusammen genau die Körpergröße.
  */
-export function PlayerFigure({ vp, p, dim = false }: { vp: NetViewport; p: CourtPlayerView; dim?: boolean }) {
+export function PlayerFigure({ vp, p, dim = false }: { vp: NetViewport; p: CourtPlayerView & { lift?: number }; dim?: boolean }) {
   const showNames = useUi((st) => st.showNames)
   const s = vp.scale
-  const foot = netProject(vp, p.x, p.y, 0)
+  // Im Sprung stehen die Füße um die Sprunghöhe über dem Boden
+  const foot = netProject(vp, p.x, p.y, p.lift ?? 0)
   const w = BODY_WIDTH * s
   const headR = (HEAD_DIAMETER / 2) * s
   const h = Math.max(0.2, p.height - HEAD_DIAMETER) * s

@@ -149,13 +149,19 @@ function sanitizeSide(raw: unknown): PlaySideDoc {
     if (!isObj(p) || typeof p.playerId !== 'string') continue
     const role = (typeof p.role === 'string' && p.role in LEGACY_ROLES ? LEGACY_ROLES[p.role] : p.role) as Role
     const slot = Math.round(Number(p.slot))
-    players.push({
+    const c: CourtPlayer = {
       playerId: p.playerId,
       role: ROLES.includes(role) ? role : 'A',
       x: num(p.x, 0, -11, 11),
       y: num(p.y, 0, -6.5, 6.5),
       ...(slot >= 1 && slot <= 6 ? { slot } : {})
-    })
+    }
+    if (isObj(p.path) && Array.isArray(p.path.points)) {
+      const points = p.path.points.filter(isObj).slice(0, 16).map((q) => ({ x: num(q.x, 0, -11, 11), y: num(q.y, 0, -6.5, 6.5) }))
+      if (points.length) c.path = { points, delay: num(p.path.delay, 0, 0, 10), speed: num(p.path.speed, 4, 1, 8) }
+    }
+    if (isObj(p.jump)) c.jump = { at: num(p.jump.at, 0, 0, 20), height: num(p.jump.height, 0.6, 0.2, 1.1) }
+    players.push(c)
   }
   const snap = sanitizeTeams([r.teamSnapshot])[0] ?? null
   const side: PlaySideDoc = {

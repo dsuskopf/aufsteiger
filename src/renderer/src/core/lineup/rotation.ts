@@ -107,6 +107,11 @@ export function laeuferLineup(side: PlaySide, team: Team | undefined, courtSide:
   const liberoId = side.players.find((c) => c.role === 'L' && side.liberoFor)?.playerId ?? side.liberoIdle
   const target = liberoId ? liberoTargetFor(rotated, situation, stored) : null
 
+  // Laufwege und Sprünge gehören zum Spieler und bleiben beim Läuferwechsel erhalten
+  const extra = (playerId: string) => {
+    const c = side.players.find((p) => p.playerId === playerId)
+    return { ...(c?.path ? { path: c.path } : {}), ...(c?.jump ? { jump: c.jump } : {}) }
+  }
   const spot = (playerId: string, slot: number, role: Role) => {
     const s = stored?.pos[playerId]
     return mirror(courtSide, s ?? defaultSpot(slot, role, situation))
@@ -118,8 +123,8 @@ export function laeuferLineup(side: PlaySide, team: Team | undefined, courtSide:
     if (liberoId && r.playerId === target) {
       liberoFor = r.playerId
       liberoRole = r.role
-      players.push({ playerId: liberoId, role: 'L', slot: r.slot, ...spot(liberoId, r.slot, r.role) })
-    } else players.push({ playerId: r.playerId, role: r.role, slot: r.slot, ...spot(r.playerId, r.slot, r.role) })
+      players.push({ playerId: liberoId, role: 'L', slot: r.slot, ...spot(liberoId, r.slot, r.role), ...extra(liberoId) })
+    } else players.push({ playerId: r.playerId, role: r.role, slot: r.slot, ...spot(r.playerId, r.slot, r.role), ...extra(r.playerId) })
   }
   // Libero ohne Ersetzten (freie Hinterfeldposition) bleibt, wo er ist
   for (const c of side.players) if (c.role === 'L' && !side.liberoFor && !players.some((p) => p.playerId === c.playerId)) players.push(c)

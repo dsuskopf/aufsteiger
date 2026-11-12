@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { advance, ballAt, buildTimeline, stepFrame, type Timeline } from '@renderer/core/timeline/timeline'
 import { visibleTrajectories } from './selectors'
 import { usePlay } from './playStore'
+import { motionDuration } from '@renderer/core/motion/motion'
 import type { TrajectoryType } from '@shared/types'
 
 interface PlaybackState {
@@ -25,6 +26,20 @@ export function currentTimeline(): Timeline<TrajectoryType> {
   return buildTimeline(visibleTrajectories(trajectories, display).map((v) => ({ type: v.type, input: v.input })))
 }
 
+/** Gesamtdauer des Spielzugs: Ballflug und Bewegungen der Spieler (Laufwege, Sprünge) */
+export function totalDuration(): number {
+  const { sides } = usePlay.getState()
+  return Math.max(currentTimeline().total, motionDuration([sides.A, sides.B]))
+}
+
+/** React-Hook: Gesamtdauer */
+export function useTotalDuration(): number {
+  usePlay((s) => s.trajectories)
+  usePlay((s) => s.display)
+  usePlay((s) => s.sides)
+  return totalDuration()
+}
+
 /** Ballposition zur aktuellen Zeit (oder null ohne Flugbahn) */
 export function currentBall() {
   return ballAt(currentTimeline(), usePlayback.getState().t)
@@ -40,7 +55,7 @@ export const usePlayback = create<PlaybackState>((set, get) => {
     if (!s.playing) return
     const dt = Math.min(0.1, (now - last) / 1000)
     last = now
-    const r = advance(s.t, dt, s.speed, currentTimeline().total, s.loop)
+    const r = advance(s.t, dt, s.speed, totalDuration(), s.loop)
     set({ t: r.t, playing: !r.ended })
     if (!r.ended) raf = requestAnimationFrame(tick)
   }
@@ -49,9 +64,9 @@ export const usePlayback = create<PlaybackState>((set, get) => {
     playing: false,
     loop: true,
     speed: 1,
-    setT: (t) => set({ t: Math.min(currentTimeline().total, Math.max(0, t)) }),
+    setT: (t) => set({ t: Math.min(totalDuration(), Math.max(0, t)) }),
     play: () => {
-      const total = currentTimeline().total
+      const total = totalDuration()
       if (total <= 0) return
       // Am Ende angekommen: von vorn
       if (get().t >= total - 1e-6) set({ t: 0 })
@@ -69,15 +84,15 @@ export const usePlayback = create<PlaybackState>((set, get) => {
     setSpeed: (speed) => set({ speed }),
     step: (dir) => {
       get().pause()
-      set({ t: stepFrame(get().t, dir, currentTimeline().total) })
+      set({ t: stepFrame(get().t, dir, totalDuration()) })
     }
   }
 })
 
 // Ändern sich die Flugbahnen, bleibt die Zeit im gültigen Bereich
 usePlay.subscribe((s, prev) => {
-  if (s.trajectories === prev.trajectories && s.display === prev.display) return
-  const total = currentTimeline().total
+  if (s.trajectories === prev.trajectories && s.display === prev.display && s.sides === prev.sides) return
+  const total = totalDuration()
   if (usePlayback.getState().t > total) usePlayback.setState({ t: total })
 })
 
@@ -90,7 +105,8 @@ export function usePathsHidden(): boolean {
   usePlay((s) => s.trajectories)
   const playing = usePlayback((s) => s.playing)
   // Nur der Wahrheitswert hängt an t, damit nicht jedes Bild neu gezeichnet wird
-  const midFlight = usePlayback((s) => s.t > 1e-6 && s.t < currentTimeline().total - 1e-6)
+  usePlay((s) => s.sides)
+  const midFlight = usePlayback((s) => s.t > 1e-6 && s.t < totalDuration() - 1e-6)
   return ballOnly && (playing || midFlight)
 }
 

@@ -1,4 +1,4 @@
-import { usePlayback, currentTimeline } from '@renderer/store/playbackStore'
+import { usePlayback, totalDuration } from '@renderer/store/playbackStore'
 import { useUi } from '@renderer/store/settingsStore'
 import { activeThreeCanvas } from '@renderer/views/three/ThreeView'
 
@@ -86,7 +86,7 @@ async function recordOnce(source: HTMLCanvasElement, fmt: Format, total: number,
 export async function recordVideo(onProgress: (k: number) => void): Promise<{ data: Uint8Array; ext: 'mp4' | 'webm' }> {
   const formats = videoFormats()
   if (formats.length === 0) throw new Error('Dieses System kann kein Video aufnehmen.')
-  const total = currentTimeline().total
+  const total = totalDuration()
   if (total <= 0) throw new Error('Keine Flugbahn zum Abspielen.')
 
   const ui = useUi.getState()

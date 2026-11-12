@@ -11,6 +11,7 @@ import { usePlay } from './store/playStore'
 import { LineupPanel } from './components/LineupPanel'
 import { TeamManager } from './components/TeamManager'
 import { TrajectoryCard } from './components/TrajectoryCard'
+import { PlayerCard } from './components/PlayerCard'
 import { Playbar } from './components/Playbar'
 import { SettingsDialog } from './components/SettingsDialog'
 import { useSettings } from './store/appSettings'
@@ -23,7 +24,8 @@ import './store/playDocs'
 const HINTS = {
   annahme: 'Annahme: Klick Start, Klick Ende – oder in einem Zug ziehen · Esc bricht ab',
   zuspiel: 'Zuspiel: Klick Start, Klick Ende – oder ziehen · Esc bricht ab',
-  zuspielCoupled: 'Zuspiel startet am Ende der Annahme: Ziel antippen oder hinziehen · Esc bricht ab'
+  zuspielCoupled: 'Zuspiel startet am Ende der Annahme: Ziel antippen oder hinziehen · Esc bricht ab',
+  laufweg: 'Laufweg: auf einem Spieler aufsetzen und den Weg ziehen – Kurven erlaubt'
 }
 
 export function App() {
@@ -113,10 +115,11 @@ export function App() {
         )}
         {is2d && tool !== 'select' && (
           <div className="draw-hint" role="status">
-            {tool === 'annahme' ? HINTS.annahme : hasAnnahme ? HINTS.zuspielCoupled : HINTS.zuspiel}
+            {tool === 'laufweg' ? HINTS.laufweg : tool === 'annahme' ? HINTS.annahme : hasAnnahme ? HINTS.zuspielCoupled : HINTS.zuspiel}
           </div>
         )}
         <TrajectoryCard />
+        <PlayerCard />
         {lineupOpen && (
           <LineupPanel onClose={() => setLineupOpen(false)} onManageTeams={() => setTeamsOpen(true)} />
         )}

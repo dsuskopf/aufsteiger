@@ -11,7 +11,8 @@ import { LaeuferBar } from './LaeuferBar'
 const TOOLS: { id: Tool; label: string; icon: IconName; title: string }[] = [
   { id: 'select', label: 'Auswählen', icon: 'pointer', title: 'Auswählen und ziehen (Spieler, Griffe)' },
   { id: 'annahme', label: 'Annahme', icon: 'arc', title: 'Annahme zeichnen: Klick Start, Klick Ende – oder ziehen' },
-  { id: 'zuspiel', label: 'Zuspiel', icon: 'arc', title: 'Zuspiel zeichnen: startet am Ende der Annahme' }
+  { id: 'zuspiel', label: 'Zuspiel', icon: 'arc', title: 'Zuspiel zeichnen: startet am Ende der Annahme' },
+  { id: 'laufweg', label: 'Laufweg', icon: 'run', title: 'Laufweg: vom Spieler aus den Weg ziehen (auch in Kurven)' }
 ]
 
 const VIEW_MODES: { id: ViewMode; label: string; title: string }[] = [

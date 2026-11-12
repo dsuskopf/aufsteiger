@@ -27,6 +27,10 @@ const PATHS = {
   formation: 'M6 8h.01M12 8h.01M18 8h.01M6 16h.01M12 16h.01M18 16h.01',
   // Namen: Namensschild
   name: 'M3 7h18v10H3zM7 11h6M7 14h10',
+  // Laufweg: geschwungene Linie mit Pfeil
+  run: 'M4 18c4 0 4-8 8-8s4-5 8-5M20 5l-3-.5M20 5l-.8 3',
+  // Sprung: Pfeil nach oben über dem Boden
+  jump: 'M12 15V4M8 8l4-4 4 4M5 20h14',
   // Zonen: Feld mit Raster
   zones: 'M3 5h18v14H3zM9 5v14M15 5v14M3 12h18',
   net: 'M3 6h18M3 6v12M21 6v12M3 10h18M7 6v6M11 6v6M15 6v6M19 6v6',

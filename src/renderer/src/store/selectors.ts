@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { TRAJECTORY_TYPES, type CourtSide, type PlayDisplay, type PlaySide, type Role, type Team, type Trajectory, type TrajectoryType } from '@shared/types'
+import { TRAJECTORY_TYPES, type CourtPlayer, type CourtSide, type PlayDisplay, type PlaySide, type Role, type Team, type Trajectory, type TrajectoryType } from '@shared/types'
 import { solveTrajectory, type SolvedTrajectory } from '@renderer/core/physics/trajectory'
 import { jerseyFor, type JerseyStyle } from '@shared/teamColors'
 import { usePlay } from './playStore'
@@ -19,6 +19,8 @@ export interface CourtPlayerView {
   jersey: JerseyStyle
   /** Körpergröße in Metern (inkl. Kopf) */
   height: number
+  /** Der Spieler auf dem Feld (mit Laufweg und Sprung) */
+  court: CourtPlayer
 }
 
 /** Spieler beider Seiten mit Nummer und Name aus dem Team (ohne React, z. B. für den Export). */
@@ -40,7 +42,8 @@ export function courtPlayers(sides: Record<CourtSide, PlaySide>, teams: Team[]):
         x: c.x,
         y: c.y,
         jersey: jerseyFor(team, c.role),
-        height: p.height
+        height: p.height,
+        court: c
       })
     }
   }

@@ -5,6 +5,8 @@ import { clampToArea } from '@renderer/core/lineup/lineup'
 import { useCourtPlayers, type CourtPlayerView } from '@renderer/store/selectors'
 import { usePlay } from '@renderer/store/playStore'
 import { useUi } from '@renderer/store/settingsStore'
+import { usePlayback } from '@renderer/store/playbackStore'
+import { playerAt } from '@renderer/core/motion/motion'
 import { COLORS } from '@renderer/theme/colors'
 
 /** Name der Konva-Gruppen, über die man Spieler beim Treffertest erkennt. */
@@ -23,42 +25,67 @@ export function PlayersLayer({ vp, interactive = true }: { vp: TopViewport; inte
   const players = useCourtPlayers()
   const movePlayer = usePlay((s) => s.movePlayer)
   const showNames = useUi((s) => s.showNames)
+  const selectPlayer = usePlay((s) => s.selectPlayer)
+  const selected = usePlay((s) => s.selectedPlayer)
   const r = Math.max(MIN_RADIUS_PX, RADIUS_M * vp.scale)
+  // Nur mit Laufwegen/Sprüngen der Uhr folgen (sonst kein Neuzeichnen pro Bild)
+  const moving = players.some((p) => p.court.path || p.court.jump)
+  const t = usePlayback((s) => (moving ? s.t : 0))
 
   const onDrag = (p: CourtPlayerView) => (e: Konva.KonvaEventObject<DragEvent>) => {
     const node = e.target
     const w = topToWorld(vp, node.x(), node.y())
     const c = clampToArea(w.x, w.y)
     movePlayer(p.side, p.playerId, c.x, c.y)
-    const px = worldToTop(vp, c.x, c.y)
+    // Position aus dem Store (der Libero bleibt mit Regeln hinter der 3-m-Linie)
+    const now = usePlay.getState().sides[p.side].players.find((q) => q.playerId === p.playerId) ?? c
+    const px = worldToTop(vp, now.x, now.y)
     node.position({ x: px.px, y: px.py })
+  }
+  // Verschieben gilt für den Platz in der Grundstellung: läuft die Animation, erst zurück an den Anfang
+  const toStart = () => {
+    if (usePlayback.getState().t === 0 && !usePlayback.getState().playing) return
+    usePlayback.getState().pause()
+    usePlayback.setState({ t: 0 })
   }
 
   return (
     <Layer listening={interactive}>
       {players.map((p) => {
-        const pos = worldToTop(vp, p.x, p.y)
+        const at = moving ? playerAt(p.court, t) : { x: p.x, y: p.y, z: 0 }
+        const pos = worldToTop(vp, at.x, at.y)
         const colors = p.jersey
+        const isSel = selected?.side === p.side && selected.playerId === p.playerId
+        // Im Sprung: etwas größer, Schatten weiter weg
+        const lift = 1 + at.z * 0.45
         return (
           <Group
             key={p.key}
             name={PLAYER_NODE_NAME}
             x={pos.px}
             y={pos.py}
+            scaleX={lift}
+            scaleY={lift}
             draggable
             dragDistance={3}
+            onPointerDown={toStart}
+            onClick={() => selectPlayer({ side: p.side, playerId: p.playerId })}
+            onTap={() => selectPlayer({ side: p.side, playerId: p.playerId })}
+            onDragStart={() => selectPlayer({ side: p.side, playerId: p.playerId })}
             onDragMove={onDrag(p)}
             onDragEnd={onDrag(p)}
             onMouseEnter={(e) => setCursor(e, 'grab')}
             onMouseLeave={(e) => setCursor(e, '')}
           >
+            {isSel && <Circle radius={r + 5} stroke={COLORS.accent} strokeWidth={2.5} listening={false} />}
             <Circle
               radius={r}
               fill={colors.fill}
               stroke={colors.stroke}
               strokeWidth={2}
               shadowColor="#000"
-              shadowBlur={6}
+              shadowBlur={6 + at.z * 30}
+              shadowOffsetY={at.z * 18}
               shadowOpacity={0.5}
             />
             <Text

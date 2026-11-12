@@ -6,6 +6,7 @@ import { fitViewport, isNearSide, netDepth, netHalfExtent, type NetViewport } fr
 import { COURT } from '@renderer/core/geometry/court'
 import { COLORS } from '@renderer/theme/colors'
 import { CourtLayer, WORLD_H, WORLD_W } from '@renderer/views/top/TopView'
+import { PathLayer } from '@renderer/views/top/PathLayer'
 import { PlayersLayer } from '@renderer/views/top/PlayersLayer'
 import { TrajectoryLayer } from '@renderer/views/top/TrajectoryLayer'
 import { Floor, HALF_W, Net, PlayerFigure } from '@renderer/views/net/NetView'
@@ -47,6 +48,7 @@ export function snapshotTop(width = 1100, height = 600): Promise<string> {
   return renderKonva((ref) => (
     <Stage ref={ref} width={width} height={height}>
       <CourtLayer vp={vp} />
+      <PathLayer vp={vp} interactive={false} />
       <PlayersLayer vp={vp} interactive={false} />
       <TrajectoryLayer vp={vp} interactive={false} preview={null} showBall={false} />
     </Stage>

@@ -1,8 +1,6 @@
-import { useMemo } from 'react'
-import { SPEEDS, buildTimeline, formatTime } from '@renderer/core/timeline/timeline'
+import { SPEEDS, formatTime } from '@renderer/core/timeline/timeline'
 import { usePlay } from '@renderer/store/playStore'
-import { usePlayback } from '@renderer/store/playbackStore'
-import { useVisibleTrajectories } from '@renderer/store/selectors'
+import { usePlayback, useTotalDuration } from '@renderer/store/playbackStore'
 import { Icon } from './Icon'
 import { speedLabel } from './SettingsDialog'
 
@@ -17,8 +15,7 @@ export function Playbar() {
   const setDisplay = usePlay((s) => s.setDisplay)
   const hasAnnahme = usePlay((s) => !!s.trajectories.annahme)
   const hasZuspiel = usePlay((s) => !!s.trajectories.zuspiel)
-  const visible = useVisibleTrajectories()
-  const total = useMemo(() => buildTimeline(visible.map((v) => ({ type: v.type, input: v.input }))).total, [visible])
+  const total = useTotalDuration()
   const empty = total <= 0
 
   return (

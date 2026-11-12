@@ -6,6 +6,8 @@ import {
   type PlaySide,
   type Role,
   type Situation,
+  type Jump,
+  type RunPath,
   type Trajectory,
   type TrajectoryType
 } from '@shared/types'
@@ -52,6 +54,11 @@ interface PlayState {
   /** Annahme und Zuspiel löschen */
   clearTrajectories: () => void
   select: (type: TrajectoryType | null) => void
+  /** Gewählter Spieler (Karte mit Laufweg und Sprung); schließt die Flugbahn-Auswahl aus */
+  selectedPlayer: { side: CourtSide; playerId: string } | null
+  selectPlayer: (p: { side: CourtSide; playerId: string } | null) => void
+  setPath: (side: CourtSide, playerId: string, path: RunPath | null) => void
+  setJump: (side: CourtSide, playerId: string, jump: Jump | null) => void
   setDisplay: (patch: Partial<PlayDisplay>) => void
 
   /** Geöffneter, gespeicherter Spielzug (null = neu, noch nicht gespeichert) */
@@ -95,6 +102,7 @@ export const usePlay = create<PlayState>((set, get) => {
     trajectories: {},
     display: { ...DEFAULT_DISPLAY },
     selected: null,
+    selectedPlayer: null,
     current: null,
     dirty: false,
 
@@ -107,7 +115,30 @@ export const usePlay = create<PlayState>((set, get) => {
         return { trajectories: next, selected: st.selected === type ? null : st.selected }
       }),
     clearTrajectories: () => set({ trajectories: {}, selected: null }),
-    select: (selected) => set({ selected }),
+    select: (selected) => set(selected ? { selected, selectedPlayer: null } : { selected }),
+    selectPlayer: (selectedPlayer) => set(selectedPlayer ? { selectedPlayer, selected: null } : { selectedPlayer }),
+    setPath: (side, playerId, path) =>
+      mapSide(side, (s) => ({
+        ...s,
+        players: s.players.map((c) => {
+          if (c.playerId !== playerId) return c
+          const next = { ...c }
+          if (path) next.path = path
+          else delete next.path
+          return next
+        })
+      })),
+    setJump: (side, playerId, jump) =>
+      mapSide(side, (s) => ({
+        ...s,
+        players: s.players.map((c) => {
+          if (c.playerId !== playerId) return c
+          const next = { ...c }
+          if (jump) next.jump = jump
+          else delete next.jump
+          return next
+        })
+      })),
     setDisplay: (patch) => set((st) => ({ display: { ...st.display, ...patch } })),
 
     setTeam: (side, teamId) => {
@@ -172,7 +203,8 @@ export const usePlay = create<PlayState>((set, get) => {
  */
 export function isPlayEmpty(): boolean {
   const s = usePlay.getState()
-  return !s.trajectories.annahme && !s.trajectories.zuspiel
+  const moves = [...s.sides.A.players, ...s.sides.B.players].some((c) => c.path || c.jump)
+  return !s.trajectories.annahme && !s.trajectories.zuspiel && !moves
 }
 
 // Jede inhaltliche Änderung markiert den Spielzug als ungespeichert

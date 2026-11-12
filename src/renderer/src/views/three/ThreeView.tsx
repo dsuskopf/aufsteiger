@@ -15,6 +15,9 @@ import { usePlay } from '@renderer/store/playStore'
 import { currentBall, currentTimeline, usePathsHidden, usePlayback } from '@renderer/store/playbackStore'
 import { ballOrientation, buildBall, buildTrajectories, placeBall } from './trajectories'
 import { buildZones, orientZoneLabels } from './zones'
+import { playerAt, pathCurve } from '@renderer/core/motion/motion'
+import { worldToThree } from '@renderer/core/geometry/transform'
+import type { CourtPlayerView } from '@renderer/store/selectors'
 import { useSettings } from '@renderer/store/appSettings'
 
 /** Zeichenfläche der laufenden 3D-Ansicht (für den Video-Export) */
@@ -37,6 +40,7 @@ export function ThreeView() {
     net: THREE.Group | null
     trajectories: THREE.Group | null
     zones: THREE.Group | null
+    paths: THREE.Group | null
     ball: THREE.Group
     camera: THREE.PerspectiveCamera
     controls: OrbitControls
@@ -98,7 +102,7 @@ export function ThreeView() {
     })
     controls.update()
 
-    sceneRef.current = { scene, net: null, trajectories: null, zones: null, ball, camera, controls }
+    sceneRef.current = { scene, net: null, trajectories: null, zones: null, paths: null, ball, camera, controls }
     // Nur für automatische Tests (?test): Kamera steuerbar
     const testHook = (window as unknown as { __vbp?: Record<string, unknown> }).__vbp
     if (testHook) testHook.three = { camera, controls }
@@ -110,6 +114,8 @@ export function ThreeView() {
     updateBall()
     const unsubA = usePlayback.subscribe(updateBall)
     const unsubB = usePlay.subscribe(updateBall)
+    // Spieler laufen und springen mit der Uhr (ohne React-Neuzeichnung)
+    const unsubC = usePlayback.subscribe(() => applyMotion(playersRef.current))
 
     const resize = () => {
       const w = Math.max(1, host.clientWidth)
@@ -135,6 +141,7 @@ export function ThreeView() {
     return () => {
       unsubA()
       unsubB()
+      unsubC()
       if (activeThreeCanvas === renderer.domElement) activeThreeCanvas = null
       const pr = playersRef.current
       if (pr) for (const { obj } of pr.items.values()) pr.factory.dispose(obj)
@@ -171,6 +178,7 @@ export function ThreeView() {
       placePlayer(item.obj, p.x, p.y)
       showNameTag(item.obj, showNames)
     }
+    applyMotion(pr)
     for (const [key, item] of pr.items) {
       if (seen.has(key)) continue
       pr.group.remove(item.obj)
@@ -197,6 +205,20 @@ export function ThreeView() {
     const ref = sceneRef.current
     if (ref?.trajectories) ref.trajectories.visible = !hidePaths
   }, [hidePaths])
+
+  // Laufwege als gestrichelte Linien auf dem Boden („Nur Ball“ blendet sie beim Abspielen aus)
+  useEffect(() => {
+    const ref = sceneRef.current
+    if (!ref) return
+    if (ref.paths) {
+      ref.scene.remove(ref.paths)
+      disposeObject(ref.paths)
+      ref.paths = null
+    }
+    if (hidePaths) return
+    ref.paths = buildPaths(players)
+    ref.scene.add(ref.paths)
+  }, [players, hidePaths])
 
   // Zonen auf dem Boden ein-/ausblenden bzw. neu aufbauen, wenn sich die Art ändert
   useEffect(() => {
@@ -303,3 +325,44 @@ export function ThreeView() {
 }
 
 const DEFAULT_CAMERA = new THREE.Vector3(-16, 9, 14)
+
+/** Spieler zur aktuellen Zeit platzieren: entlang des Laufwegs, im Sprung angehoben */
+function applyMotion(pr: PlayerItems | null): void {
+  if (!pr) return
+  const t = usePlayback.getState().t
+  const { sides } = usePlay.getState()
+  for (const side of ['A', 'B'] as const)
+    for (const c of sides[side].players) {
+      const item = pr.items.get(`${side}:${c.playerId}`)
+      if (!item) continue
+      const at = playerAt(c, t)
+      placePlayer(item.obj, at.x, at.y)
+      item.obj.position.y = at.z
+    }
+}
+
+/** Laufwege als gestrichelte Linien knapp über dem Boden, in der Trikotfarbe */
+function buildPaths(players: CourtPlayerView[]): THREE.Group {
+  const g = new THREE.Group()
+  g.name = 'paths'
+  for (const p of players) {
+    const path = p.court.path
+    if (!path || path.points.length === 0) continue
+    const { poly } = pathCurve(p.court, path)
+    const line = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(poly.map((q) => new THREE.Vector3(...worldToThree(q.x, q.y, 0.012)))),
+      new THREE.LineDashedMaterial({ color: p.jersey.fill, dashSize: 0.3, gapSize: 0.2, transparent: true, opacity: 0.95 })
+    )
+    line.computeLineDistances()
+    g.add(line)
+    const end = poly[poly.length - 1]
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(0.25, 0.3, 32),
+      new THREE.MeshBasicMaterial({ color: p.jersey.fill, transparent: true, opacity: 0.8, depthWrite: false })
+    )
+    ring.rotation.x = -Math.PI / 2
+    ring.position.set(...worldToThree(end.x, end.y, 0.013))
+    g.add(ring)
+  }
+  return g
+}

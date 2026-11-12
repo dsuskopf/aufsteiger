@@ -74,6 +74,25 @@ export interface CourtPlayer {
   y: number
   /** Feste Position 1–6 in der Rotation (2/3/4 vorne, 1/6/5 hinten); der Libero hat die des Ersetzten */
   slot?: number
+  /** Laufweg ab seinem Platz (glatte Kurve durch die Punkte) */
+  path?: RunPath
+  /** Sprung (senkrecht) während des Spielzugs */
+  jump?: Jump
+}
+
+/** Laufweg: Punkte nach dem Start (Start = Platz des Spielers), Startverzögerung und Tempo */
+export interface RunPath {
+  points: Vec2[]
+  /** Start nach … Sekunden */
+  delay: number
+  /** Tempo in m/s */
+  speed: number
+}
+
+/** Sprung: Absprung zur Zeit at (s), Steighöhe in Metern */
+export interface Jump {
+  at: number
+  height: number
 }
 
 export interface PlaySide {

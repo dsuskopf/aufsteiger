@@ -12,6 +12,7 @@ const VIEW_MODES: { id: ViewMode; label: string; title: string }[] = [
 
 export function Toolbar() {
   const { viewMode, setViewMode, netPreset, setNetPreset, netHeight, setNetHeight } = useUi()
+  const { lineupOpen, setLineupOpen, setTeamsOpen } = useUi()
 
   return (
     <header className="toolbar">
@@ -31,6 +32,11 @@ export function Toolbar() {
           </button>
         ))}
       </div>
+
+      <button className={lineupOpen ? 'active' : ''} onClick={() => setLineupOpen(!lineupOpen)}>
+        Aufstellung
+      </button>
+      <button onClick={() => setTeamsOpen(true)}>Teams</button>
 
       <div className="spacer" />
 

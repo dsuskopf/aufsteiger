@@ -1,5 +1,9 @@
 import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'node:path'
+import { registerIpc } from './ipc'
+
+// Für Tests: eigenes Datenverzeichnis, damit echte Teams/Spielzüge unberührt bleiben
+if (process.env['VBP_USER_DATA']) app.setPath('userData', process.env['VBP_USER_DATA'])
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -38,6 +42,7 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  registerIpc()
   createWindow()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

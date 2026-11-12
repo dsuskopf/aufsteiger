@@ -19,6 +19,8 @@ interface Options {
   resetKey?: unknown
   /** Fixpunkt für den Button-Zoom (Bildschirm-Pixel), Standard: Mitte der Fläche. */
   zoomAnchor?: { x: number; y: number }
+  /** true = diese Berührung gehört einem Objekt (z. B. Spieler ziehen), nicht der Ansicht. */
+  shouldIgnore?: (e: PointerEvent) => boolean
 }
 
 /**
@@ -30,13 +32,13 @@ interface Options {
  * - Buttons: weicher, animierter Zoom zur Mitte bzw. zurück zur Startansicht.
  */
 export function useZoomPan(hostRef: RefObject<HTMLElement | null>, opts: Options) {
-  const { size, content, initial = IDENTITY_VIEW, resetKey, zoomAnchor } = opts
+  const { size, content, initial = IDENTITY_VIEW, resetKey, zoomAnchor, shouldIgnore } = opts
   const [view, setViewState] = useState<View2D>(IDENTITY_VIEW)
   const viewRef = useRef(view)
   const goalRef = useRef<View2D | null>(null)
   const cancelRef = useRef<(() => void) | null>(null)
-  const optsRef = useRef({ size, content, initial, zoomAnchor })
-  optsRef.current = { size, content, initial, zoomAnchor }
+  const optsRef = useRef({ size, content, initial, zoomAnchor, shouldIgnore })
+  optsRef.current = { size, content, initial, zoomAnchor, shouldIgnore }
 
   const clamp = useCallback((v: View2D) => {
     const o = optsRef.current
@@ -128,6 +130,7 @@ export function useZoomPan(hostRef: RefObject<HTMLElement | null>, opts: Options
 
     const onDown = (e: PointerEvent) => {
       if (!isPanPointer(e)) return
+      if (pointers.size === 0 && optsRef.current.shouldIgnore?.(e)) return
       stopAnimation()
       el.setPointerCapture(e.pointerId)
       pointers.set(e.pointerId, local(e))

@@ -12,6 +12,10 @@ interface UiState {
   topTurns: number
   /** Seitenansicht von der anderen Seite betrachten (horizontal gedreht). */
   sideMirrored: boolean
+  lineupOpen: boolean
+  teamsOpen: boolean
+  setLineupOpen: (open: boolean) => void
+  setTeamsOpen: (open: boolean) => void
   rotateTop: () => void
   toggleSideMirror: () => void
   setViewMode: (m: ViewMode) => void
@@ -26,6 +30,10 @@ export const useUi = create<UiState>((set) => ({
   netHeight: NET_PRESETS.herren.height,
   topTurns: 0,
   sideMirrored: false,
+  lineupOpen: false,
+  teamsOpen: false,
+  setLineupOpen: (lineupOpen) => set({ lineupOpen }),
+  setTeamsOpen: (teamsOpen) => set({ teamsOpen }),
   // Ohne Modulo: der Winkel wächst weiter, damit die Animation immer in dieselbe Richtung dreht
   rotateTop: () => set((s) => ({ topTurns: s.topTurns + 1 })),
   toggleSideMirror: () => set((s) => ({ sideMirrored: !s.sideMirrored })),

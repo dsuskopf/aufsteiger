@@ -5,6 +5,60 @@ export type NetPresetId = 'herren' | 'damen' | 'mixed' | 'custom'
 
 export type Role = 'S' | 'MB' | 'AA' | 'DA' | 'L'
 
+/** Alle Rollen in Anzeige-Reihenfolge. Rollen sind rein optisch. */
+export const ROLES: readonly Role[] = ['S', 'AA', 'MB', 'DA', 'L']
+
+export const ROLE_LABELS: Record<Role, string> = {
+  S: 'Steller',
+  MB: 'Mittelblocker',
+  AA: 'Außenangreifer',
+  DA: 'Diagonalangreifer',
+  L: 'Libero'
+}
+
+/* ---------- Teams ---------- */
+
+export interface Player {
+  id: string
+  name: string
+  /** Rückennummer (1–99) */
+  number: number
+  /** Eine oder mehrere Positionen; die erste gilt als Hauptposition. */
+  positions: Role[]
+}
+
+export interface Team {
+  id: string
+  name: string
+  players: Player[]
+}
+
+export interface TeamsFile {
+  schemaVersion: number
+  teams: Team[]
+}
+
+/* ---------- Spielzug: Aufstellung ---------- */
+
+export type CourtSide = 'A' | 'B'
+
+/** Ein Spieler auf dem Feld. Nummer und Name kommen aus dem Team, die Rolle wählt man im Spielzug. */
+export interface CourtPlayer {
+  playerId: string
+  role: Role
+  /** Position in Weltkoordinaten (Meter) */
+  x: number
+  y: number
+}
+
+export interface PlaySide {
+  teamId: string | null
+  /** Höchstens 6 Spieler */
+  players: CourtPlayer[]
+}
+
+export const MAX_PLAYERS_PER_SIDE = 6
+
 export interface Vec2 {
   x: number
   y: number

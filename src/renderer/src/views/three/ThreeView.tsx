@@ -7,9 +7,17 @@ import { buildCourt, buildNet, disposeObject } from './courtScene'
 import { CAMERA_LIMITS, clampTarget } from './camera'
 import { ViewControls } from '@renderer/components/ViewControls'
 import { ZOOM_DURATION_MS, ZOOM_STEP, tween } from '@renderer/components/tween'
+import { useCourtPlayers } from '@renderer/store/selectors'
+import { CylinderPlayerFactory, placePlayer, visualKey, type PlayerMeshFactory } from './players'
+
+interface PlayerItems {
+  group: THREE.Group
+  factory: PlayerMeshFactory
+  items: Map<string, { obj: THREE.Object3D; vkey: string }>
+}
 
 /**
- * 3D-Ansicht: Feld, Netz (später Spieler, Flugbahnen, Ball).
+ * 3D-Ansicht: Feld, Netz, Spieler (später Flugbahnen, Ball).
  * Kamera per OrbitControls, beschränkt auf die obere Halbkugel.
  */
 export function ThreeView() {
@@ -21,6 +29,8 @@ export function ThreeView() {
     controls: OrbitControls
   } | null>(null)
   const netHeight = useUi((s) => s.netHeight)
+  const players = useCourtPlayers()
+  const playersRef = useRef<PlayerItems | null>(null)
 
   useEffect(() => {
     const host = hostRef.current!
@@ -36,6 +46,10 @@ export function ThreeView() {
     sun.position.set(6, 14, 8)
     scene.add(sun)
     scene.add(buildCourt())
+    const playerGroup = new THREE.Group()
+    playerGroup.name = 'players'
+    scene.add(playerGroup)
+    playersRef.current = { group: playerGroup, factory: new CylinderPlayerFactory(), items: new Map() }
 
     const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200)
     camera.position.copy(DEFAULT_CAMERA)
@@ -82,6 +96,9 @@ export function ThreeView() {
     })
 
     return () => {
+      const pr = playersRef.current
+      if (pr) for (const { obj } of pr.items.values()) pr.factory.dispose(obj)
+      playersRef.current = null
       renderer.setAnimationLoop(null)
       ro.disconnect()
       controls.dispose()
@@ -91,6 +108,35 @@ export function ThreeView() {
       sceneRef.current = null
     }
   }, [])
+
+  // Spieler abgleichen: neue anlegen, geänderte neu erzeugen, sonst nur verschieben
+  useEffect(() => {
+    const pr = playersRef.current
+    if (!pr) return
+    const seen = new Set<string>()
+    for (const p of players) {
+      seen.add(p.key)
+      const vkey = visualKey(p)
+      let item = pr.items.get(p.key)
+      if (item && item.vkey !== vkey) {
+        pr.group.remove(item.obj)
+        pr.factory.dispose(item.obj)
+        item = undefined
+      }
+      if (!item) {
+        item = { obj: pr.factory.create(p), vkey }
+        pr.group.add(item.obj)
+        pr.items.set(p.key, item)
+      }
+      placePlayer(item.obj, p.x, p.y)
+    }
+    for (const [key, item] of pr.items) {
+      if (seen.has(key)) continue
+      pr.group.remove(item.obj)
+      pr.factory.dispose(item.obj)
+      pr.items.delete(key)
+    }
+  }, [players])
 
   // Netz neu aufbauen, wenn sich die Netzhöhe ändert
   useEffect(() => {

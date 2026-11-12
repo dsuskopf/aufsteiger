@@ -1,6 +1,8 @@
 import { Circle, Layer, Line, Stage, Text } from 'react-konva'
 import { COURT, courtLines } from '@renderer/core/geometry/court'
 import { useEffect, useRef, useState } from 'react'
+import type Konva from 'konva'
+import { PlayersLayer, hitsPlayer } from './PlayersLayer'
 import {
   applyViewTop,
   fitViewport,
@@ -45,7 +47,13 @@ export function TopView() {
     y0: Math.min(...corners.map((c) => c.py)),
     y1: Math.max(...corners.map((c) => c.py))
   }
-  const { view, zoomIn, zoomOut, reset } = useZoomPan(ref, { size, content })
+  const stageRef = useRef<Konva.Stage>(null)
+  const { view, zoomIn, zoomOut, reset } = useZoomPan(ref, {
+    size,
+    content,
+    // Finger auf einem Spieler zieht den Spieler, nicht die Ansicht
+    shouldIgnore: (e) => hitsPlayer(stageRef.current, e.clientX, e.clientY)
+  })
   // Beim Drehen den Zoom weich zurücksetzen
   const firstRef = useRef(true)
   useEffect(() => {
@@ -61,8 +69,9 @@ export function TopView() {
     <>
       <div className="canvas-host" ref={ref}>
         {size.width > 0 && (
-          <Stage width={size.width} height={size.height}>
+          <Stage ref={stageRef} width={size.width} height={size.height}>
             <CourtLayer vp={vp} />
+            <PlayersLayer vp={vp} />
           </Stage>
         )}
       </div>

@@ -16,3 +16,9 @@ export const COLORS = {
   violetLight: '#7e4bb0',
   violetGlow: 'rgba(126, 75, 176, 0.35)'
 } as const
+
+/** Trikotfarben je Seite; der Libero trägt ein abweichendes Trikot (heller). */
+export const TEAM_COLORS = {
+  A: { fill: '#3d1f5c', libero: '#6a4a94', stroke: '#8a5cc2', text: '#f1eaf8' },
+  B: { fill: '#26303c', libero: '#4a5a70', stroke: '#8796ab', text: '#e6ebf1' }
+} as const

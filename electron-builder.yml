@@ -6,13 +6,20 @@ directories:
 files:
   - out/**/*
   - package.json
+  # Renderer und Hauptprozess sind vollständig gebündelt (Vite) – keine node_modules nötig
+  - '!node_modules/**/*'
 win:
+  icon: build/icon.png
   target:
     - target: nsis
       arch: [x64, arm64]
 nsis:
   oneClick: false
+  perMachine: false
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: Volleyball Playbook
+  artifactName: Volleyball-Playbook-Setup-${version}.${ext}
+  # Gespeicherte Teams und Spielzüge beim Deinstallieren behalten
+  deleteAppDataOnUninstall: false

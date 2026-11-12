@@ -15,6 +15,8 @@ function createWindow(): void {
     backgroundColor: '#0b0b0d',
     autoHideMenuBar: true,
     title: 'Volleyball Playbook',
+    // Im Entwicklungsmodus das App-Icon zeigen (die installierte .exe bringt es selbst mit)
+    ...(app.isPackaged ? {} : { icon: join(__dirname, '../../build/icon.png') }),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,

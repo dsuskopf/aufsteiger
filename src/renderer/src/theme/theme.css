@@ -605,7 +605,8 @@ input.field.hex.invalid { box-shadow: inset 0 0 0 1px var(--danger); }
 .doc-button .doc-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .doc-button .dirty { color: var(--accent-text); }
 @media (max-width: 1240px) {
-  .segmented.tools .tool-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  /* Wenig Platz: Text behalten (Annahme/Zuspiel wären als Icon nicht unterscheidbar), Icon weglassen */
+  .segmented.tools .icon { display: none; }
   .segmented.tools button { padding: 0 10px; }
   .doc-button { max-width: 160px; }
 }

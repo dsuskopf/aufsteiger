@@ -53,6 +53,10 @@ interface PlayState {
   removeTrajectory: (type: TrajectoryType) => void
   /** Annahme und Zuspiel löschen */
   clearTrajectories: () => void
+  /** Laufwege und Sprünge aller Spieler löschen (beide Seiten) */
+  clearMoves: () => void
+  /** Laufweg und Sprung eines Spielers löschen */
+  clearPlayerMoves: (side: CourtSide, playerId: string) => void
   select: (type: TrajectoryType | null) => void
   /** Gewählter Spieler (Karte mit Laufweg und Sprung); schließt die Flugbahn-Auswahl aus */
   selectedPlayer: { side: CourtSide; playerId: string } | null
@@ -115,6 +119,32 @@ export const usePlay = create<PlayState>((set, get) => {
         return { trajectories: next, selected: st.selected === type ? null : st.selected }
       }),
     clearTrajectories: () => set({ trajectories: {}, selected: null }),
+    clearMoves: () =>
+      set((st) => {
+        const strip = (s: PlaySide): PlaySide =>
+          s.players.some((c) => c.path || c.jump)
+            ? {
+                ...s,
+                players: s.players.map((c) => {
+                  if (!c.path && !c.jump) return c
+                  const { path: _p, jump: _j, ...rest } = c
+                  return rest
+                })
+              }
+            : s
+        const A = strip(st.sides.A)
+        const B = strip(st.sides.B)
+        return A === st.sides.A && B === st.sides.B ? {} : { sides: { A, B } }
+      }),
+    clearPlayerMoves: (side, playerId) =>
+      mapSide(side, (s) => ({
+        ...s,
+        players: s.players.map((c) => {
+          if (c.playerId !== playerId || (!c.path && !c.jump)) return c
+          const { path: _p, jump: _j, ...rest } = c
+          return rest
+        })
+      })),
     select: (selected) => set(selected ? { selected, selectedPlayer: null } : { selected }),
     selectPlayer: (selectedPlayer) => set(selectedPlayer ? { selectedPlayer, selected: null } : { selectedPlayer }),
     setPath: (side, playerId, path) =>

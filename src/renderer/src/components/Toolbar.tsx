@@ -32,7 +32,9 @@ export function Toolbar() {
   const { netBarOpen, setNetBarOpen } = useUi()
   const current = usePlay((s) => s.current)
   const dirty = usePlay((s) => s.dirty)
-  const hasTrajectories = usePlay((s) => !!s.trajectories.annahme || !!s.trajectories.zuspiel)
+  const hasTrajectories = usePlay(
+    (s) => !!s.trajectories.annahme || !!s.trajectories.zuspiel || [...s.sides.A.players, ...s.sides.B.players].some((c) => c.path || c.jump)
+  )
 
   return (
     <header className="toolbar">
@@ -84,16 +86,17 @@ export function Toolbar() {
         ))}
       </div>
 
-      {/* Annahme und Zuspiel löschen (zweistufig: erst nachfragen, dann löschen) */}
+      {/* Annahme, Zuspiel, Laufwege und Sprünge löschen (zweistufig: erst nachfragen, dann löschen) */}
       <ConfirmButton
-          label="Flugbahnen löschen"
-          confirmLabel="Annahme und Zuspiel löschen?"
+          label="Flugbahnen und Laufwege löschen"
+          confirmLabel="Annahme, Zuspiel, Laufwege und Sprünge löschen?"
           icon="trash"
           disabled={!hasTrajectories}
           onConfirm={() => {
             usePlayback.getState().pause()
             usePlayback.setState({ t: 0 })
             usePlay.getState().clearTrajectories()
+            usePlay.getState().clearMoves()
           }}
         />
 

@@ -15,7 +15,7 @@ const fmt = (v: number, d = 2) => v.toFixed(d).replace('.', ',')
  */
 export function PlayerCard() {
   const sel = usePlay((s) => s.selectedPlayer)
-  const { selectPlayer, setPath, setJump } = usePlay()
+  const { selectPlayer, setPath, setJump, clearPlayerMoves } = usePlay()
   const players = useCourtPlayers()
   const total = useTotalDuration()
   const hasZuspiel = usePlay((s) => !!s.trajectories.zuspiel)
@@ -24,7 +24,11 @@ export function PlayerCard() {
     const onKey = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement | null)?.tagName
       if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return
-      if (e.key === 'Escape' && usePlay.getState().selectedPlayer) selectPlayer(null)
+      const sp = usePlay.getState().selectedPlayer
+      if (!sp) return
+      if (e.key === 'Escape') selectPlayer(null)
+      // Entf löscht Laufweg und Sprung des gewählten Spielers (wie bei den Flugbahnen)
+      if (e.key === 'Delete' || e.key === 'Backspace') usePlay.getState().clearPlayerMoves(sp.side, sp.playerId)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -52,6 +56,15 @@ export function PlayerCard() {
         <h3>
           #{p.number} {p.name || ROLE_LABELS[p.role]}
         </h3>
+        <button
+          className="icon-only plain"
+          title="Laufweg und Sprung löschen (Entf)"
+          aria-label="Laufweg und Sprung löschen"
+          disabled={!path && !jump}
+          onClick={() => clearPlayerMoves(sel.side, sel.playerId)}
+        >
+          <Icon name="trash" />
+        </button>
         <button className="icon-only plain" title="Schließen (Esc)" aria-label="Auswahl aufheben" onClick={() => selectPlayer(null)}>
           <Icon name="close" />
         </button>

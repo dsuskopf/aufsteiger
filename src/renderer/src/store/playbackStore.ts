@@ -26,7 +26,7 @@ interface PlaybackState {
 export function currentTimeline(): Timeline<BallType | 'abprall'> {
   const { trajectories, display, schlag } = usePlay.getState()
   const items: TimelineItem<BallType | 'abprall'>[] = visibleTrajectories(trajectories, display).map((v) => ({ type: v.type, input: v.input }))
-  if (schlag && display.showSchlag) {
+  if (schlag) {
     items.push({ type: 'schlag', attack: schlag })
     // Abprall: trifft der Schlag den Boden, springt der Ball noch weiter (Einstellung)
     const st = useSettings.getState().settings

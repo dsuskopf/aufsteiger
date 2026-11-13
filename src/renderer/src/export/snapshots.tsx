@@ -117,8 +117,8 @@ export function snapshotsThree(width = 900, height = 560): { label: string; url:
     created.push(obj)
   }
   const { trajectories, display } = usePlay.getState()
-  const schlag = display.showSchlag ? usePlay.getState().schlag : null
-  scene.add(buildTrajectories(visibleTrajectories(trajectories, display), display.showAfterHit, null, schlag))
+  const schlag = usePlay.getState().schlag
+  scene.add(buildTrajectories(visibleTrajectories(trajectories, display), null, schlag))
 
   const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 200)
   const out: { label: string; url: string }[] = []

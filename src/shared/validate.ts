@@ -226,11 +226,7 @@ export function sanitizePlay(raw: unknown): PlayDoc | null {
     netPreset: NET_PRESET_IDS.includes(raw.netPreset as NetPresetId) ? (raw.netPreset as NetPresetId) : 'herren',
     netHeight: num(raw.netHeight, 2.43, 1, 3),
     display: {
-      showAnnahme: bool(disp.showAnnahme, DEFAULT_DISPLAY.showAnnahme),
-      showZuspiel: bool(disp.showZuspiel, DEFAULT_DISPLAY.showZuspiel),
-      showAfterHit: bool(disp.showAfterHit, DEFAULT_DISPLAY.showAfterHit),
-      ballOnly: bool(disp.ballOnly, DEFAULT_DISPLAY.ballOnly),
-      showSchlag: bool(disp.showSchlag, DEFAULT_DISPLAY.showSchlag)
+      ballOnly: bool(disp.ballOnly, DEFAULT_DISPLAY.ballOnly)
     },
     ...(sanitizeAttack(raw.schlag) ? { schlag: sanitizeAttack(raw.schlag) } : {}),
     netViewFrom: raw.netViewFrom === 'B' ? 'B' : 'A',

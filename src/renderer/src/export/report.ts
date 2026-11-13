@@ -33,7 +33,7 @@ export async function buildReport(code: string, title: string): Promise<string> 
       return `<tr><td><b>${TRAJECTORY_LABELS[type]}</b></td><td>${m(input.start.h)}</td><td>${m(sol.apexH)}</td><td>${m(input.hitH)}</td><td>${m(sol.D)}</td><td>${sol.tHit.toFixed(2).replace('.', ',')} s</td><td>${speed} km/h</td></tr>`
     })
     .join('')
-    + (play.schlag && play.display.showSchlag
+    + (play.schlag
       ? (() => {
           const s = solveAttack(play.schlag)
           const d = Math.hypot(s.landing.x - play.schlag.start.x, s.landing.y - play.schlag.start.y)

@@ -163,16 +163,11 @@ export interface Trajectory {
 
 /** Anzeige-Optionen eines Spielzugs */
 export interface PlayDisplay {
-  showAnnahme: boolean
-  showZuspiel: boolean
-  /** Verlauf hinter dem Schlagpunkt gestrichelt bis zum Boden */
-  showAfterHit: boolean
-  /** Beim Abspielen nur den Ball zeigen, die Flugbahnen ausblenden */
+  /** Beim Abspielen nur den Ball zeigen, die Flugbahnen ausblenden (Checkbox „Flugbahn“ aus) */
   ballOnly: boolean
-  showSchlag: boolean
 }
 
-export const DEFAULT_DISPLAY: PlayDisplay = { showAnnahme: true, showZuspiel: true, showAfterHit: false, ballOnly: false, showSchlag: true }
+export const DEFAULT_DISPLAY: PlayDisplay = { ballOnly: false }
 
 export interface Settings {
   schemaVersion: number

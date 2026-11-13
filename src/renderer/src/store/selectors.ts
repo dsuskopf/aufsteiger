@@ -93,13 +93,12 @@ export interface TrajectoryView {
 
 export function visibleTrajectories(
   trajectories: Partial<Record<TrajectoryType, Trajectory>>,
-  display: PlayDisplay
+  _display?: PlayDisplay
 ): TrajectoryView[] {
   const out: TrajectoryView[] = []
   for (const type of TRAJECTORY_TYPES) {
     const input = trajectories[type]
     if (!input) continue
-    if (type === 'annahme' ? !display.showAnnahme : !display.showZuspiel) continue
     out.push({ type, input, sol: solveTrajectory(input), coupled: type === 'zuspiel' && !!trajectories.annahme })
   }
   return out

@@ -1,9 +1,9 @@
-import { Arrow, Circle, Group, Layer, Line, Rect, Text } from 'react-konva'
+import { Arrow, Circle, Group, Layer, Rect, Text } from 'react-konva'
 import type Konva from 'konva'
 import { TRAJECTORY_LABELS } from '@shared/types'
 import { topToWorld, worldToTop, type TopViewport } from '@renderer/core/geometry/transform'
 import { clampToArea } from '@renderer/core/lineup/lineup'
-import { BALL_RADIUS, pointAt } from '@renderer/core/physics/trajectory'
+import { BALL_RADIUS } from '@renderer/core/physics/trajectory'
 import { BALL_COLORS, COLORS } from '@renderer/theme/colors'
 import { usePlay } from '@renderer/store/playStore'
 import { useBall, usePathsHidden } from '@renderer/store/playbackStore'
@@ -17,7 +17,7 @@ const HIT_R = 24
 
 /**
  * Flugbahnen in der Draufsicht: immer eine Gerade von Start bis Schlagpunkt mit Pfeil,
- * optional der weitere Verlauf bis zum Boden gestrichelt. Griffe an Start und Ende verschieben die Bahn.
+ * Griffe an Start und Ende verschieben die Bahn.
  */
 export function TrajectoryLayer({
   vp,
@@ -34,8 +34,7 @@ export function TrajectoryLayer({
   // „Nur Ball“ beim Abspielen: Linien, Beschriftungen und Griffe ausblenden
   const hidden = usePathsHidden()
   const list = hidden ? [] : visible
-  const display = usePlay((s) => s.display)
-  const schlagInput = usePlay((s) => (s.display.showSchlag && !hidden ? s.schlag : null))
+  const schlagInput = usePlay((s) => (!hidden ? s.schlag : null))
   const coupledSchlag = usePlay((s) => !!s.trajectories.zuspiel)
   const setSchlag = usePlay((s) => s.setSchlag)
   const selected = usePlay((s) => s.selected)
@@ -62,26 +61,13 @@ export function TrajectoryLayer({
   return (
     <Layer listening={interactive}>
       {list.map((tv) => {
-        const { input, sol, type } = tv
+        const { input, type } = tv
         const isSel = selected === type
         const width = isSel ? 4 : 3
         const opacity = type === 'annahme' ? 0.8 : 1
-        const ground = pointAt(sol, input.start, sol.sGround)
         const mid = worldToTop(vp, (input.start.x + input.end.x) / 2, (input.start.y + input.end.y) / 2)
         return (
           <Group key={type} opacity={opacity}>
-            {display.showAfterHit && (
-              <Line
-                points={[...P(input.end.x, input.end.y), ...P(ground.x, ground.y)]}
-                stroke={COLORS.trajectory}
-                strokeWidth={2}
-                dash={[8, 6]}
-                // Muster am Start verankert, damit die Striche beim Verschieben des Schlagpunkts stehen bleiben
-                dashOffset={Math.hypot(P(input.end.x, input.end.y)[0] - P(input.start.x, input.start.y)[0], P(input.end.x, input.end.y)[1] - P(input.start.x, input.start.y)[1])}
-                opacity={0.45}
-                listening={false}
-              />
-            )}
             <Arrow
               points={[...P(input.start.x, input.start.y), ...P(input.end.x, input.end.y)]}
               stroke={COLORS.trajectory}
@@ -120,9 +106,6 @@ export function TrajectoryLayer({
         const midPx = worldToTop(vp, mid.x, mid.y)
         return (
           <Group>
-            {display.showAfterHit && sol.tGround > sol.tHit + 0.01 && (
-              <Line points={attackPoints(sol, sol.tHit, sol.tGround, 16).flatMap((p) => P(p.x, p.y))} stroke={COLORS.trajectory} strokeWidth={2} dash={[8, 6]} opacity={0.45} listening={false} />
-            )}
             <Arrow
               points={pts}
               stroke={COLORS.trajectory}

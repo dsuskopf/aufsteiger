@@ -28,8 +28,7 @@ export function NetTrajectories({ vp, interactive = true, showBall = true }: { v
   // „Nur Ball“ beim Abspielen: Bahnen und Griffe ausblenden
   const hidden = usePathsHidden()
   const list = hidden ? [] : visible
-  const schlagInput = usePlay((s) => (s.display.showSchlag && !hidden ? s.schlag : null))
-  const display = usePlay((s) => s.display)
+  const schlagInput = usePlay((s) => (!hidden ? s.schlag : null))
   const selected = usePlay((s) => s.selected)
   const select = usePlay((s) => s.select)
   const setTrajectory = usePlay((s) => s.setTrajectory)
@@ -81,11 +80,7 @@ export function NetTrajectories({ vp, interactive = true, showBall = true }: { v
         const label = at(apex.x, apex.y, apex.z)
         return (
           <Group key={type} opacity={type === 'annahme' ? 0.8 : 1}>
-            {display.showAfterHit && (
-              // Strichmuster am Start verankert: beim Verschieben des Schlagpunkts bleiben die Striche stehen
-              <Line points={pts(tv, sol.D, sol.sGround)} stroke={COLORS.trajectory} strokeWidth={2} dash={DASH} dashOffset={polyLength(pts(tv, 0, sol.D))} opacity={0.45} listening={false} />
-            )}
-            {sol.rising && !display.showAfterHit && (
+            {sol.rising && (
               // Schlagpunkt vor dem Scheitel: Weg bis zum Scheitel angedeutet, damit der Scheitel-Griff auf der Bahn liegt
               <Line points={pts(tv, sol.D, sol.sA)} stroke={COLORS.trajectory} strokeWidth={2} dash={[3, 6]} opacity={0.4} listening={false} />
             )}
@@ -114,9 +109,6 @@ export function NetTrajectories({ vp, interactive = true, showBall = true }: { v
         const label = at(top.x, top.y, top.z)
         return (
           <Group>
-            {display.showAfterHit && sol.tGround > sol.tHit + 0.01 && (
-              <Line points={proj(attackPoints(sol, sol.tHit, sol.tGround, 16))} stroke={COLORS.trajectory} strokeWidth={2} dash={DASH} opacity={0.45} listening={false} />
-            )}
             <Line
               points={proj(attackPoints(sol, 0, sol.tHit, 64))}
               stroke={COLORS.trajectory}
@@ -152,8 +144,6 @@ export function NetTrajectories({ vp, interactive = true, showBall = true }: { v
   )
 }
 
-/** Strichmuster der Bahn nach dem Schlagpunkt (px) */
-const DASH = [8, 6]
 
 /** Länge eines Linienzugs [x0, y0, x1, y1, …] in Pixeln */
 export function polyLength(pts: number[]): number {

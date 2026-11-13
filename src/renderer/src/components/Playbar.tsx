@@ -13,9 +13,6 @@ export function Playbar() {
   const { t, playing, loop, speed, setT, toggle, pause, setLoop, setSpeed, step } = usePlayback()
   const display = usePlay((s) => s.display)
   const setDisplay = usePlay((s) => s.setDisplay)
-  const hasAnnahme = usePlay((s) => !!s.trajectories.annahme)
-  const hasZuspiel = usePlay((s) => !!s.trajectories.zuspiel)
-  const hasSchlag = usePlay((s) => !!s.schlag)
   const total = useTotalDuration()
   const empty = total <= 0
 
@@ -69,25 +66,9 @@ export function Playbar() {
       </select>
       <span className="playbar-sep" aria-hidden="true" />
       <div className="playbar-toggles" role="group" aria-label="Flugbahnen anzeigen">
-        <label className={hasAnnahme ? '' : 'muted'}>
-          <input type="checkbox" checked={display.showAnnahme} onChange={(e) => setDisplay({ showAnnahme: e.target.checked })} />
-          Annahme
-        </label>
-        <label className={hasZuspiel ? '' : 'muted'}>
-          <input type="checkbox" checked={display.showZuspiel} onChange={(e) => setDisplay({ showZuspiel: e.target.checked })} />
-          Zuspiel
-        </label>
-        <label className={hasSchlag ? '' : 'muted'}>
-          <input type="checkbox" checked={display.showSchlag} onChange={(e) => setDisplay({ showSchlag: e.target.checked })} />
-          Schlag
-        </label>
-        <label>
-          <input type="checkbox" checked={display.showAfterHit} onChange={(e) => setDisplay({ showAfterHit: e.target.checked })} />
-          Nach Schlagpunkt
-        </label>
-        <label title="Beim Abspielen nur den Ball zeigen, die Flugbahnen ausblenden">
-          <input type="checkbox" checked={display.ballOnly} onChange={(e) => setDisplay({ ballOnly: e.target.checked })} />
-          Nur Ball
+        <label title="Flugbahnen auch beim Abspielen zeigen (aus: nur der Ball fliegt)">
+          <input type="checkbox" checked={!display.ballOnly} onChange={(e) => setDisplay({ ballOnly: !e.target.checked })} />
+          Flugbahn
         </label>
       </div>
     </footer>

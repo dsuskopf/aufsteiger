@@ -18,8 +18,8 @@ function curve(points: { x: number; y: number; z: number }[]): THREE.CatmullRomC
   return new THREE.CatmullRomCurve3(points.map((p) => new THREE.Vector3(...worldToThree(p.x, p.y, p.z))))
 }
 
-/** Flugbahnen als Röhren in der Standardfarbe; der Verlauf nach dem Schlagpunkt optional blass. */
-export function buildTrajectories(list: TrajectoryView[], showAfterHit: boolean, selected: string | null, schlag?: AttackInput | null): THREE.Group {
+/** Flugbahnen als Röhren in der Standardfarbe (bis zum Schlagpunkt bzw. Ziel). */
+export function buildTrajectories(list: TrajectoryView[], selected: string | null, schlag?: AttackInput | null): THREE.Group {
   const g = new THREE.Group()
   g.name = 'trajectories'
   if (schlag) {
@@ -32,14 +32,6 @@ export function buildTrajectories(list: TrajectoryView[], showAfterHit: boolean,
         new THREE.MeshBasicMaterial({ color: COLORS.trajectory })
       )
     )
-    if (showAfterHit && sol.tGround > sol.tHit + 0.01) {
-      g.add(
-        new THREE.Mesh(
-          new THREE.TubeGeometry(curve(attackPoints(sol, sol.tHit, sol.tGround, 24)), 32, 0.018, 8, false),
-          new THREE.MeshBasicMaterial({ color: COLORS.trajectory, transparent: true, opacity: 0.3, depthWrite: false })
-        )
-      )
-    }
     const end = attackPoints(sol, sol.tHit, sol.tHit, 1)[0]
     const mark = new THREE.Mesh(new THREE.SphereGeometry(0.06, 16, 12), new THREE.MeshBasicMaterial({ color: COLORS.trajectory }))
     mark.position.set(...worldToThree(end.x, end.y, Math.max(0.06, end.z)))
@@ -53,13 +45,6 @@ export function buildTrajectories(list: TrajectoryView[], showAfterHit: boolean,
       new THREE.MeshBasicMaterial({ color: COLORS.trajectory, transparent: tv.type === 'annahme', opacity: tv.type === 'annahme' ? 0.8 : 1 })
     )
     g.add(main)
-    if (showAfterHit && sol.sGround > sol.D + 0.05) {
-      const rest = new THREE.Mesh(
-        new THREE.TubeGeometry(curve(sampleTrajectory(sol, input.start, sol.D, sol.sGround, 32)), 48, 0.018, 8, false),
-        new THREE.MeshBasicMaterial({ color: COLORS.trajectory, transparent: true, opacity: 0.3, depthWrite: false })
-      )
-      g.add(rest)
-    }
     // Schlagpunkt-Markierung und Bodenschatten der Geraden (Draufsicht-Linie)
     const hit = new THREE.Mesh(
       new THREE.SphereGeometry(0.06, 16, 12),

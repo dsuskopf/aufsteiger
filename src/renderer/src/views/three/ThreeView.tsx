@@ -329,8 +329,8 @@ export function ThreeView() {
         onZoomOut={() => zoom(ZOOM_STEP)}
         onReset={resetView}
       >
-        <ZonesButton />
         <NamesButton />
+        <ZonesButton />
       </ViewControls>
     </>
   )

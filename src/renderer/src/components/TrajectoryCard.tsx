@@ -20,8 +20,9 @@ const m = (v: number) => `${v.toFixed(2).replace('.', ',')} m`
  * Dieselben Höhen lassen sich in der Netzansicht direkt an den Griffen ziehen; die Karte wirkt auch in 3D.
  */
 export function TrajectoryCard() {
-  const selected = usePlay((s) => s.selected)
-  const t = usePlay((s) => (s.selected ? s.trajectories[s.selected] : undefined))
+  // Diese Karte gilt für Annahme und Zuspiel; der Schlag hat seine eigene Karte
+  const selected = usePlay((s) => (s.selected === 'schlag' ? null : s.selected))
+  const t = usePlay((s) => (s.selected && s.selected !== 'schlag' ? s.trajectories[s.selected] : undefined))
   const coupled = usePlay((s) => s.selected === 'zuspiel' && !!s.trajectories.annahme)
   const annahme = usePlay((s) => s.trajectories.annahme)
   const { setTrajectory, removeTrajectory, select } = usePlay()
@@ -33,7 +34,10 @@ export function TrajectoryCard() {
       if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return
       const sel = usePlay.getState().selected
       if (!sel) return
-      if (e.key === 'Delete' || e.key === 'Backspace') removeTrajectory(sel)
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (sel === 'schlag') usePlay.getState().removeSchlag()
+        else removeTrajectory(sel)
+      }
       if (e.key === 'Escape' && useUi.getState().tool === 'select') select(null)
     }
     window.addEventListener('keydown', onKey)

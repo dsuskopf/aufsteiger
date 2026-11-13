@@ -7,6 +7,7 @@ import {
   SCHEMA_VERSION,
   TRAJECTORY_TYPES,
   ZONE_STYLES,
+  type Attack,
   type CourtPlayer,
   type Formation,
   type NetPresetId,
@@ -143,6 +144,19 @@ function sanitizeTrajectory(raw: unknown): Trajectory | undefined {
   }
 }
 
+function sanitizeAttack(raw: unknown): Attack | undefined {
+  if (!isObj(raw) || !isObj(raw.start) || !isObj(raw.end)) return undefined
+  const c = (v: unknown) => num(v, 0, -30, 30)
+  return {
+    start: { x: c(raw.start.x), y: c(raw.start.y), h: num(raw.start.h, 3, 0, 6) },
+    end: { x: c(raw.end.x), y: c(raw.end.y) },
+    endH: num(raw.endH, 0, 0, 3),
+    speed: num(raw.speed, 70 / 3.6, 20 / 3.6, 130 / 3.6),
+    topspin: num(raw.topspin, 0, -10, 10),
+    sidespin: num(raw.sidespin, 0, -10, 10)
+  }
+}
+
 function sanitizeSide(raw: unknown): PlaySideDoc {
   const r = isObj(raw) ? raw : {}
   const players: CourtPlayer[] = []
@@ -213,8 +227,10 @@ export function sanitizePlay(raw: unknown): PlayDoc | null {
       showAnnahme: bool(disp.showAnnahme, DEFAULT_DISPLAY.showAnnahme),
       showZuspiel: bool(disp.showZuspiel, DEFAULT_DISPLAY.showZuspiel),
       showAfterHit: bool(disp.showAfterHit, DEFAULT_DISPLAY.showAfterHit),
-      ballOnly: bool(disp.ballOnly, DEFAULT_DISPLAY.ballOnly)
+      ballOnly: bool(disp.ballOnly, DEFAULT_DISPLAY.ballOnly),
+      showSchlag: bool(disp.showSchlag, DEFAULT_DISPLAY.showSchlag)
     },
+    ...(sanitizeAttack(raw.schlag) ? { schlag: sanitizeAttack(raw.schlag) } : {}),
     netViewFrom: raw.netViewFrom === 'B' ? 'B' : 'A',
     netAngle: Math.round(num(raw.netAngle, 0, -90, 90)),
     netShowPlayers: bool(raw.netShowPlayers, false)

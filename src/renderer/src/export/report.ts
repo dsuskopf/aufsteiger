@@ -1,4 +1,5 @@
 import { TRAJECTORY_LABELS } from '@shared/types'
+import { solveAttack } from '@renderer/core/physics/attack'
 import { DEFAULT_COLOR } from '@renderer/theme/defaultColor'
 import { NET_PRESETS } from '@renderer/core/geometry/court'
 import { usePlay } from '@renderer/store/playStore'
@@ -32,6 +33,13 @@ export async function buildReport(code: string, title: string): Promise<string> 
       return `<tr><td><b>${TRAJECTORY_LABELS[type]}</b></td><td>${m(input.start.h)}</td><td>${m(sol.apexH)}</td><td>${m(input.hitH)}</td><td>${m(sol.D)}</td><td>${sol.tHit.toFixed(2).replace('.', ',')} s</td><td>${speed} km/h</td></tr>`
     })
     .join('')
+    + (play.schlag && play.display.showSchlag
+      ? (() => {
+          const s = solveAttack(play.schlag)
+          const d = Math.hypot(s.landing.x - play.schlag.start.x, s.landing.y - play.schlag.start.y)
+          return `<tr><td><b>Schlag</b></td><td>${m(play.schlag.start.h)}</td><td>${m(s.apexH)}</td><td>${m(play.schlag.endH)}</td><td>${m(d)}</td><td>${s.tHit.toFixed(2).replace('.', ',')} s</td><td>${Math.round(play.schlag.speed * 3.6)} km/h</td></tr>`
+        })()
+      : '')
 
   return `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>${esc(code)}</title><style>
   @page { size: A4 landscape; margin: 10mm; }

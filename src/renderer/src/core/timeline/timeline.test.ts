@@ -12,7 +12,7 @@ describe('timeline', () => {
       { type: 'zuspiel', input: zuspiel }
     ])
     expect(tl.segments[1].t0).toBeCloseTo(tl.segments[0].t1, 12)
-    expect(tl.total).toBeCloseTo(tl.segments[0].sol.tHit + tl.segments[1].sol.tHit, 12)
+    expect(tl.total).toBeCloseTo(tl.segments[0].sol!.tHit + tl.segments[1].sol!.tHit, 12)
   })
 
   it('Ball startet am Start, ist am Ende am Schlagpunkt des letzten Segments', () => {

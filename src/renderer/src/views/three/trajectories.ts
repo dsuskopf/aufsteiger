@@ -4,8 +4,9 @@ import { worldToThree } from '@renderer/core/geometry/transform'
 import type { Timeline } from '@renderer/core/timeline/timeline'
 import { COLORS } from '@renderer/theme/colors'
 import type { TrajectoryView } from '@renderer/store/selectors'
-import type { TrajectoryType } from '@shared/types'
+import type { BallType, TrajectoryType } from '@shared/types'
 import { createVolleyballMesh } from './ballModel'
+import { attackPoints, solveAttack, type AttackInput } from '@renderer/core/physics/attack'
 
 /**
  * Drall in Umdrehungen pro Sekunde (Rückwärtsdrall). Eine Annahme mit den Unterarmen dreht deutlich,
@@ -18,9 +19,32 @@ function curve(points: { x: number; y: number; z: number }[]): THREE.CatmullRomC
 }
 
 /** Flugbahnen als Röhren in der Standardfarbe; der Verlauf nach dem Schlagpunkt optional blass. */
-export function buildTrajectories(list: TrajectoryView[], showAfterHit: boolean, selected: string | null): THREE.Group {
+export function buildTrajectories(list: TrajectoryView[], showAfterHit: boolean, selected: string | null, schlag?: AttackInput | null): THREE.Group {
   const g = new THREE.Group()
   g.name = 'trajectories'
+  if (schlag) {
+    // Schlag: Bahn aus der Simulation (Drall biegt sie), Zielpunkt als Kugel
+    const sol = solveAttack(schlag)
+    const isSel = selected === 'schlag'
+    g.add(
+      new THREE.Mesh(
+        new THREE.TubeGeometry(curve(attackPoints(sol, 0, sol.tHit, 64)), 96, isSel ? 0.035 : 0.025, 10, false),
+        new THREE.MeshBasicMaterial({ color: COLORS.trajectory })
+      )
+    )
+    if (showAfterHit && sol.tGround > sol.tHit + 0.01) {
+      g.add(
+        new THREE.Mesh(
+          new THREE.TubeGeometry(curve(attackPoints(sol, sol.tHit, sol.tGround, 24)), 32, 0.018, 8, false),
+          new THREE.MeshBasicMaterial({ color: COLORS.trajectory, transparent: true, opacity: 0.3, depthWrite: false })
+        )
+      )
+    }
+    const end = attackPoints(sol, sol.tHit, sol.tHit, 1)[0]
+    const mark = new THREE.Mesh(new THREE.SphereGeometry(0.06, 16, 12), new THREE.MeshBasicMaterial({ color: COLORS.trajectory }))
+    mark.position.set(...worldToThree(end.x, end.y, Math.max(0.06, end.z)))
+    g.add(mark)
+  }
   for (const tv of list) {
     const { sol, input } = tv
     const isSel = selected === tv.type
@@ -81,15 +105,23 @@ const _q = new THREE.Quaternion()
  * Lage des Balls zur Zeit t: Jede Flugbahn dreht ihn um die waagrechte Achse quer zur Flugrichtung
  * (Rückwärtsdrall); die Drehungen der vorherigen Flugbahnen bleiben erhalten, so springt der Ball nie.
  */
-export function ballOrientation(tl: Timeline<TrajectoryType>, t: number, out = new THREE.Quaternion()): THREE.Quaternion {
+export function ballOrientation(tl: Timeline<BallType>, t: number, out = new THREE.Quaternion()): THREE.Quaternion {
   out.identity()
   for (const seg of tl.segments) {
     if (t <= seg.t0) break
     const local = Math.min(t, seg.t1) - seg.t0
-    const { dx, dy } = seg.sol.dir
-    // Achse links der Flugrichtung; negative Drehung = Oberseite läuft nach hinten (Rückwärtsdrall)
-    _axis.set(...worldToThree(-dy, dx, 0)).normalize()
-    _q.setFromAxisAngle(_axis, -2 * Math.PI * SPIN_RPS[seg.type] * local)
+    if (seg.asol) {
+      // Schlag: echter Drall (Topspin/Backspin, Seitendrall) um seine Achse
+      if (seg.asol.spinRate === 0) continue
+      const a = seg.asol.spinAxis
+      _axis.set(...worldToThree(a.x, a.y, a.z)).normalize()
+      _q.setFromAxisAngle(_axis, seg.asol.spinRate * local)
+    } else {
+      const { dx, dy } = seg.sol!.dir
+      // Achse links der Flugrichtung; negative Drehung = Oberseite läuft nach hinten (Rückwärtsdrall)
+      _axis.set(...worldToThree(-dy, dx, 0)).normalize()
+      _q.setFromAxisAngle(_axis, -2 * Math.PI * SPIN_RPS[seg.type as TrajectoryType] * local)
+    }
     out.premultiply(_q)
   }
   return out

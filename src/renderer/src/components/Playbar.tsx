@@ -15,6 +15,7 @@ export function Playbar() {
   const setDisplay = usePlay((s) => s.setDisplay)
   const hasAnnahme = usePlay((s) => !!s.trajectories.annahme)
   const hasZuspiel = usePlay((s) => !!s.trajectories.zuspiel)
+  const hasSchlag = usePlay((s) => !!s.schlag)
   const total = useTotalDuration()
   const empty = total <= 0
 
@@ -75,6 +76,10 @@ export function Playbar() {
         <label className={hasZuspiel ? '' : 'muted'}>
           <input type="checkbox" checked={display.showZuspiel} onChange={(e) => setDisplay({ showZuspiel: e.target.checked })} />
           Zuspiel
+        </label>
+        <label className={hasSchlag ? '' : 'muted'}>
+          <input type="checkbox" checked={display.showSchlag} onChange={(e) => setDisplay({ showSchlag: e.target.checked })} />
+          Schlag
         </label>
         <label>
           <input type="checkbox" checked={display.showAfterHit} onChange={(e) => setDisplay({ showAfterHit: e.target.checked })} />

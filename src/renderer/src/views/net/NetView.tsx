@@ -129,6 +129,11 @@ export function NetView({ compact = false }: { compact?: boolean }) {
 
   // Tippen ins Leere schließt Flugbahn- und Spieler-Karte
   useEmptyTapClose(ref, stageRef)
+  // Nach einer Größenänderung alle Ebenen neu zeichnen
+  useEffect(() => {
+    const id = requestAnimationFrame(() => stageRef.current?.batchDraw())
+    return () => cancelAnimationFrame(id)
+  }, [size.width, size.height])
 
   const resetAll = () => {
     reset()

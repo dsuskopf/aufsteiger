@@ -8,6 +8,7 @@ import { BALL_COLORS, COLORS } from '@renderer/theme/colors'
 import { usePlay } from '@renderer/store/playStore'
 import { useBall, usePathsHidden } from '@renderer/store/playbackStore'
 import { useVisibleTrajectories, type TrajectoryView } from '@renderer/store/selectors'
+import { attackPoints, solveAttack } from '@renderer/core/physics/attack'
 
 /** Name der ziehbaren Griffe (Treffertest für die Gestenerkennung) */
 export const HANDLE_NODE_NAME = 'handle'
@@ -31,8 +32,12 @@ export function TrajectoryLayer({
 }) {
   const visible = useVisibleTrajectories()
   // „Nur Ball“ beim Abspielen: Linien, Beschriftungen und Griffe ausblenden
-  const list = usePathsHidden() ? [] : visible
+  const hidden = usePathsHidden()
+  const list = hidden ? [] : visible
   const display = usePlay((s) => s.display)
+  const schlagInput = usePlay((s) => (s.display.showSchlag && !hidden ? s.schlag : null))
+  const coupledSchlag = usePlay((s) => !!s.trajectories.zuspiel)
+  const setSchlag = usePlay((s) => s.setSchlag)
   const selected = usePlay((s) => s.selected)
   const select = usePlay((s) => s.select)
   const setTrajectory = usePlay((s) => s.setTrajectory)
@@ -106,6 +111,71 @@ export function TrajectoryLayer({
           </Group>
         )
       })}
+      {schlagInput && (() => {
+        // Schlag: Bahn aus der Simulation (mit Seitendrall gebogen), Pfeil zum Ziel
+        const sol = solveAttack(schlagInput)
+        const pts = attackPoints(sol, 0, sol.tHit, 48).flatMap((p) => P(p.x, p.y))
+        const isSel = selected === 'schlag'
+        const mid = attackPoints(sol, sol.tHit / 2, sol.tHit / 2, 1)[0]
+        const midPx = worldToTop(vp, mid.x, mid.y)
+        return (
+          <Group>
+            {display.showAfterHit && sol.tGround > sol.tHit + 0.01 && (
+              <Line points={attackPoints(sol, sol.tHit, sol.tGround, 16).flatMap((p) => P(p.x, p.y))} stroke={COLORS.trajectory} strokeWidth={2} dash={[8, 6]} opacity={0.45} listening={false} />
+            )}
+            <Arrow
+              points={pts}
+              stroke={COLORS.trajectory}
+              fill={COLORS.trajectory}
+              strokeWidth={isSel ? 4 : 3}
+              pointerLength={12}
+              pointerWidth={12}
+              hitStrokeWidth={22}
+              lineCap="round"
+              lineJoin="round"
+              shadowColor="#000"
+              shadowBlur={isSel ? 10 : 4}
+              shadowOpacity={0.6}
+              onClick={() => select('schlag')}
+              onTap={() => select('schlag')}
+            />
+            {!sol.reachable && (
+              // Ziel nicht erreichbar: geplantes Ziel als Kreuz, der Ball landet woanders
+              <Text x={P(schlagInput.end.x, schlagInput.end.y)[0] - 6} y={P(schlagInput.end.x, schlagInput.end.y)[1] - 9} text="×" fontSize={18} fontStyle="bold" fill={COLORS.trajectory} listening={false} />
+            )}
+            <Text x={midPx.px - 40} y={midPx.py - 22} width={80} align="center" text="Schlag" fontSize={12} fontStyle="bold" fill={COLORS.trajectory} listening={false} />
+          </Group>
+        )
+      })()}
+      {interactive && schlagInput && (
+        <Group>
+          {!coupledSchlag && (
+            <Handle
+              {...xy(vp, schlagInput.start.x, schlagInput.start.y)}
+              hollow
+              onPick={() => select('schlag')}
+              onDrag={(e) => {
+                const w = topToWorld(vp, e.target.x(), e.target.y())
+                const c = clampToArea(w.x, w.y)
+                const s = usePlay.getState().schlag
+                if (s) setSchlag({ ...s, start: { ...s.start, x: c.x, y: c.y } })
+                e.target.position(xy(vp, c.x, c.y))
+              }}
+            />
+          )}
+          <Handle
+            {...xy(vp, schlagInput.end.x, schlagInput.end.y)}
+            onPick={() => select('schlag')}
+            onDrag={(e) => {
+              const w = topToWorld(vp, e.target.x(), e.target.y())
+              const c = clampToArea(w.x, w.y)
+              const s = usePlay.getState().schlag
+              if (s) setSchlag({ ...s, end: { x: c.x, y: c.y } })
+              e.target.position(xy(vp, c.x, c.y))
+            }}
+          />
+        </Group>
+      )}
       {/* Griffe über allen Linien (das Ende der Annahme liegt unter dem Start des Zuspiels) */}
       {interactive &&
         list.map((tv) => (

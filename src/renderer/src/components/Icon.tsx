@@ -27,6 +27,8 @@ const PATHS = {
   formation: 'M6 8h.01M12 8h.01M18 8h.01M6 16h.01M12 16h.01M18 16h.01',
   // Namen: Namensschild
   name: 'M3 7h18v10H3zM7 11h6M7 14h10',
+  // Schlag: steil nach unten mit Pfeil
+  spike: 'M4 5c6 0 10 4 14 13M18 18l.6-3.6M18 18l-3.4-1.4',
   // Laufweg: geschwungene Linie mit Pfeil
   run: 'M4 18c4 0 4-8 8-8s4-5 8-5M20 5l-3-.5M20 5l-.8 3',
   // Sprung: Pfeil nach oben über dem Boden

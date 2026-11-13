@@ -8,6 +8,8 @@ import {
   type Situation,
   type Jump,
   type RunPath,
+  type Attack,
+  type BallType,
   type Trajectory,
   type TrajectoryType
 } from '@shared/types'
@@ -25,6 +27,7 @@ import { useSettings } from './appSettings'
 import { formationKey, formationOf, laeuferLineup } from '@renderer/core/lineup/rotation'
 import { tween } from '@renderer/components/tween'
 import { clampInput, coupleTrajectories } from '@renderer/core/physics/trajectory'
+import { clampAttack } from '@renderer/core/physics/attack'
 import { useTeams } from './teamsStore'
 
 interface PlayState {
@@ -47,8 +50,12 @@ interface PlayState {
 
   /** Höchstens eine Annahme und ein Zuspiel; das Zuspiel startet am Schlagpunkt der Annahme */
   trajectories: Partial<Record<TrajectoryType, Trajectory>>
+  /** Schlag: startet am Schlagpunkt des Zuspiels */
+  schlag: Attack | null
+  setSchlag: (a: Attack) => void
+  removeSchlag: () => void
   display: PlayDisplay
-  selected: TrajectoryType | null
+  selected: BallType | null
   setTrajectory: (type: TrajectoryType, t: Trajectory) => void
   removeTrajectory: (type: TrajectoryType) => void
   /** Annahme und Zuspiel löschen */
@@ -57,7 +64,7 @@ interface PlayState {
   clearMoves: () => void
   /** Laufweg und Sprung eines Spielers löschen */
   clearPlayerMoves: (side: CourtSide, playerId: string) => void
-  select: (type: TrajectoryType | null) => void
+  select: (type: BallType | null) => void
   /** Gewählter Spieler (Karte mit Laufweg und Sprung); schließt die Flugbahn-Auswahl aus */
   selectedPlayer: { side: CourtSide; playerId: string } | null
   selectPlayer: (p: { side: CourtSide; playerId: string } | null) => void
@@ -72,6 +79,14 @@ interface PlayState {
 }
 
 const emptySide = (): PlaySide => ({ teamId: null, players: [] })
+
+/** Schlag startet am Schlagpunkt des Zuspiels (Lage und Höhe) – gibt dasselbe Objekt zurück, wenn es schon passt */
+function coupleSchlag(schlag: Attack | null, zuspiel: Trajectory | undefined): Attack | null {
+  if (!schlag || !zuspiel) return schlag
+  const s = schlag.start
+  if (s.x === zuspiel.end.x && s.y === zuspiel.end.y && s.h === zuspiel.hitH) return schlag
+  return { ...schlag, start: { x: zuspiel.end.x, y: zuspiel.end.y, h: zuspiel.hitH } }
+}
 const teamById = (id: string | null) => useTeams.getState().teams.find((t) => t.id === id)
 /** Aufstellungsregeln aktiv? (Einstellungen) */
 const rulesOn = () => useSettings.getState().settings.lineupRules
@@ -104,6 +119,7 @@ export const usePlay = create<PlayState>((set, get) => {
   return {
     sides: { A: emptySide(), B: emptySide() },
     trajectories: {},
+    schlag: null,
     display: { ...DEFAULT_DISPLAY },
     selected: null,
     selectedPlayer: null,
@@ -111,14 +127,19 @@ export const usePlay = create<PlayState>((set, get) => {
     dirty: false,
 
     setTrajectory: (type, t) =>
-      set((st) => ({ trajectories: coupleTrajectories({ ...st.trajectories, [type]: clampInput(t) }) })),
+      set((st) => {
+        const trajectories = coupleTrajectories({ ...st.trajectories, [type]: clampInput(t) })
+        return { trajectories, schlag: coupleSchlag(st.schlag, trajectories.zuspiel) }
+      }),
+    setSchlag: (a) => set((st) => ({ schlag: coupleSchlag(clampAttack(a), st.trajectories.zuspiel) })),
+    removeSchlag: () => set((st) => ({ schlag: null, selected: st.selected === 'schlag' ? null : st.selected })),
     removeTrajectory: (type) =>
       set((st) => {
         const next = { ...st.trajectories }
         delete next[type]
         return { trajectories: next, selected: st.selected === type ? null : st.selected }
       }),
-    clearTrajectories: () => set({ trajectories: {}, selected: null }),
+    clearTrajectories: () => set({ trajectories: {}, schlag: null, selected: null }),
     clearMoves: () =>
       set((st) => {
         const strip = (s: PlaySide): PlaySide =>
@@ -234,12 +255,12 @@ export const usePlay = create<PlayState>((set, get) => {
 export function isPlayEmpty(): boolean {
   const s = usePlay.getState()
   const moves = [...s.sides.A.players, ...s.sides.B.players].some((c) => c.path || c.jump)
-  return !s.trajectories.annahme && !s.trajectories.zuspiel && !moves
+  return !s.trajectories.annahme && !s.trajectories.zuspiel && !s.schlag && !moves
 }
 
 // Jede inhaltliche Änderung markiert den Spielzug als ungespeichert
 usePlay.subscribe((s, prev) => {
-  if (!s.dirty && (s.sides !== prev.sides || s.trajectories !== prev.trajectories || s.display !== prev.display))
+  if (!s.dirty && (s.sides !== prev.sides || s.trajectories !== prev.trajectories || s.schlag !== prev.schlag || s.display !== prev.display))
     usePlay.setState({ dirty: true })
 })
 

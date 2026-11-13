@@ -1,13 +1,19 @@
 import { positionAt, solveTrajectory, type SolvedTrajectory, type TrajectoryInput } from '../physics/trajectory'
+import { attackPositionAt, solveAttack, type AttackInput, type SolvedAttack } from '../physics/attack'
 
 /** Physik-Zeitschritt für Frame-für-Frame (unabhängig vom Tempo) */
 export const FRAME_DT = 1 / 60
 export const SPEEDS = [0.25, 0.5, 1, 2, 4] as const
 
+/** Ein Ballflug auf der Zeitachse: Parabel (Annahme, Zuspiel) oder Schlag (mit Drall) */
 export interface Segment<T extends string = string> {
   type: T
-  input: TrajectoryInput
-  sol: SolvedTrajectory
+  /** Parabel: Eingabe und Lösung */
+  input?: TrajectoryInput
+  sol?: SolvedTrajectory
+  /** Schlag: Eingabe und Lösung */
+  attack?: AttackInput
+  asol?: SolvedAttack
   /** Beginn und Ende auf der Gesamt-Zeitachse (s) */
   t0: number
   t1: number
@@ -18,16 +24,31 @@ export interface Timeline<T extends string = string> {
   total: number
 }
 
-/** Hängt die sichtbaren Flugbahnen nacheinander (Annahme, dann Zuspiel); jede dauert bis zu ihrem Schlagpunkt. */
-export function buildTimeline<T extends string>(list: { type: T; input: TrajectoryInput }[]): Timeline<T> {
+export type TimelineItem<T extends string> = { type: T; input: TrajectoryInput } | { type: T; attack: AttackInput }
+
+/** Hängt die sichtbaren Ballflüge nacheinander (Annahme, Zuspiel, Schlag); jeder dauert bis zu seinem Schlagpunkt/Ziel. */
+export function buildTimeline<T extends string>(list: TimelineItem<T>[]): Timeline<T> {
   let t = 0
-  const segments = list.map(({ type, input }) => {
-    const sol = solveTrajectory(input)
-    const seg = { type, input, sol, t0: t, t1: t + sol.tHit }
+  const segments = list.map((item) => {
+    if ('attack' in item) {
+      const asol = solveAttack(item.attack)
+      const seg: Segment<T> = { type: item.type, attack: item.attack, asol, t0: t, t1: t + asol.tHit }
+      t = seg.t1
+      return seg
+    }
+    const sol = solveTrajectory(item.input)
+    const seg: Segment<T> = { type: item.type, input: item.input, sol, t0: t, t1: t + sol.tHit }
     t = seg.t1
     return seg
   })
   return { segments, total: t }
+}
+
+/** Position innerhalb eines Segments zur lokalen Zeit (ab seinem Beginn) */
+export function segmentPosition<T extends string>(seg: Segment<T>, local: number): { x: number; y: number; z: number } {
+  const tl = Math.min(seg.t1 - seg.t0, Math.max(0, local))
+  if (seg.asol) return attackPositionAt(seg.asol, tl)
+  return positionAt(seg.sol!, seg.input!.start, tl)
 }
 
 /** Ballposition zur Zeit t (geklemmt auf 0..total); null ohne Flugbahn */
@@ -38,7 +59,7 @@ export function ballAt<T extends string>(
   if (tl.segments.length === 0) return null
   const tc = Math.min(tl.total, Math.max(0, t))
   const seg = tl.segments.find((s) => tc <= s.t1) ?? tl.segments[tl.segments.length - 1]
-  return { ...positionAt(seg.sol, seg.input.start, Math.min(seg.sol.tHit, tc - seg.t0)), type: seg.type }
+  return { ...segmentPosition(seg, tc - seg.t0), type: seg.type }
 }
 
 /** Nächster Zeitpunkt beim Abspielen; Schleife springt an den Anfang, sonst bleibt er am Ende stehen. */

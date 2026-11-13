@@ -5,7 +5,8 @@ import { MIN_DIST, newTrajectory } from '@renderer/core/physics/trajectory'
 import { trajectoryDefaults, useSettings } from '@renderer/store/appSettings'
 import { usePlay } from '@renderer/store/playStore'
 import { useUi } from '@renderer/store/settingsStore'
-import type { TrajectoryType } from '@shared/types'
+import type { BallType } from '@shared/types'
+import { newAttack } from '@renderer/core/physics/attack'
 
 type Pt = { x: number; y: number }
 
@@ -20,7 +21,7 @@ const THRESHOLD = { mouse: 6, pen: 6, touch: 12 } as Record<string, number>
  * (sonst verschiebt er die Ansicht – so verschiebt man nichts aus Versehen).
  * Beim Zuspiel mit vorhandener Annahme steht der Start fest (Schlagpunkt der Annahme): ein Klick setzt das Ziel.
  */
-export function useDrawTrajectory(hostRef: RefObject<HTMLElement | null>, vp: TopViewport, active: TrajectoryType | null) {
+export function useDrawTrajectory(hostRef: RefObject<HTMLElement | null>, vp: TopViewport, active: BallType | null) {
   const vpRef = useRef(vp)
   vpRef.current = vp
   const [preview, setPreview] = useState<{ a: Pt; b: Pt } | null>(null)
@@ -41,13 +42,25 @@ export function useDrawTrajectory(hostRef: RefObject<HTMLElement | null>, vp: To
       return clampToArea(w.x, w.y)
     }
     const fixedStart = (): Pt | null => {
-      const a = usePlay.getState().trajectories.annahme
-      return active === 'zuspiel' && a ? { ...a.end } : null
+      const { annahme, zuspiel } = usePlay.getState().trajectories
+      if (active === 'zuspiel' && annahme) return { ...annahme.end }
+      // Der Schlag startet am Schlagpunkt des Zuspiels
+      if (active === 'schlag' && zuspiel) return { ...zuspiel.end }
+      return null
     }
     const finish = (a: Pt, b: Pt) => {
       pendingRef.current = null
       setPreview(null)
       if (Math.hypot(b.x - a.x, b.y - a.y) < MIN_DIST) return
+      if (active === 'schlag') {
+        const z = usePlay.getState().trajectories.zuspiel
+        const h = z ? z.hitH : useSettings.getState().settings.defaultHitH
+        const play = usePlay.getState()
+        play.setSchlag(newAttack({ ...a, h }, b))
+        play.select('schlag')
+        useUi.getState().setTool('select')
+        return
+      }
       const play0 = usePlay.getState()
       const t = newTrajectory(a, b, trajectoryDefaults(active, useSettings.getState().settings, play0.trajectories.annahme))
       const play = usePlay.getState()

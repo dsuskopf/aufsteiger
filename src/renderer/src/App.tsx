@@ -12,6 +12,7 @@ import { LineupPanel } from './components/LineupPanel'
 import { TeamManager } from './components/TeamManager'
 import { TrajectoryCard } from './components/TrajectoryCard'
 import { PlayerCard } from './components/PlayerCard'
+import { SchlagCard } from './components/SchlagCard'
 import { Playbar } from './components/Playbar'
 import { SettingsDialog } from './components/SettingsDialog'
 import { useSettings } from './store/appSettings'
@@ -25,7 +26,9 @@ const HINTS = {
   annahme: 'Annahme: Klick Start, Klick Ende – oder in einem Zug ziehen · Esc bricht ab',
   zuspiel: 'Zuspiel: Klick Start, Klick Ende – oder ziehen · Esc bricht ab',
   zuspielCoupled: 'Zuspiel startet am Ende der Annahme: Ziel antippen oder hinziehen · Esc bricht ab',
-  laufweg: 'Laufweg: auf einem Spieler aufsetzen und den Weg ziehen – Kurven erlaubt'
+  laufweg: 'Laufweg: auf einem Spieler aufsetzen und den Weg ziehen – Kurven erlaubt',
+  schlag: 'Schlag: Klick Start, Klick Ziel – oder ziehen · Esc bricht ab',
+  schlagCoupled: 'Schlag startet am Schlagpunkt des Zuspiels: Ziel antippen oder hinziehen · Esc bricht ab'
 }
 
 export function App() {
@@ -34,6 +37,7 @@ export function App() {
 
   const { settingsOpen, setSettingsOpen, tool, dialog, setDialog } = useUi()
   const hasAnnahme = usePlay((s) => !!s.trajectories.annahme)
+  const hasZuspiel = usePlay((s) => !!s.trajectories.zuspiel)
 
   // Einstellungen laden und als Startwerte übernehmen (Netzhöhe, Schleife, Tempo)
   useEffect(() => {
@@ -115,11 +119,22 @@ export function App() {
         )}
         {is2d && tool !== 'select' && (
           <div className="draw-hint" role="status">
-            {tool === 'laufweg' ? HINTS.laufweg : tool === 'annahme' ? HINTS.annahme : hasAnnahme ? HINTS.zuspielCoupled : HINTS.zuspiel}
+            {tool === 'laufweg'
+              ? HINTS.laufweg
+              : tool === 'schlag'
+                ? hasZuspiel
+                  ? HINTS.schlagCoupled
+                  : HINTS.schlag
+                : tool === 'annahme'
+                  ? HINTS.annahme
+                  : hasAnnahme
+                    ? HINTS.zuspielCoupled
+                    : HINTS.zuspiel}
           </div>
         )}
         <TrajectoryCard />
         <PlayerCard />
+        <SchlagCard />
         {lineupOpen && (
           <LineupPanel onClose={() => setLineupOpen(false)} onManageTeams={() => setTeamsOpen(true)} />
         )}

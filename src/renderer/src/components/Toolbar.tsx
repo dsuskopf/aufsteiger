@@ -12,6 +12,7 @@ const TOOLS: { id: Tool; label: string; icon: IconName; title: string }[] = [
   { id: 'select', label: 'Auswählen', icon: 'pointer', title: 'Auswählen und ziehen (Spieler, Griffe)' },
   { id: 'annahme', label: 'Annahme', icon: 'arc', title: 'Annahme zeichnen: Klick Start, Klick Ende – oder ziehen' },
   { id: 'zuspiel', label: 'Zuspiel', icon: 'arc', title: 'Zuspiel zeichnen: startet am Ende der Annahme' },
+  { id: 'schlag', label: 'Schlag', icon: 'spike', title: 'Schlag zeichnen: startet am Schlagpunkt des Zuspiels, Ziel antippen' },
   { id: 'laufweg', label: 'Laufweg', icon: 'run', title: 'Laufweg: vom Spieler aus den Weg ziehen (auch in Kurven)' }
 ]
 
@@ -33,7 +34,11 @@ export function Toolbar() {
   const current = usePlay((s) => s.current)
   const dirty = usePlay((s) => s.dirty)
   const hasTrajectories = usePlay(
-    (s) => !!s.trajectories.annahme || !!s.trajectories.zuspiel || [...s.sides.A.players, ...s.sides.B.players].some((c) => c.path || c.jump)
+    (s) =>
+      !!s.trajectories.annahme ||
+      !!s.trajectories.zuspiel ||
+      !!s.schlag ||
+      [...s.sides.A.players, ...s.sides.B.players].some((c) => c.path || c.jump)
   )
 
   return (
@@ -89,7 +94,7 @@ export function Toolbar() {
       {/* Annahme, Zuspiel, Laufwege und Sprünge löschen (zweistufig: erst nachfragen, dann löschen) */}
       <ConfirmButton
           label="Flugbahnen und Laufwege löschen"
-          confirmLabel="Annahme, Zuspiel, Laufwege und Sprünge löschen?"
+          confirmLabel="Annahme, Zuspiel, Schlag, Laufwege und Sprünge löschen?"
           icon="trash"
           disabled={!hasTrajectories}
           onConfirm={() => {

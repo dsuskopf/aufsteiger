@@ -14,6 +14,7 @@ import { COLORS } from '@renderer/theme/colors'
 import { usePlay } from '@renderer/store/playStore'
 import { useBall, usePathsHidden } from '@renderer/store/playbackStore'
 import { useVisibleTrajectories, type TrajectoryView } from '@renderer/store/selectors'
+import { attackPoints, solveAttack } from '@renderer/core/physics/attack'
 import { Ball, Handle } from '../top/TrajectoryLayer'
 
 /**
@@ -25,7 +26,9 @@ import { Ball, Handle } from '../top/TrajectoryLayer'
 export function NetTrajectories({ vp, interactive = true, showBall = true }: { vp: NetViewport; interactive?: boolean; showBall?: boolean }) {
   const visible = useVisibleTrajectories()
   // „Nur Ball“ beim Abspielen: Bahnen und Griffe ausblenden
-  const list = usePathsHidden() ? [] : visible
+  const hidden = usePathsHidden()
+  const list = hidden ? [] : visible
+  const schlagInput = usePlay((s) => (s.display.showSchlag && !hidden ? s.schlag : null))
   const display = usePlay((s) => s.display)
   const selected = usePlay((s) => s.selected)
   const select = usePlay((s) => s.select)
@@ -103,6 +106,34 @@ export function NetTrajectories({ vp, interactive = true, showBall = true }: { v
           </Group>
         )
       })}
+      {schlagInput && (() => {
+        const sol = solveAttack(schlagInput)
+        const proj = (ps: { x: number; y: number; z: number }[]) => ps.flatMap((p) => { const q = netProject(vp, p.x, p.y, p.z); return [q.px, q.py] })
+        const isSel = selected === 'schlag'
+        const top = attackPoints(sol, 0, sol.tHit, 64).reduce((a, b) => (b.z > a.z ? b : a))
+        const label = at(top.x, top.y, top.z)
+        return (
+          <Group>
+            {display.showAfterHit && sol.tGround > sol.tHit + 0.01 && (
+              <Line points={proj(attackPoints(sol, sol.tHit, sol.tGround, 16))} stroke={COLORS.trajectory} strokeWidth={2} dash={DASH} opacity={0.45} listening={false} />
+            )}
+            <Line
+              points={proj(attackPoints(sol, 0, sol.tHit, 64))}
+              stroke={COLORS.trajectory}
+              strokeWidth={isSel ? 4 : 3}
+              lineCap="round"
+              lineJoin="round"
+              hitStrokeWidth={22}
+              shadowColor="#000"
+              shadowBlur={isSel ? 10 : 4}
+              shadowOpacity={0.6}
+              onClick={() => select('schlag')}
+              onTap={() => select('schlag')}
+            />
+            <Text x={label.x - 40} y={label.y - 22} width={80} align="center" text="Schlag" fontSize={12} fontStyle="bold" fill={COLORS.trajectory} listening={false} />
+          </Group>
+        )
+      })()}
       {/* Griffe über allen Linien, damit keine Bahn einen Griff verdeckt (Annahme-Schlagpunkt = Zuspiel-Start) */}
       {interactive &&
         list.map((tv) => {

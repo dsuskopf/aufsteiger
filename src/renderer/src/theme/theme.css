@@ -127,8 +127,11 @@ input[type='range'] { width: 150px; height: var(--touch); accent-color: var(--ac
 }
 .toolbar-row { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
 .toolbar-end { margin-left: auto; }
-/* Schmal (z. B. hochkant): rechte Gruppe nur mit Icons, damit alles in die erste Reihe passt */
-@media (max-width: 1100px) {
+/* Schmal: rechte Gruppe nur mit Icons, damit alles in die erste Reihe passt (fünf Werkzeuge brauchen Platz) */
+@media (max-width: 1500px) {
+  .toolbar-row:first-child { gap: 14px; }
+}
+@media (max-width: 1500px) {
   .toolbar-end .btn-label { display: none; }
   .toolbar-end button { width: var(--touch); padding: 0; }
 }
@@ -825,3 +828,4 @@ input.switch:checked::after { transform: translateX(20px); }
 .player-card .card-section { display: flex; flex-direction: column; gap: 6px; padding-top: 8px; border-top: 1px solid var(--separator); }
 .player-card .card-section .row { gap: 8px; }
 .player-card .card-section > button.plain { align-self: flex-start; }
+.traj-card .caption.warn { margin: 0; color: var(--danger, #e5484d); }

@@ -124,6 +124,26 @@ export interface Vec3 {
 }
 
 export type TrajectoryType = 'annahme' | 'zuspiel'
+/** Alle Ballflüge eines Spielzugs: Annahme, Zuspiel (Parabeln) und Schlag (mit Drall) */
+export type BallType = TrajectoryType | 'schlag'
+export const BALL_LABELS: Record<BallType, string> = { annahme: 'Annahme', zuspiel: 'Zuspiel', schlag: 'Schlag' }
+
+/**
+ * Schlag (Angriff): Start = Schlagpunkt des Zuspiels, Ziel standardmäßig auf dem Boden.
+ * Eingestellt werden Abschlaggeschwindigkeit und Drall; Winkel und höchster Punkt werden berechnet.
+ */
+export interface Attack {
+  start: { x: number; y: number; h: number }
+  end: { x: number; y: number }
+  /** Höhe am Ziel (0 = Boden) */
+  endH: number
+  /** Abschlaggeschwindigkeit in m/s */
+  speed: number
+  /** Topspin in U/s (negativ = Backspin) */
+  topspin: number
+  /** Seitendrall in U/s (positiv = Kurve nach rechts aus Sicht des Angreifers) */
+  sidespin: number
+}
 export const TRAJECTORY_TYPES: readonly TrajectoryType[] = ['annahme', 'zuspiel']
 export const TRAJECTORY_LABELS: Record<TrajectoryType, string> = { annahme: 'Annahme', zuspiel: 'Zuspiel' }
 
@@ -149,9 +169,10 @@ export interface PlayDisplay {
   showAfterHit: boolean
   /** Beim Abspielen nur den Ball zeigen, die Flugbahnen ausblenden */
   ballOnly: boolean
+  showSchlag: boolean
 }
 
-export const DEFAULT_DISPLAY: PlayDisplay = { showAnnahme: true, showZuspiel: true, showAfterHit: false, ballOnly: false }
+export const DEFAULT_DISPLAY: PlayDisplay = { showAnnahme: true, showZuspiel: true, showAfterHit: false, ballOnly: false, showSchlag: true }
 
 export interface Settings {
   schemaVersion: number
@@ -221,6 +242,7 @@ export interface PlayDoc {
   updatedAt: string
   sides: Record<CourtSide, PlaySideDoc>
   trajectories: Partial<Record<TrajectoryType, Trajectory>>
+  schlag?: Attack
   netPreset: NetPresetId
   netHeight: number
   display: PlayDisplay

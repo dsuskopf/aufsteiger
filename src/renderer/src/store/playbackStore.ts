@@ -1,9 +1,9 @@
 import { create } from 'zustand'
-import { advance, ballAt, buildTimeline, stepFrame, type Timeline } from '@renderer/core/timeline/timeline'
+import { advance, ballAt, buildTimeline, stepFrame, type Timeline, type TimelineItem } from '@renderer/core/timeline/timeline'
 import { visibleTrajectories } from './selectors'
 import { usePlay } from './playStore'
 import { motionDuration } from '@renderer/core/motion/motion'
-import type { TrajectoryType } from '@shared/types'
+import type { BallType } from '@shared/types'
 
 interface PlaybackState {
   /** Zeit auf der Gesamtachse (s) */
@@ -20,10 +20,12 @@ interface PlaybackState {
   step: (dir: 1 | -1) => void
 }
 
-/** Timeline der aktuell sichtbaren Flugbahnen (Annahme, dann Zuspiel) */
-export function currentTimeline(): Timeline<TrajectoryType> {
-  const { trajectories, display } = usePlay.getState()
-  return buildTimeline(visibleTrajectories(trajectories, display).map((v) => ({ type: v.type, input: v.input })))
+/** Timeline der aktuell sichtbaren Ballflüge (Annahme, Zuspiel, dann Schlag) */
+export function currentTimeline(): Timeline<BallType> {
+  const { trajectories, display, schlag } = usePlay.getState()
+  const items: TimelineItem<BallType>[] = visibleTrajectories(trajectories, display).map((v) => ({ type: v.type, input: v.input }))
+  if (schlag && display.showSchlag) items.push({ type: 'schlag', attack: schlag })
+  return buildTimeline(items)
 }
 
 /** Gesamtdauer des Spielzugs: Ballflug und Bewegungen der Spieler (Laufwege, Sprünge) */
@@ -35,6 +37,7 @@ export function totalDuration(): number {
 /** React-Hook: Gesamtdauer */
 export function useTotalDuration(): number {
   usePlay((s) => s.trajectories)
+  usePlay((s) => s.schlag)
   usePlay((s) => s.display)
   usePlay((s) => s.sides)
   return totalDuration()
@@ -91,7 +94,7 @@ export const usePlayback = create<PlaybackState>((set, get) => {
 
 // Ändern sich die Flugbahnen, bleibt die Zeit im gültigen Bereich
 usePlay.subscribe((s, prev) => {
-  if (s.trajectories === prev.trajectories && s.display === prev.display && s.sides === prev.sides) return
+  if (s.trajectories === prev.trajectories && s.schlag === prev.schlag && s.display === prev.display && s.sides === prev.sides) return
   const total = totalDuration()
   if (usePlayback.getState().t > total) usePlayback.setState({ t: total })
 })
@@ -103,6 +106,7 @@ usePlay.subscribe((s, prev) => {
 export function usePathsHidden(): boolean {
   const ballOnly = usePlay((s) => s.display.ballOnly)
   usePlay((s) => s.trajectories)
+  usePlay((s) => s.schlag)
   const playing = usePlayback((s) => s.playing)
   // Nur der Wahrheitswert hängt an t, damit nicht jedes Bild neu gezeichnet wird
   usePlay((s) => s.sides)
@@ -114,6 +118,7 @@ export function usePathsHidden(): boolean {
 export function useBall() {
   usePlayback((s) => s.t)
   usePlay((s) => s.trajectories)
+  usePlay((s) => s.schlag)
   usePlay((s) => s.display)
   return currentBall()
 }

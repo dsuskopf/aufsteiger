@@ -9,7 +9,7 @@ export type ViewMode = '2d' | '3d'
 export type Main2D = 'top' | 'net'
 
 /** Werkzeug der Draufsicht: auswählen/ziehen oder eine Flugbahn zeichnen */
-export type Tool = 'select' | 'annahme' | 'zuspiel' | 'laufweg'
+export type Tool = 'select' | 'annahme' | 'zuspiel' | 'schlag' | 'laufweg'
 
 interface UiState {
   /** Zonen auf dem Feldboden einblenden (welche Art: Einstellungen → Zonen) */

@@ -81,10 +81,15 @@ export function TopView({ compact = false }: { compact?: boolean }) {
     reset()
   }, [targetAngle])
   const vp = applyViewTop(base, view)
-  const preview = useDrawTrajectory(ref, vp, tool === 'annahme' || tool === 'zuspiel' ? tool : null)
+  const preview = useDrawTrajectory(ref, vp, tool === 'annahme' || tool === 'zuspiel' || tool === 'schlag' ? tool : null)
   const stroke = useDrawPath(ref, vp, tool === 'laufweg')
   // Tippen ins Leere schließt Flugbahn- und Spieler-Karte
   useEmptyTapClose(ref, stageRef)
+  // Nach einer Größenänderung alle Ebenen neu zeichnen (sonst bleiben einzelne Ebenen leer, bis man etwas bewegt)
+  useEffect(() => {
+    const id = requestAnimationFrame(() => stageRef.current?.batchDraw())
+    return () => cancelAnimationFrame(id)
+  }, [size.width, size.height])
 
   return (
     <>

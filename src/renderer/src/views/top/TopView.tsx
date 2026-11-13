@@ -111,10 +111,10 @@ export function TopView({ compact = false }: { compact?: boolean }) {
         </PipBar>
       ) : (
       <ViewControls onZoomIn={zoomIn} onZoomOut={zoomOut} onReset={reset} lead={<ViewSwapButton />}>
+        <NamesButton />
         <button title="Feld um 90° drehen" aria-label="Feld um 90 Grad drehen" onClick={rotateTop}>
           <Icon name="rotate" />
         </button>
-        <NamesButton />
         <ZonesButton />
       </ViewControls>
       )}

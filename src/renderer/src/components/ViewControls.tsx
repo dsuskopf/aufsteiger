@@ -13,7 +13,7 @@ interface Props {
 
 /**
  * Schwebende Ansichts-Steuerung oben rechts, in dieser Reihenfolge:
- * Ansicht wechseln | Zurücksetzen, +, − | Drehen bzw. Blickseite, Namen, Zonen.
+ * Ansicht wechseln | Zurücksetzen, +, − | Namen, Drehen bzw. Blickseite, Zonen.
  */
 export function ViewControls({ onZoomIn, onZoomOut, onReset, lead, children }: Props) {
   return (

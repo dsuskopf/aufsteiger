@@ -193,6 +193,7 @@ export function NetView({ compact = false }: { compact?: boolean }) {
       </label>
       <AngleSlider value={angleDeg} onChange={setAngle} />
       <ViewControls onZoomIn={zoomIn} onZoomOut={zoomOut} onReset={resetAll} lead={<ViewSwapButton />}>
+        <NamesButton />
         <button
           title={`Von Seite ${from === 'A' ? 'B' : 'A'} aufs Netz schauen`}
           aria-label={`Blickseite wechseln, aktuell von Seite ${from}`}
@@ -200,7 +201,6 @@ export function NetView({ compact = false }: { compact?: boolean }) {
         >
           <Icon name="flip" />
         </button>
-        <NamesButton />
       </ViewControls>
         </>
       )}

@@ -4,6 +4,8 @@ import { visibleTrajectories } from './selectors'
 import { usePlay } from './playStore'
 import { motionDuration } from '@renderer/core/motion/motion'
 import type { BallType } from '@shared/types'
+import { useSettings } from './appSettings'
+import { bounceTrack, solveAttack } from '@renderer/core/physics/attack'
 
 interface PlaybackState {
   /** Zeit auf der Gesamtachse (s) */
@@ -21,10 +23,18 @@ interface PlaybackState {
 }
 
 /** Timeline der aktuell sichtbaren Ballflüge (Annahme, Zuspiel, dann Schlag) */
-export function currentTimeline(): Timeline<BallType> {
+export function currentTimeline(): Timeline<BallType | 'abprall'> {
   const { trajectories, display, schlag } = usePlay.getState()
-  const items: TimelineItem<BallType>[] = visibleTrajectories(trajectories, display).map((v) => ({ type: v.type, input: v.input }))
-  if (schlag && display.showSchlag) items.push({ type: 'schlag', attack: schlag })
+  const items: TimelineItem<BallType | 'abprall'>[] = visibleTrajectories(trajectories, display).map((v) => ({ type: v.type, input: v.input }))
+  if (schlag && display.showSchlag) {
+    items.push({ type: 'schlag', attack: schlag })
+    // Abprall: trifft der Schlag den Boden, springt der Ball noch weiter (Einstellung)
+    const st = useSettings.getState().settings
+    if (st.bounce) {
+      const track = bounceTrack(solveAttack(schlag), schlag.endH, st.bounceDuration)
+      if (track) items.push({ type: 'abprall', track })
+    }
+  }
   return buildTimeline(items)
 }
 
@@ -36,6 +46,8 @@ export function totalDuration(): number {
 
 /** React-Hook: Gesamtdauer */
 export function useTotalDuration(): number {
+  useSettings((s) => s.settings.bounce)
+  useSettings((s) => s.settings.bounceDuration)
   usePlay((s) => s.trajectories)
   usePlay((s) => s.schlag)
   usePlay((s) => s.display)

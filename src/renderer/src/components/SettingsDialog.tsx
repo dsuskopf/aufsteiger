@@ -81,6 +81,32 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
             </label>
           </section>
           <section>
+            <h3 className="section-title">Schlag</h3>
+            <label className="setting-row">
+              <span className="grow">
+                Abprall nach dem Schlag
+                <span className="caption block">Trifft der Schlag den Boden, springt der Ball in der Animation weiter.</span>
+              </span>
+              <input type="checkbox" className="switch" checked={s.bounce} onChange={(e) => update({ bounce: e.target.checked })} />
+            </label>
+            {s.bounce && (
+              <label className="traj-slider">
+                <span className="row">
+                  <span className="grow">Dauer des Abpralls</span>
+                  <span className="value">{s.bounceDuration.toFixed(1).replace('.', ',')} s</span>
+                </span>
+                <input
+                  type="range"
+                  min={0.5}
+                  max={5}
+                  step={0.1}
+                  value={s.bounceDuration}
+                  onChange={(e) => update({ bounceDuration: Number(e.target.value) })}
+                />
+              </label>
+            )}
+          </section>
+          <section>
             <h3 className="section-title">Läufersystem</h3>
             <label className="setting-row">
               <span className="grow">

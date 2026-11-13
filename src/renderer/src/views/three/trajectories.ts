@@ -105,11 +105,13 @@ const _q = new THREE.Quaternion()
  * Lage des Balls zur Zeit t: Jede Flugbahn dreht ihn um die waagrechte Achse quer zur Flugrichtung
  * (Rückwärtsdrall); die Drehungen der vorherigen Flugbahnen bleiben erhalten, so springt der Ball nie.
  */
-export function ballOrientation(tl: Timeline<BallType>, t: number, out = new THREE.Quaternion()): THREE.Quaternion {
+export function ballOrientation(tl: Timeline<BallType | 'abprall'>, t: number, out = new THREE.Quaternion()): THREE.Quaternion {
   out.identity()
   for (const seg of tl.segments) {
     if (t <= seg.t0) break
     const local = Math.min(t, seg.t1) - seg.t0
+    // Abprall: keine eigene Drehung (der Ball behält die Lage nach dem Schlag)
+    if (seg.track) continue
     if (seg.asol) {
       // Schlag: echter Drall (Topspin/Backspin, Seitendrall) um seine Achse
       if (seg.asol.spinRate === 0) continue

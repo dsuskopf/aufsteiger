@@ -197,6 +197,10 @@ export interface Settings {
    * (ersetzt einen Hinterfeldspieler). Aus: freie Aufstellung.
    */
   lineupRules: boolean
+  /** Abprall nach dem Schlag, wenn er den Boden trifft (Animation läuft weiter) */
+  bounce: boolean
+  /** Dauer des Abpralls in Sekunden */
+  bounceDuration: number
   /** Läufer-Abzeichen („L2“) am Bezugs-Steller des Läufersystems zeigen */
   showLaeuferMark: boolean
   /** Art der Zonen auf dem Feldboden (eingeblendet per Button in der Ansicht) */
@@ -222,6 +226,8 @@ export const DEFAULT_SETTINGS: Settings = {
   fingerDraws: false,
   lineupRules: true,
   showLaeuferMark: false,
+  bounce: true,
+  bounceDuration: 1.5,
   zoneStyle: 'standard'
 }
 

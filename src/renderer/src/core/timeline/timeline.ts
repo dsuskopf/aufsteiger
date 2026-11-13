@@ -1,5 +1,5 @@
 import { positionAt, solveTrajectory, type SolvedTrajectory, type TrajectoryInput } from '../physics/trajectory'
-import { attackPositionAt, solveAttack, type AttackInput, type SolvedAttack } from '../physics/attack'
+import { attackPositionAt, solveAttack, trackPositionAt, type AttackInput, type SolvedAttack, type Track } from '../physics/attack'
 
 /** Physik-Zeitschritt für Frame-für-Frame (unabhängig vom Tempo) */
 export const FRAME_DT = 1 / 60
@@ -14,6 +14,8 @@ export interface Segment<T extends string = string> {
   /** Schlag: Eingabe und Lösung */
   attack?: AttackInput
   asol?: SolvedAttack
+  /** Vorberechnete Bewegung (Abprall nach dem Schlag) */
+  track?: Track
   /** Beginn und Ende auf der Gesamt-Zeitachse (s) */
   t0: number
   t1: number
@@ -24,12 +26,20 @@ export interface Timeline<T extends string = string> {
   total: number
 }
 
-export type TimelineItem<T extends string> = { type: T; input: TrajectoryInput } | { type: T; attack: AttackInput }
+export type TimelineItem<T extends string> =
+  | { type: T; input: TrajectoryInput }
+  | { type: T; attack: AttackInput }
+  | { type: T; track: Track }
 
 /** Hängt die sichtbaren Ballflüge nacheinander (Annahme, Zuspiel, Schlag); jeder dauert bis zu seinem Schlagpunkt/Ziel. */
 export function buildTimeline<T extends string>(list: TimelineItem<T>[]): Timeline<T> {
   let t = 0
   const segments = list.map((item) => {
+    if ('track' in item) {
+      const seg: Segment<T> = { type: item.type, track: item.track, t0: t, t1: t + item.track.t[item.track.t.length - 1] }
+      t = seg.t1
+      return seg
+    }
     if ('attack' in item) {
       const asol = solveAttack(item.attack)
       const seg: Segment<T> = { type: item.type, attack: item.attack, asol, t0: t, t1: t + asol.tHit }
@@ -47,6 +57,7 @@ export function buildTimeline<T extends string>(list: TimelineItem<T>[]): Timeli
 /** Position innerhalb eines Segments zur lokalen Zeit (ab seinem Beginn) */
 export function segmentPosition<T extends string>(seg: Segment<T>, local: number): { x: number; y: number; z: number } {
   const tl = Math.min(seg.t1 - seg.t0, Math.max(0, local))
+  if (seg.track) return trackPositionAt(seg.track, tl)
   if (seg.asol) return attackPositionAt(seg.asol, tl)
   return positionAt(seg.sol!, seg.input!.start, tl)
 }

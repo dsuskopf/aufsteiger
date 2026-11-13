@@ -323,6 +323,87 @@ export function netClearance(sol: SolvedAttack, netHeight: number): number | nul
   return null
 }
 
+/** Abgetastete Bewegung (Zeit ab Beginn, Weltposition) */
+export interface Track {
+  t: Float64Array
+  x: Float64Array
+  y: Float64Array
+  z: Float64Array
+}
+
+/** Stoßzahl Ball–Hallenboden (senkrecht) und verbleibender Anteil der waagerechten Geschwindigkeit je Aufprall */
+export const BOUNCE_RESTITUTION = 0.62
+export const BOUNCE_FRICTION = 0.78
+/** Rollreibung (m/s²), sobald der Ball nicht mehr springt */
+const ROLL_DECEL = 0.6
+
+/**
+ * Abprall nach dem Schlag: Der Ball springt vom Aufprallpunkt weiter (Stoßzahl, Reibung beim Aufprall,
+ * Luftwiderstand), wird mit jedem Aufprall flacher und rollt schließlich aus. Dauer in Sekunden.
+ * null, wenn der Ball am Ziel nicht den Boden berührt (Zielhöhe über 0).
+ */
+export function bounceTrack(sol: SolvedAttack, endH: number, duration: number): Track | null {
+  if (endH > 0.005 || duration <= 0) return null
+  const n = sol.t.length
+  const i = Math.max(1, Math.min(n - 1, sol.iHit))
+  const dt0 = Math.max(1e-6, sol.t[i] - sol.t[i - 1])
+  let v: V3 = [(sol.x[i] - sol.x[i - 1]) / dt0, (sol.y[i] - sol.y[i - 1]) / dt0, (sol.z[i] - sol.z[i - 1]) / dt0]
+  let p: V3 = [sol.landing.x, sol.landing.y, 0]
+  // Erster Aufprall
+  v = [v[0] * BOUNCE_FRICTION, v[1] * BOUNCE_FRICTION, Math.abs(v[2]) * BOUNCE_RESTITUTION]
+  const ts = [0]
+  const ps: V3[] = [[...p]]
+  let t = 0
+  let rolling = v[2] < 0.3
+  const dt = 1 / 240
+  while (t < duration) {
+    if (rolling) {
+      const sp = Math.hypot(v[0], v[1])
+      const ns = Math.max(0, sp - ROLL_DECEL * dt)
+      if (sp > 0) v = [(v[0] / sp) * ns, (v[1] / sp) * ns, 0]
+      p = [p[0] + v[0] * dt, p[1] + v[1] * dt, 0]
+    } else {
+      const sp = Math.hypot(v[0], v[1], v[2])
+      const k = DRAG_K * sp
+      v = [v[0] - k * v[0] * dt, v[1] - k * v[1] * dt, v[2] + (-G - k * v[2]) * dt]
+      p = [p[0] + v[0] * dt, p[1] + v[1] * dt, p[2] + v[2] * dt]
+      if (p[2] <= 0) {
+        p[2] = 0
+        v = [v[0] * BOUNCE_FRICTION, v[1] * BOUNCE_FRICTION, -v[2] * BOUNCE_RESTITUTION]
+        if (v[2] < 0.3) rolling = true
+      }
+    }
+    t += dt
+    ts.push(t)
+    ps.push([...p])
+  }
+  const m = ts.length
+  const track: Track = { t: new Float64Array(m), x: new Float64Array(m), y: new Float64Array(m), z: new Float64Array(m) }
+  for (let k = 0; k < m; k++) {
+    track.t[k] = ts[k]
+    track.x[k] = ps[k][0]
+    track.y[k] = ps[k][1]
+    track.z[k] = ps[k][2]
+  }
+  return track
+}
+
+/** Position auf einer abgetasteten Bewegung zur Zeit t (geklemmt) */
+export function trackPositionAt(tr: Track, t: number): { x: number; y: number; z: number } {
+  const n = tr.t.length
+  if (t <= 0) return { x: tr.x[0], y: tr.y[0], z: tr.z[0] }
+  if (t >= tr.t[n - 1]) return { x: tr.x[n - 1], y: tr.y[n - 1], z: tr.z[n - 1] }
+  let lo = 0
+  let hi = n - 1
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1
+    if (tr.t[mid] <= t) lo = mid
+    else hi = mid
+  }
+  const f = (t - tr.t[lo]) / Math.max(1e-12, tr.t[hi] - tr.t[lo])
+  return { x: tr.x[lo] + (tr.x[hi] - tr.x[lo]) * f, y: tr.y[lo] + (tr.y[hi] - tr.y[lo]) * f, z: tr.z[lo] + (tr.z[hi] - tr.z[lo]) * f }
+}
+
 /** Neuer Schlag vom Schlagpunkt des Zuspiels (oder frei) zum Ziel auf dem Boden */
 export function newAttack(start: { x: number; y: number; h: number }, end: { x: number; y: number }): AttackInput {
   return clampAttack({ start, end, endH: 0, speed: ATTACK_SPEED.default, topspin: 0, sidespin: 0 })

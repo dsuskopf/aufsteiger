@@ -56,3 +56,29 @@ describe('Schlag', () => {
     expect(s.tGround).toBeGreaterThan(s.tHit)
   })
 })
+
+describe('Abprall nach dem Schlag', () => {
+  it('startet am Aufprallpunkt, springt weiter in Schlagrichtung, wird flacher und dauert so lange wie eingestellt', async () => {
+    const { bounceTrack, trackPositionAt } = await import('./attack')
+    const s = solveAttack(base)
+    const tr = bounceTrack(s, 0, 1.5)!
+    expect(tr.t[tr.t.length - 1]).toBeCloseTo(1.5, 1)
+    expect(trackPositionAt(tr, 0)).toMatchObject({ x: s.landing.x, y: s.landing.y, z: 0 })
+    let maxZ = 0
+    for (let i = 0; i < tr.z.length; i++) {
+      expect(tr.z[i]).toBeGreaterThanOrEqual(0)
+      maxZ = Math.max(maxZ, tr.z[i])
+    }
+    expect(maxZ).toBeGreaterThan(0.1)
+    expect(maxZ).toBeLessThan(3.1)
+    // weiter in Schlagrichtung (Start (−1, 2) → Ziel (6, −1))
+    const end = trackPositionAt(tr, 1.5)
+    expect((end.x - s.landing.x) * 7 + (end.y - s.landing.y) * -3).toBeGreaterThan(0)
+  })
+
+  it('kein Abprall, wenn der Schlag über dem Boden endet (Zielhöhe > 0) oder die Dauer 0 ist', async () => {
+    const { bounceTrack } = await import('./attack')
+    expect(bounceTrack(solveAttack({ ...base, endH: 1 }), 1, 1.5)).toBeNull()
+    expect(bounceTrack(solveAttack(base), 0, 0)).toBeNull()
+  })
+})

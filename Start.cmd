@@ -21,5 +21,19 @@ if not exist "node_modules\" (
   )
 )
 
+if not exist "node_modules\electron\dist\electron.exe" (
+  echo Electron fehlt - wird heruntergeladen ...
+  node "node_modules\electron\install.js"
+  if errorlevel 1 (
+    echo Electron-Download fehlgeschlagen. Internetverbindung pruefen.
+    pause
+    exit /b 1
+  )
+)
+
 call npm run dev
-if errorlevel 1 pause
+if errorlevel 1 (
+  echo.
+  echo Start fehlgeschlagen - siehe Meldung oben.
+  pause
+)

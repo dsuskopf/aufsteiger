@@ -1,6 +1,7 @@
 import { TRAJECTORY_LABELS } from '@shared/types'
 import { solveAttack } from '@renderer/core/physics/attack'
 import { DEFAULT_COLOR } from '@renderer/theme/defaultColor'
+import { luminance } from '@shared/teamColors'
 import { NET_PRESETS } from '@renderer/core/geometry/court'
 import { usePlay } from '@renderer/store/playStore'
 import { useTeams } from '@renderer/store/teamsStore'
@@ -47,7 +48,7 @@ export async function buildReport(code: string, title: string): Promise<string> 
   body { margin: 0; font: 10pt/1.4 'Segoe UI', system-ui, sans-serif; color: #1b1b1f; }
   .page { page-break-after: always; height: 188mm; display: flex; flex-direction: column; gap: 4mm; }
   .page:last-child { page-break-after: auto; }
-  header { display: flex; align-items: baseline; gap: 6mm; border-bottom: 1.5pt solid ${DEFAULT_COLOR}; padding-bottom: 2mm; }
+  header { display: flex; align-items: baseline; gap: 6mm; border-bottom: 1.5pt solid ${luminance(DEFAULT_COLOR) > 0.7 ? "#9a9aa2" : DEFAULT_COLOR}; padding-bottom: 2mm; }
   .code { font-size: 20pt; font-weight: 700; }
   h1 { flex: 1; margin: 0; font-size: 15pt; font-weight: 600; }
   .meta { color: #66666e; font-size: 9pt; text-align: right; }

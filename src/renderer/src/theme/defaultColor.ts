@@ -1,8 +1,8 @@
-import { mixWhite, textOn } from '@shared/teamColors'
+import { hexToRgb, luminance, mixWhite, rgbToHex, textOn } from '@shared/teamColors'
 
 /**
  * ===================================================================================
- *  STANDARDFARBE DER APP  –  aktuell „Sand“ #d8c8a8
+ *  STANDARDFARBE DER APP  –  aktuell „Weiß“ #ffffff
  * ===================================================================================
  *  Die einzige Stelle, an der die Standardfarbe festgelegt wird. Alles andere leitet sich ab:
  *   - CSS-Variablen --accent, --accent-hover, --accent-ring, --accent-text, --on-accent
@@ -14,12 +14,19 @@ import { mixWhite, textOn } from '@shared/teamColors'
  *  Teamfarben sind davon getrennt (siehe src/shared/teamColors.ts).
  * ===================================================================================
  */
-export const DEFAULT_COLOR = '#d8c8a8'
+export const DEFAULT_COLOR = '#ffffff'
+
+/** Hover-Ton: aufhellen – bei sehr hellen Farben (z. B. Weiß) stattdessen leicht abdunkeln, damit er sichtbar bleibt. */
+function hoverTone(hex: string): string {
+  if (luminance(hex) < 0.7) return mixWhite(hex, 0.25)
+  const [r, g, b] = hexToRgb(hex)
+  return rgbToHex(r * 0.86, g * 0.86, b * 0.86)
+}
 
 /** Abgeleitete Töne der Standardfarbe */
 export const DEFAULT_COLOR_TONES = {
   base: DEFAULT_COLOR,
-  hover: mixWhite(DEFAULT_COLOR, 0.25),
+  hover: hoverTone(DEFAULT_COLOR),
   /** Schrift auf der Standardfarbe (beste Lesbarkeit) */
   on: textOn(DEFAULT_COLOR)
 } as const

@@ -22,8 +22,6 @@ export function SchlagCard() {
   const dist = Math.hypot(sol.landing.x - schlag.start.x, sol.landing.y - schlag.start.y)
   const miss = Math.hypot(sol.landing.x - schlag.end.x, sol.landing.y - schlag.end.y)
   const net = netClearance(sol, netHeight)
-  const topLabel = schlag.topspin > 0.05 ? 'Topspin' : schlag.topspin < -0.05 ? 'Backspin' : 'ohne'
-  const sideLabel = schlag.sidespin > 0.05 ? 'nach rechts' : schlag.sidespin < -0.05 ? 'nach links' : 'ohne'
 
   return (
     <aside className="traj-card" aria-label="Schlag bearbeiten">
@@ -48,22 +46,6 @@ export function SchlagCard() {
       />
       <div className="spin-row">
         <SpinPad topspin={schlag.topspin} sidespin={schlag.sidespin} onChange={(topspin, sidespin) => setSchlag({ ...schlag, topspin, sidespin })} />
-        <dl className="spin-values">
-          {/* Werte auch eintippbar: Topspin positiv / Backspin negativ, rechts positiv / links negativ */}
-          <div>
-            <dt>{topLabel === 'Backspin' ? 'Backspin (−)' : 'Topspin (+) / Back (−)'}</dt>
-            <dd>
-              <NumberField label="Topspin, negativ = Backspin" value={schlag.topspin} min={-SPIN_MAX} max={SPIN_MAX} digits={1} unit="U/s" onCommit={(v) => setSchlag({ ...schlag, ...limitSpin(v, schlag.sidespin) })} />
-            </dd>
-          </div>
-          <div>
-            <dt>{sideLabel === 'nach links' ? 'Links (−)' : 'Rechts (+) / Links (−)'}</dt>
-            <dd>
-              <NumberField label="Seitendrall, positiv = rechts" value={schlag.sidespin} min={-SPIN_MAX} max={SPIN_MAX} digits={1} unit="U/s" onCommit={(v) => setSchlag({ ...schlag, ...limitSpin(schlag.topspin, v) })} />
-            </dd>
-          </div>
-          <p className="caption">Punkt im Kreis setzen · Doppelklick = ohne Drall</p>
-        </dl>
       </div>
       <Slider
         label="Zielhöhe"
@@ -197,13 +179,6 @@ function SpinPad({ topspin, sidespin, onChange }: { topspin: number; sidespin: n
       <circle cx={px} cy={py} r={7} className="pad-dot" />
     </svg>
   )
-}
-
-/** Drall begrenzen: zusammen höchstens SPIN_MAX (wie im Kreis) */
-function limitSpin(topspin: number, sidespin: number): { topspin: number; sidespin: number } {
-  const m = Math.hypot(topspin, sidespin)
-  if (m <= SPIN_MAX) return { topspin, sidespin }
-  return { topspin: Math.round(((topspin / m) * SPIN_MAX) * 10) / 10, sidespin: Math.round(((sidespin / m) * SPIN_MAX) * 10) / 10 }
 }
 
 function Slider(props: {

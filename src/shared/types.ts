@@ -192,6 +192,8 @@ export interface Settings {
    * (ersetzt einen Hinterfeldspieler). Aus: freie Aufstellung.
    */
   lineupRules: boolean
+  /** Deckkraft der Flugbahnen in 3D in Prozent (10–100) */
+  trajectoryOpacity3d: number
   /** Abprall nach dem Schlag, wenn er den Boden trifft (Animation läuft weiter) */
   bounce: boolean
   /** Dauer des Abpralls in Sekunden */
@@ -221,6 +223,7 @@ export const DEFAULT_SETTINGS: Settings = {
   fingerDraws: false,
   lineupRules: true,
   showLaeuferMark: false,
+  trajectoryOpacity3d: 70,
   bounce: true,
   bounceDuration: 1.5,
   zoneStyle: 'standard'

@@ -2,6 +2,7 @@ import { SPEEDS, formatTime } from '@renderer/core/timeline/timeline'
 import { usePlay } from '@renderer/store/playStore'
 import { usePlayback, useTotalDuration } from '@renderer/store/playbackStore'
 import { Icon } from './Icon'
+import { NumberField } from './NumberField'
 import { speedLabel } from './SettingsDialog'
 
 /**
@@ -46,7 +47,18 @@ export function Playbar() {
         }}
       />
       <span className="time">
-        {formatTime(Math.min(t, total))} <span className="secondary">/ {formatTime(total)}</span>
+        <NumberField
+          label="Zeit in Sekunden"
+          value={Math.min(t, total)}
+          min={0}
+          max={Math.max(0, total)}
+          unit="s"
+          onCommit={(v) => {
+            pause()
+            setT(v)
+          }}
+        />{' '}
+        <span className="secondary">/ {formatTime(total)}</span>
       </span>
       <button
         className={`icon-only ${loop ? 'selected' : ''}`}

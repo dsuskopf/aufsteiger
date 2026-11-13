@@ -165,10 +165,14 @@ function ChannelInput({ label, value, onCommit }: { label: string; value: number
   const [draft, setDraft] = useState(String(value))
   useEffect(() => setDraft(String(value)), [value])
   const n = Number(draft)
-  const valid = draft.trim() !== '' && Number.isInteger(n) && n >= 0 && n <= 255
+  const valid = draft.trim() !== '' && Number.isFinite(n)
+  // Über 255 → 255
   const commit = () => {
-    if (valid) onCommit(n)
-    else setDraft(String(value))
+    if (valid) {
+      const c = Math.min(255, Math.max(0, Math.round(n)))
+      onCommit(c)
+      setDraft(String(c))
+    } else setDraft(String(value))
   }
   return (
     <label className="channel">

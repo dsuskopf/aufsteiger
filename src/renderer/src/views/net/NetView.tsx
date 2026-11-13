@@ -18,6 +18,7 @@ import type Konva from 'konva'
 import { NetTrajectories } from './NetTrajectories'
 import { hitsDraggable } from '../top/PlayersLayer'
 import { LaeuferBadge } from '../top/LaeuferBadge'
+import { NumberField } from '@renderer/components/NumberField'
 import { useEmptyTapClose } from '@renderer/components/useEmptyTapClose'
 import { usePlayback } from '@renderer/store/playbackStore'
 import { playerAt } from '@renderer/core/motion/motion'
@@ -371,7 +372,11 @@ function AngleSlider({ value, onChange, compact = false }: { value: number; onCh
           ))}
         </span>
       </span>
-      <span className="value">{value}°</span>
+      {compact ? (
+        <span className="value">{value}°</span>
+      ) : (
+        <NumberField label="Blickwinkel in Grad" value={value} min={-90} max={90} digits={0} unit="°" onCommit={onChange} />
+      )}
     </label>
   )
 }

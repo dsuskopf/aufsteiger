@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './theme/theme.css'
 import { App } from './App'
+import { installSegmentedThumbs } from './components/segmentedThumbs'
 import { applyDefaultColor } from './theme/defaultColor'
 import Konva from 'konva'
 import { usePlay } from './store/playStore'
@@ -23,3 +24,6 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>
 )
+
+// Umschalter: Auswahl gleitet weich zum neuen Button
+installSegmentedThumbs()

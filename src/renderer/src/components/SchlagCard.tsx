@@ -3,6 +3,7 @@ import { ATTACK_SPEED, END_H_MAX, SPIN_MAX, netClearance, solveAttack } from '@r
 import { usePlay } from '@renderer/store/playStore'
 import { useUi } from '@renderer/store/settingsStore'
 import { Icon } from './Icon'
+import { NumberField } from './NumberField'
 
 const fmt = (v: number, d = 2) => v.toFixed(d).replace('.', ',')
 
@@ -41,30 +42,26 @@ export function SchlagCard() {
         min={ATTACK_SPEED.min * 3.6}
         max={ATTACK_SPEED.max * 3.6}
         step={1}
-        text={`${Math.round(schlag.speed * 3.6)} km/h`}
+        digits={0}
+        unit="km/h"
         onChange={(v) => setSchlag({ ...schlag, speed: v / 3.6 })}
       />
       <div className="spin-row">
         <SpinPad topspin={schlag.topspin} sidespin={schlag.sidespin} onChange={(topspin, sidespin) => setSchlag({ ...schlag, topspin, sidespin })} />
         <dl className="spin-values">
-          {topLabel === 'ohne' && sideLabel === 'ohne' && (
-            <div>
-              <dt>Drall</dt>
-              <dd>ohne</dd>
-            </div>
-          )}
-          {topLabel !== 'ohne' && (
-            <div>
-              <dt>{topLabel}</dt>
-              <dd>{fmt(Math.abs(schlag.topspin), 1)} U/s</dd>
-            </div>
-          )}
-          {sideLabel !== 'ohne' && (
-            <div>
-              <dt>{sideLabel === 'nach rechts' ? 'Rechts' : 'Links'}</dt>
-              <dd>{fmt(Math.abs(schlag.sidespin), 1)} U/s</dd>
-            </div>
-          )}
+          {/* Werte auch eintippbar: Topspin positiv / Backspin negativ, rechts positiv / links negativ */}
+          <div>
+            <dt>{topLabel === 'Backspin' ? 'Backspin (−)' : 'Topspin (+) / Back (−)'}</dt>
+            <dd>
+              <NumberField label="Topspin, negativ = Backspin" value={schlag.topspin} min={-SPIN_MAX} max={SPIN_MAX} digits={1} unit="U/s" onCommit={(v) => setSchlag({ ...schlag, ...limitSpin(v, schlag.sidespin) })} />
+            </dd>
+          </div>
+          <div>
+            <dt>{sideLabel === 'nach links' ? 'Links (−)' : 'Rechts (+) / Links (−)'}</dt>
+            <dd>
+              <NumberField label="Seitendrall, positiv = rechts" value={schlag.sidespin} min={-SPIN_MAX} max={SPIN_MAX} digits={1} unit="U/s" onCommit={(v) => setSchlag({ ...schlag, ...limitSpin(schlag.topspin, v) })} />
+            </dd>
+          </div>
           <p className="caption">Punkt im Kreis setzen · Doppelklick = ohne Drall</p>
         </dl>
       </div>
@@ -74,7 +71,9 @@ export function SchlagCard() {
         min={0}
         max={END_H_MAX}
         step={0.01}
-        text={schlag.endH < 0.005 ? 'Boden' : `${fmt(schlag.endH)} m`}
+        digits={2}
+        unit="m"
+        display={schlag.endH < 0.005 ? 'Boden' : undefined}
         onChange={(v) => setSchlag({ ...schlag, endH: v < 0.02 ? 0 : v })}
       />
       {!sol.reachable && (
@@ -200,15 +199,32 @@ function SpinPad({ topspin, sidespin, onChange }: { topspin: number; sidespin: n
   )
 }
 
-function Slider(props: { label: string; value: number; min: number; max: number; step: number; text: string; onChange: (v: number) => void }) {
-  const { label, value, min, max, step, text, onChange } = props
+/** Drall begrenzen: zusammen höchstens SPIN_MAX (wie im Kreis) */
+function limitSpin(topspin: number, sidespin: number): { topspin: number; sidespin: number } {
+  const m = Math.hypot(topspin, sidespin)
+  if (m <= SPIN_MAX) return { topspin, sidespin }
+  return { topspin: Math.round(((topspin / m) * SPIN_MAX) * 10) / 10, sidespin: Math.round(((sidespin / m) * SPIN_MAX) * 10) / 10 }
+}
+
+function Slider(props: {
+  label: string
+  value: number
+  min: number
+  max: number
+  step: number
+  digits: number
+  unit: string
+  display?: string
+  onChange: (v: number) => void
+}) {
+  const { label, value, min, max, step, digits, unit, display, onChange } = props
   return (
     <label className="traj-slider">
       <span className="row">
         <span className="grow">{label}</span>
-        <span className="value">{text}</span>
+        <NumberField label={label} value={value} min={min} max={max} digits={digits} unit={display ? undefined : unit} display={display} onCommit={onChange} />
       </span>
-      <input type="range" min={min} max={max} step={step} value={Math.min(max, Math.max(min, value))} onChange={(e) => onChange(Number(e.target.value))} />
+      <input type="range" aria-label={label} min={min} max={max} step={step} value={Math.min(max, Math.max(min, value))} onChange={(e) => onChange(Number(e.target.value))} />
     </label>
   )
 }

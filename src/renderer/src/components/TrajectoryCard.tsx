@@ -6,12 +6,15 @@ import {
   START_H_MAX,
   hitRanges,
   moveHitAlongParabola,
+  RISE_EPS,
+  setHitHeight,
   solveTrajectory,
   type TrajectoryInput
 } from '@renderer/core/physics/trajectory'
 import { usePlay } from '@renderer/store/playStore'
 import { useUi } from '@renderer/store/settingsStore'
 import { Icon } from './Icon'
+import { NumberField } from './NumberField'
 
 const m = (v: number) => `${v.toFixed(2).replace('.', ',')} m`
 
@@ -112,7 +115,15 @@ function HitSlider({ label, input, hint, onChange }: { label: string; input: Tra
       <span className="row">
         <span className="grow">{label}</span>
         {sol.rising && <span className="tag-rising">vor dem höchsten Punkt</span>}
-        <span className="value">{m(input.hitH)}</span>
+        {/* Höhe eintippen: auf dem aktuellen Ast (steigend/fallend) */}
+        <NumberField
+          label={label}
+          value={input.hitH}
+          min={sol.rising ? input.start.h + RISE_EPS : 0}
+          max={Math.max(0.01, sol.apexH - APEX_EPS)}
+          unit="m"
+          onCommit={(h) => onChange(setHitHeight(input, h, sol.rising))}
+        />
       </span>
       <input
         type="range"
@@ -145,13 +156,14 @@ export function MeterSlider(props: {
     <label className={`traj-slider ${disabled ? 'disabled' : ''}`}>
       <span className="row">
         <span className="grow">{label}</span>
-        <span className="value">{m(value)}</span>
+        <NumberField label={label} value={value} min={min} max={max} unit="m" onCommit={onChange} />
       </span>
       <input
         type="range"
         min={min}
         max={max}
         step={0.01}
+        aria-label={label}
         value={Math.min(max, Math.max(min, value))}
         disabled={disabled}
         onChange={(e) => onChange(Number(e.target.value))}

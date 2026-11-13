@@ -6,6 +6,7 @@ import { currentTimeline, totalDuration, useTotalDuration } from '@renderer/stor
 import { useCourtPlayers } from '@renderer/store/selectors'
 import { useUi } from '@renderer/store/settingsStore'
 import { Icon } from './Icon'
+import { NumberField } from './NumberField'
 
 const fmt = (v: number, d = 2) => v.toFixed(d).replace('.', ',')
 
@@ -174,11 +175,9 @@ function ValueSlider(props: {
     <label className="traj-slider">
       <span className="row">
         <span className="grow">{label}</span>
-        <span className="value">
-          {fmt(value, digits)} {unit}
-        </span>
+        <NumberField label={label} value={value} min={min} max={max} digits={digits} unit={unit} onCommit={onChange} />
       </span>
-      <input type="range" min={min} max={max} step={step} value={Math.min(max, Math.max(min, value))} onChange={(e) => onChange(Number(e.target.value))} />
+      <input type="range" aria-label={label} min={min} max={max} step={step} value={Math.min(max, Math.max(min, value))} onChange={(e) => onChange(Number(e.target.value))} />
     </label>
   )
 }

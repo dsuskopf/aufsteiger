@@ -294,10 +294,14 @@ function HeightInput({ value, onCommit }: { value: number; onCommit: (h: number)
   const [draft, setDraft] = useState(fmt(value))
   useEffect(() => setDraft(fmt(value)), [value])
   const n = Number(draft.trim().replace(',', '.'))
-  const valid = draft.trim() !== '' && Number.isFinite(n) && n >= PLAYER_HEIGHT.min && n <= PLAYER_HEIGHT.max
+  const valid = draft.trim() !== '' && Number.isFinite(n)
+  // Zu groß oder zu klein: auf 1,00 bzw. 2,50 m setzen
   const commit = () => {
-    if (valid) onCommit(n)
-    else setDraft(fmt(value))
+    if (valid) {
+      const c = Math.min(PLAYER_HEIGHT.max, Math.max(PLAYER_HEIGHT.min, n))
+      onCommit(c)
+      setDraft(fmt(c))
+    } else setDraft(fmt(value))
   }
   return (
     <input
@@ -319,8 +323,11 @@ function NumberInput({ value, onCommit }: { value: number; onCommit: (n: number)
   useEffect(() => setDraft(String(value)), [value])
   const commit = () => {
     const n = Number(draft.trim())
-    if (draft.trim() !== '' && Number.isInteger(n) && n >= 0 && n <= 99) onCommit(n)
-    else setDraft(String(value))
+    if (draft.trim() !== '' && Number.isFinite(n)) {
+      const c = Math.min(99, Math.max(0, Math.round(n)))
+      onCommit(c)
+      setDraft(String(c))
+    } else setDraft(String(value))
   }
   return (
     <input

@@ -51,6 +51,7 @@ export function ThreeView() {
   const playersRef = useRef<PlayerItems | null>(null)
   const trajectories = useVisibleTrajectories()
   const schlag = usePlay((s) => s.schlag)
+  const pathOpacity = useSettings((s) => s.settings.trajectoryOpacity3d)
   const selected = usePlay((s) => s.selected)
   const hidePaths = usePathsHidden()
   const showZones = useUi((s) => s.showZones)
@@ -200,10 +201,10 @@ export function ThreeView() {
       ref.scene.remove(ref.trajectories)
       disposeObject(ref.trajectories)
     }
-    ref.trajectories = buildTrajectories(trajectories, selected, schlag)
+    ref.trajectories = buildTrajectories(trajectories, selected, schlag, pathOpacity / 100)
     ref.trajectories.visible = !hidePaths
     ref.scene.add(ref.trajectories)
-  }, [trajectories, selected, schlag])
+  }, [trajectories, selected, schlag, pathOpacity])
 
   // „Nur Ball“ beim Abspielen: Bahnen aus-/einblenden, ohne sie neu aufzubauen
   useEffect(() => {

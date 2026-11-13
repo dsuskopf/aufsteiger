@@ -4,6 +4,7 @@ import { NET_PRESETS, presetForHeight } from '@renderer/core/geometry/court'
 import { SPEEDS } from '@renderer/core/timeline/timeline'
 import { useSettings } from '@renderer/store/appSettings'
 import { MeterSlider } from './TrajectoryCard'
+import { NumberField } from './NumberField'
 
 export const speedLabel = (s: number) => `${Math.round(s * 100)} %`
 
@@ -81,6 +82,25 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
             </label>
           </section>
           <section>
+            <h3 className="section-title">3D-Ansicht</h3>
+            <label className="traj-slider">
+              <span className="row">
+                <span className="grow">Deckkraft der Flugbahnen</span>
+                <NumberField label="Deckkraft der Flugbahnen" value={s.trajectoryOpacity3d} min={10} max={100} digits={0} unit="%" onCommit={(v) => update({ trajectoryOpacity3d: v })} />
+              </span>
+              <input
+                type="range"
+                aria-label="Deckkraft der Flugbahnen in 3D"
+                min={10}
+                max={100}
+                step={1}
+                value={s.trajectoryOpacity3d}
+                onChange={(e) => update({ trajectoryOpacity3d: Number(e.target.value) })}
+              />
+              <span className="caption">Durchscheinende Flugbahnen verdecken Spieler und Ball weniger.</span>
+            </label>
+          </section>
+          <section>
             <h3 className="section-title">Schlag</h3>
             <label className="setting-row">
               <span className="grow">
@@ -93,7 +113,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
               <label className="traj-slider">
                 <span className="row">
                   <span className="grow">Dauer des Abpralls</span>
-                  <span className="value">{s.bounceDuration.toFixed(1).replace('.', ',')} s</span>
+                  <NumberField label="Dauer des Abpralls" value={s.bounceDuration} min={0.5} max={5} digits={1} unit="s" onCommit={(v) => update({ bounceDuration: v })} />
                 </span>
                 <input
                   type="range"

@@ -128,6 +128,7 @@ export function sanitizeSettings(raw: unknown): Settings {
     fingerDraws: bool(r.fingerDraws, d.fingerDraws),
     lineupRules: bool(r.lineupRules, d.lineupRules),
     showLaeuferMark: bool(r.showLaeuferMark, d.showLaeuferMark),
+    trajectoryOpacity3d: Math.round(num(r.trajectoryOpacity3d, d.trajectoryOpacity3d, 10, 100)),
     bounce: bool(r.bounce, d.bounce),
     bounceDuration: Math.round(num(r.bounceDuration, d.bounceDuration, 0.5, 5) * 10) / 10,
     zoneStyle: ZONE_STYLES.includes(r.zoneStyle as ZoneStyle) ? (r.zoneStyle as ZoneStyle) : d.zoneStyle

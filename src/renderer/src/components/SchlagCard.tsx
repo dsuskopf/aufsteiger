@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { ATTACK_SPEED, END_H_MAX, SPIN_MAX, netClearance, solveAttack } from '@renderer/core/physics/attack'
 import { usePlay } from '@renderer/store/playStore'
 import { useUi } from '@renderer/store/settingsStore'
@@ -43,24 +44,30 @@ export function SchlagCard() {
         text={`${Math.round(schlag.speed * 3.6)} km/h`}
         onChange={(v) => setSchlag({ ...schlag, speed: v / 3.6 })}
       />
-      <Slider
-        label="Backspin ← → Topspin"
-        value={schlag.topspin}
-        min={-SPIN_MAX}
-        max={SPIN_MAX}
-        step={0.1}
-        text={`${topLabel}${topLabel !== 'ohne' ? ` ${fmt(Math.abs(schlag.topspin), 1)} U/s` : ''}`}
-        onChange={(v) => setSchlag({ ...schlag, topspin: Math.abs(v) < 0.15 ? 0 : v })}
-      />
-      <Slider
-        label="Drall links ← → rechts"
-        value={schlag.sidespin}
-        min={-SPIN_MAX}
-        max={SPIN_MAX}
-        step={0.1}
-        text={`${sideLabel}${sideLabel !== 'ohne' ? ` ${fmt(Math.abs(schlag.sidespin), 1)} U/s` : ''}`}
-        onChange={(v) => setSchlag({ ...schlag, sidespin: Math.abs(v) < 0.15 ? 0 : v })}
-      />
+      <div className="spin-row">
+        <SpinPad topspin={schlag.topspin} sidespin={schlag.sidespin} onChange={(topspin, sidespin) => setSchlag({ ...schlag, topspin, sidespin })} />
+        <dl className="spin-values">
+          {topLabel === 'ohne' && sideLabel === 'ohne' && (
+            <div>
+              <dt>Drall</dt>
+              <dd>ohne</dd>
+            </div>
+          )}
+          {topLabel !== 'ohne' && (
+            <div>
+              <dt>{topLabel}</dt>
+              <dd>{fmt(Math.abs(schlag.topspin), 1)} U/s</dd>
+            </div>
+          )}
+          {sideLabel !== 'ohne' && (
+            <div>
+              <dt>{sideLabel === 'nach rechts' ? 'Rechts' : 'Links'}</dt>
+              <dd>{fmt(Math.abs(schlag.sidespin), 1)} U/s</dd>
+            </div>
+          )}
+          <p className="caption">Punkt im Kreis setzen · Doppelklick = ohne Drall</p>
+        </dl>
+      </div>
       <Slider
         label="Zielhöhe"
         value={schlag.endH}
@@ -93,6 +100,103 @@ export function SchlagCard() {
         </div>
       </dl>
     </aside>
+  )
+}
+
+/**
+ * Drall-Kreis: Punkt setzen oder ziehen – oben Topspin, unten Backspin, rechts/links Seitendrall.
+ * Abstand zur Mitte = Stärke (Rand = 10 U/s); nahe der Mitte rastet er auf „ohne Drall“ ein.
+ * Pfeiltasten verstellen in Schritten von 0,5 U/s.
+ */
+function SpinPad({ topspin, sidespin, onChange }: { topspin: number; sidespin: number; onChange: (topspin: number, sidespin: number) => void }) {
+  const ref = useRef<SVGSVGElement>(null)
+  const dragging = useRef<number | null>(null)
+  const SIZE = 132
+  const R = 54
+  const C = SIZE / 2
+  const toValue = (clientX: number, clientY: number) => {
+    const r = ref.current!.getBoundingClientRect()
+    let dx = ((clientX - r.left) / r.width) * SIZE - C
+    let dy = ((clientY - r.top) / r.height) * SIZE - C
+    const d = Math.hypot(dx, dy)
+    if (d > R) {
+      dx = (dx / d) * R
+      dy = (dy / d) * R
+    }
+    const k = SPIN_MAX / R
+    let side = dx * k
+    let top = -dy * k
+    // Mitte rastet ein, kleine Werte auf eine Achse
+    if (Math.hypot(side, top) < 0.6) side = top = 0
+    if (Math.abs(side) < 0.3) side = 0
+    if (Math.abs(top) < 0.3) top = 0
+    onChange(Math.round(top * 10) / 10, Math.round(side * 10) / 10)
+  }
+  const px = C + (sidespin / SPIN_MAX) * R
+  const py = C - (topspin / SPIN_MAX) * R
+  const step = (dt: number, ds: number) => {
+    let t = topspin + dt
+    let s = sidespin + ds
+    const m = Math.hypot(t, s)
+    if (m > SPIN_MAX) {
+      t = (t / m) * SPIN_MAX
+      s = (s / m) * SPIN_MAX
+    }
+    onChange(Math.round(t * 10) / 10, Math.round(s * 10) / 10)
+  }
+  return (
+    <svg
+      ref={ref}
+      className="spin-pad"
+      viewBox={`0 0 ${SIZE} ${SIZE}`}
+      width={SIZE}
+      height={SIZE}
+      role="slider"
+      tabIndex={0}
+      aria-label="Drall: oben Topspin, unten Backspin, rechts und links Seitendrall"
+      aria-valuetext={`Topspin ${topspin}, Seitendrall ${sidespin} Umdrehungen pro Sekunde`}
+      onPointerDown={(e) => {
+        if (e.button !== 0) return
+        dragging.current = e.pointerId
+        e.currentTarget.setPointerCapture(e.pointerId)
+        toValue(e.clientX, e.clientY)
+      }}
+      onPointerMove={(e) => dragging.current === e.pointerId && toValue(e.clientX, e.clientY)}
+      onPointerUp={(e) => {
+        if (dragging.current === e.pointerId) dragging.current = null
+      }}
+      onPointerCancel={() => (dragging.current = null)}
+      onDoubleClick={() => onChange(0, 0)}
+      onKeyDown={(e) => {
+        const d = 0.5
+        if (e.key === 'ArrowUp') step(d, 0)
+        else if (e.key === 'ArrowDown') step(-d, 0)
+        else if (e.key === 'ArrowRight') step(0, d)
+        else if (e.key === 'ArrowLeft') step(0, -d)
+        else if (e.key === 'Home' || e.key === '0') onChange(0, 0)
+        else return
+        e.preventDefault()
+      }}
+    >
+      <circle cx={C} cy={C} r={R} className="pad-ring" />
+      <circle cx={C} cy={C} r={R / 2} className="pad-mid" />
+      <line x1={C - R} y1={C} x2={C + R} y2={C} className="pad-axis" />
+      <line x1={C} y1={C - R} x2={C} y2={C + R} className="pad-axis" />
+      <text x={C} y={C - R - 4} className="pad-label" textAnchor="middle">
+        Top
+      </text>
+      <text x={C} y={C + R + 11} className="pad-label" textAnchor="middle">
+        Back
+      </text>
+      <text x={C - R - 4} y={C + 3} className="pad-label" textAnchor="end">
+        L
+      </text>
+      <text x={C + R + 4} y={C + 3} className="pad-label" textAnchor="start">
+        R
+      </text>
+      {(topspin !== 0 || sidespin !== 0) && <line x1={C} y1={C} x2={px} y2={py} className="pad-vector" />}
+      <circle cx={px} cy={py} r={7} className="pad-dot" />
+    </svg>
   )
 }
 

@@ -260,10 +260,13 @@ export function Net({ vp, netHeight }: { vp: NetViewport; netHeight: number }) {
       {[-postY, postY].map((y) => (
         <Line key={y} points={[...P(y, 0), ...P(y, top + 0.1)]} stroke="#55555c" strokeWidth={Math.max(3, 2 * COURT.postRadius * s)} lineCap="round" />
       ))}
-      {/* Spannseile zum Pfosten */}
-      {[-1, 1].map((d) => (
-        <Line key={`c${d}`} points={[...P(d * half, top - 0.03), ...P(d * postY, top - 0.03)]} stroke="#8a8a92" strokeWidth={1} />
-      ))}
+      {/* Abspannseile oben und unten vom Netz zu den Pfosten, unauffällig grau wie die Pfosten */}
+      {[-1, 1].flatMap((d) => [
+        <Line key={`ct${d}`} points={[...P(d * half, top - 0.035), ...P(d * postY, top - 0.035)]} stroke="#6a6a72" strokeWidth={Math.max(1.2, 0.012 * s)} />,
+        <Line key={`cb${d}`} points={[...P(d * half, bottom), ...P(d * postY, bottom)]} stroke="#6a6a72" strokeWidth={Math.max(1.2, 0.012 * s)} />
+      ])}
+      {/* Netzfläche als leichter Schleier: Spieler dahinter stehen sichtbar hinter dem Netz */}
+      <Line points={[...P(-half, bottom), ...P(half, bottom), ...P(half, top), ...P(-half, top)]} closed fill="#c8c8d0" opacity={0.16} />
       {mesh}
       {/* Netzoberkante (7 cm) und Unterkante */}
       <Line points={[...P(-half, top - 0.035), ...P(half, top - 0.035)]} stroke="#d9d9de" strokeWidth={Math.max(2, 0.07 * s)} />
@@ -309,7 +312,7 @@ export function PlayerFigure({ vp, p, dim = false }: { vp: NetViewport; p: Court
   // Der Kopf wächst nur für die Lesbarkeit über die echte Größe hinaus (min. 12 px Radius)
   const r = Math.max(12, headR)
   return (
-    <Group opacity={dim ? 0.4 : 1}>
+    <Group opacity={dim ? 0.6 : 1}>
       <Rect
         x={foot.px - w / 2}
         y={foot.py - h}

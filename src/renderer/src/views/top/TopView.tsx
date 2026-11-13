@@ -182,9 +182,13 @@ export function CourtLayer({ vp }: { vp: TopViewport }) {
         />
       ))}
       <ZoneMarks vp={vp} />
-      {/* Netz (über die Mittellinie hinaus bis zu den Pfosten) */}
+      {/* Abspannseile vom Netz zu den Pfosten: dünn und grau wie die Pfosten */}
+      {[-1, 1].map((d) => (
+        <Line key={d} points={[...P(0, (d * COURT.netWidth) / 2), ...P(0, d * postY)]} stroke="#6a6a72" strokeWidth={Math.max(1, lw * 0.6)} />
+      ))}
+      {/* Netz (9,50 m breit, über die Seitenlinien hinaus) */}
       <Line
-        points={[...P(0, -postY), ...P(0, postY)]}
+        points={[...P(0, -COURT.netWidth / 2), ...P(0, COURT.netWidth / 2)]}
         stroke={COLORS.net}
         strokeWidth={Math.max(2, lw * 1.6)}
         opacity={0.85}

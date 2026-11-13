@@ -13,8 +13,8 @@ import { useCourtPlayers } from '@renderer/store/selectors'
 import { CylinderPlayerFactory, placePlayer, setLaeuferMark, showNameTag, visualKey, type PlayerMeshFactory } from './players'
 import { useVisibleTrajectories } from '@renderer/store/selectors'
 import { usePlay } from '@renderer/store/playStore'
-import { currentBall, currentTimeline, usePathsHidden, usePlayback } from '@renderer/store/playbackStore'
-import { ballOrientation, buildBall, buildTrajectories, placeBall } from './trajectories'
+import { currentBall, currentTimeline, totalDuration, usePathsHidden, usePlayback } from '@renderer/store/playbackStore'
+import { ballOrientation, buildBall, buildTrajectories, placeBall, updateTrajectoryProgress } from './trajectories'
 import { buildZones, orientZoneLabels } from './zones'
 import { playerAt, pathCurve } from '@renderer/core/motion/motion'
 import { worldToThree } from '@renderer/core/geometry/transform'
@@ -114,8 +114,13 @@ export function ThreeView() {
 
     // Ball folgt der Uhr ohne React-Neuzeichnung (Position und Drall)
     const spin = new THREE.Quaternion()
-    const updateBall = () =>
-      placeBall(ball, currentBall(), ballOrientation(currentTimeline(), usePlayback.getState().t, spin))
+    const updateBall = () => {
+      const tl = currentTimeline()
+      const t = usePlayback.getState().t
+      placeBall(ball, currentBall(), ballOrientation(tl, t, spin))
+      // Schon geflogener Teil der Bahnen blass, Lücke um den Ball
+      updateTrajectoryProgress(sceneRef.current?.trajectories ?? null, tl, t, totalDuration())
+    }
     updateBall()
     const unsubA = usePlayback.subscribe(updateBall)
     const unsubB = usePlay.subscribe(updateBall)
@@ -202,6 +207,7 @@ export function ThreeView() {
       disposeObject(ref.trajectories)
     }
     ref.trajectories = buildTrajectories(trajectories, selected, schlag, pathOpacity / 100)
+    updateTrajectoryProgress(ref.trajectories, currentTimeline(), usePlayback.getState().t, totalDuration())
     ref.trajectories.visible = !hidePaths
     ref.scene.add(ref.trajectories)
   }, [trajectories, selected, schlag, pathOpacity])

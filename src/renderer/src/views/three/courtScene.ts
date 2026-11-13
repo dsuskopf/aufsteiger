@@ -82,6 +82,18 @@ export function buildNet(netHeight: number): THREE.Group {
     g.add(post)
   }
 
+  // Abspannseile oben und unten vom Netzende zum Pfosten, grau wie die Pfosten
+  const ropeMat = new THREE.MeshStandardMaterial({ color: '#55555c', metalness: 0.3, roughness: 0.6 })
+  const ropeLen = postY - COURT.netWidth / 2
+  for (const side of [-1, 1])
+    for (const h of [netHeight - 0.035, netHeight - COURT.netBandDepth]) {
+      const rope = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, ropeLen, 8), ropeMat)
+      rope.rotation.x = Math.PI / 2
+      const [tx, , tz] = worldToThree(0, side * (COURT.netWidth / 2 + ropeLen / 2), 0)
+      rope.position.set(tx, h, tz)
+      g.add(rope)
+    }
+
   for (const side of [-1, 1]) g.add(buildAntenna(netHeight, side))
   return g
 }

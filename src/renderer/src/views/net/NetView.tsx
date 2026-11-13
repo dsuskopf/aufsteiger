@@ -11,7 +11,7 @@ import { ViewControls } from '@renderer/components/ViewControls'
 import { Icon } from '@renderer/components/Icon'
 import { PipBar } from '@renderer/components/PipBar'
 import { useUi } from '@renderer/store/settingsStore'
-import { NamesButton } from '@renderer/components/ViewToggles'
+import { NamesButton, ViewSwapButton } from '@renderer/components/ViewToggles'
 import { useCourtPlayers, useLaeuferMarkers, type CourtPlayerView } from '@renderer/store/selectors'
 import { useEffect, useRef } from 'react'
 import type Konva from 'konva'
@@ -201,6 +201,7 @@ export function NetView({ compact = false }: { compact?: boolean }) {
           <Icon name="flip" />
         </button>
         <NamesButton />
+        <ViewSwapButton />
       </ViewControls>
         </>
       )}

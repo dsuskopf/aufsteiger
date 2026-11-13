@@ -4,6 +4,18 @@ import { Icon } from './Icon'
 
 const STYLE_LABEL = { standard: '1–6', advanced: '1–9', letters: '1–9 mit A–D' } as const
 
+/** 2D: große Ansicht wechseln (Draufsicht ↔ Netzansicht); die andere erscheint im Pop-up */
+export function ViewSwapButton() {
+  const main = useUi((s) => s.main2D)
+  const swap = useUi((s) => s.swapMain2D)
+  const title = main === 'top' ? 'Zur Netzansicht wechseln (Draufsicht ins Pop-up)' : 'Zur Draufsicht wechseln (Netzansicht ins Pop-up)'
+  return (
+    <button title={title} aria-label={title} onClick={swap}>
+      <Icon name="swap" />
+    </button>
+  )
+}
+
 /** Namen der Spieler ein-/ausblenden (Spieler ohne Namen zeigen nichts) */
 export function NamesButton() {
   const show = useUi((s) => s.showNames)

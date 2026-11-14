@@ -6,6 +6,7 @@ import { useSettings } from './appSettings'
 import { usePlayback } from './playbackStore'
 import { inferSlots } from '@renderer/core/lineup/lineup'
 import { clearHistory } from './history'
+import { netOrient, yawFromOrient } from '@renderer/core/geometry/transform'
 
 /** Aktuellen Spielzug als speicherbares Dokument (Teams als Referenz + Kopie) */
 export function currentDoc(meta: { id: string; code: string; title: string; createdAt: string }): PlayDoc {
@@ -27,8 +28,9 @@ export function currentDoc(meta: { id: string; code: string; title: string; crea
     netPreset: ui.netPreset,
     netHeight: ui.netHeight,
     display: play.display,
-    netViewFrom: ui.netViewFrom,
-    netAngle: ui.netAngle,
+    // Gespeichert als Blickseite + Drehung (−90° … 90°) – so lesen auch ältere Fassungen den Blickwinkel
+    netViewFrom: netOrient(ui.netYaw).from,
+    netAngle: Math.round(netOrient(ui.netYaw).angleDeg),
     netShowPlayers: ui.netShowPlayers
   }
 }
@@ -64,7 +66,7 @@ export function openDoc(doc: PlayDoc): void {
   usePlayback.setState({ t: 0 })
   const ui = useUi.getState()
   ui.setNetHeight(doc.netHeight)
-  useUi.setState({ netViewFrom: doc.netViewFrom, netAngle: doc.netAngle, netShowPlayers: doc.netShowPlayers, tool: 'select' })
+  useUi.setState({ netYaw: yawFromOrient(doc.netViewFrom, doc.netAngle), netShowPlayers: doc.netShowPlayers, tool: 'select' })
   usePlay.setState({
     sides: { A: strip('A'), B: strip('B') },
     trajectories: doc.trajectories,
@@ -133,6 +135,6 @@ export async function deletePlay(id: string): Promise<void> {
 
 // Netzhöhe und Netzansicht gehören zum Spielzug: Änderungen gelten als ungespeichert
 useUi.subscribe((s, prev) => {
-  if (s.netHeight !== prev.netHeight || s.netViewFrom !== prev.netViewFrom || s.netAngle !== prev.netAngle || s.netShowPlayers !== prev.netShowPlayers)
+  if (s.netHeight !== prev.netHeight || s.netYaw !== prev.netYaw || s.netShowPlayers !== prev.netShowPlayers)
     if (!usePlay.getState().dirty) usePlay.setState({ dirty: true })
 })

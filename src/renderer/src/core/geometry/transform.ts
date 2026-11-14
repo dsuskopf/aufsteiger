@@ -159,6 +159,30 @@ export interface NetViewport {
 
 export const NET_ANGLE_MAX = Math.PI / 2
 
+/** Blickwinkel in Grad auf 0 … <360 bringen */
+export function normYaw(deg: number): number {
+  if (!Number.isFinite(deg)) return 0
+  const d = ((deg % 360) + 360) % 360
+  return d >= 360 - 1e-9 ? 0 : d
+}
+
+/**
+ * Freier Blickwinkel rundum (Grad: 0 = frontal von A, 180 = frontal von B) → Blickseite und Drehung (−90° … 90°).
+ * Die Blickrichtung ist dabei durchgehend: Seite + Drehung ergibt immer genau den Winkel.
+ */
+export function netOrient(yawDeg: number): { from: 'A' | 'B'; angleDeg: number; angle: number } {
+  let d = normYaw(yawDeg)
+  if (d > 180) d -= 360
+  const from = Math.abs(d) <= 90 ? 'A' : 'B'
+  const angleDeg = from === 'A' ? d : d > 0 ? d - 180 : d + 180
+  return { from, angleDeg, angle: (angleDeg * Math.PI) / 180 }
+}
+
+/** Umkehrung von netOrient (z. B. beim Laden eines Spielzugs) */
+export function yawFromOrient(from: 'A' | 'B', angleDeg: number): number {
+  return normYaw((from === 'B' ? 180 : 0) + angleDeg)
+}
+
 /** Blickrichtung (Einheitsvektor in der Bodenebene) */
 export function netViewDir(vp: Pick<NetViewport, 'from' | 'angle'>): { dx: number; dy: number } {
   const th = (vp.from === 'A' ? 0 : Math.PI) + (vp.angle ?? 0)

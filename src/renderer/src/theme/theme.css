@@ -291,7 +291,8 @@ input[type='range'] { width: 150px; height: var(--touch); accent-color: var(--ac
   font-weight: 600;
   cursor: pointer;
 }
-.net-angle {
+/* Netzansicht: Kompass unten in der Mitte (Standpunkt des Betrachters, Name des Blickwinkels) */
+.net-compass {
   position: absolute;
   left: 50%;
   bottom: 10px;
@@ -299,9 +300,9 @@ input[type='range'] { width: 150px; height: var(--touch); accent-color: var(--ac
   z-index: 3;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-height: var(--touch);
-  padding: 0 14px;
+  padding: 0 14px 0 6px;
   border-radius: 999px;
   background: var(--glass);
   backdrop-filter: blur(16px);
@@ -309,18 +310,12 @@ input[type='range'] { width: 150px; height: var(--touch); accent-color: var(--ac
   color: var(--label-2);
   font-size: 13px;
   font-weight: 600;
+  white-space: nowrap;
 }
-.net-angle .angle-track { position: relative; display: block; width: 200px; height: 34px; }
-.net-angle input[type='range'] { position: absolute; left: 0; top: -2px; width: 100%; height: 26px; margin: 0; }
-/* Markierungen: Strich unter der Spur, Gradzahl darunter; der Daumen ist ca. 16 px breit → Rand einrechnen */
-.angle-ticks { position: absolute; left: 8px; right: 8px; top: 20px; height: 14px; pointer-events: none; }
-.angle-ticks .tick { position: absolute; top: 0; width: 1px; height: 5px; background: var(--label-2); transform: translateX(-0.5px); }
-.angle-ticks .tick.on { background: var(--accent); }
-.angle-ticks .tick-label { position: absolute; top: 4px; left: 50%; transform: translateX(-50%); font-size: 9px; line-height: 1; color: var(--label-2); white-space: nowrap; }
-.angle-ticks .tick.on .tick-label { color: var(--accent-text); }
-.net-angle.compact { bottom: 6px; min-height: 40px; gap: 6px; padding: 0 10px; }
-.net-angle.compact .angle-track { width: 150px; }
-.net-angle .value { min-width: 40px; text-align: right; color: var(--label); font-variant-numeric: tabular-nums; }
+.net-compass:hover:not(:disabled) { background: var(--glass); color: var(--label); }
+.net-compass svg { flex: none; }
+.net-compass .value { color: var(--label); font-variant-numeric: tabular-nums; }
+.net-compass.compact { bottom: 6px; min-height: 36px; gap: 6px; padding: 0 10px 0 4px; font-size: 12px; }
 .pane-check input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); cursor: pointer; }
 .pane-hint {
   position: absolute;

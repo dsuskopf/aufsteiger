@@ -1,6 +1,7 @@
 import { Toolbar } from './components/Toolbar'
 import { TopView } from './views/top/TopView'
 import { NetView } from './views/net/NetView'
+import { netYawLabel } from './views/net/netAngles'
 import { Icon } from './components/Icon'
 import { PipWindow } from './components/PipWindow'
 import { ThreeView } from './views/three/ThreeView'
@@ -36,7 +37,7 @@ const HINTS = {
 
 export function App() {
   const viewMode = useUi((s) => s.viewMode)
-  const { teamsOpen, setTeamsOpen, netViewFrom, netPipCollapsed, setNetPipCollapsed, sidebarOpen } = useUi()
+  const { teamsOpen, setTeamsOpen, netPipCollapsed, setNetPipCollapsed, sidebarOpen } = useUi()
 
   const { settingsOpen, setSettingsOpen, tool, dialog, setDialog } = useUi()
   const hasAnnahme = usePlay((s) => !!s.trajectories.annahme)
@@ -129,8 +130,8 @@ export function App() {
   const is2d = viewMode === '2d'
   const show3d = viewMode === '3d'
   const main2D = useUi((s) => s.main2D)
-  const netAngle = useUi((s) => s.netAngle)
-  const netTitle = `Netz · Blick von ${netViewFrom}${netAngle ? ` · ${netAngle > 0 ? '+' : ''}${netAngle}°` : ''}`
+  const netYaw = useUi((s) => s.netYaw)
+  const netTitle = `Netz · ${netYawLabel(netYaw)}`
   const pipTitle = main2D === 'top' ? netTitle : 'Draufsicht'
 
   return (

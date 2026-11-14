@@ -8,6 +8,7 @@ import { useTeams } from '@renderer/store/teamsStore'
 import { useUi } from '@renderer/store/settingsStore'
 import { visibleTrajectories } from '@renderer/store/selectors'
 import { snapshotNet, snapshotsThree, snapshotTop } from './snapshots'
+import { netYawLabel } from '@renderer/views/net/netAngles'
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
 const m = (v: number) => `${v.toFixed(2).replace('.', ',')} m`
@@ -74,7 +75,7 @@ export async function buildReport(code: string, title: string): Promise<string> 
     </div>
     <div class="row">
       <figure><figcaption>Draufsicht</figcaption><div class="img"><img src="${top}"></div></figure>
-      <figure><figcaption>Netzansicht · Blick von ${ui.netViewFrom}${ui.netAngle ? ` · ${ui.netAngle}°` : ''}</figcaption><div class="img"><img src="${net}"></div></figure>
+      <figure><figcaption>Netzansicht · ${esc(netYawLabel(ui.netYaw))}</figcaption><div class="img"><img src="${net}"></div></figure>
     </div>
     ${
       rows

@@ -2,13 +2,12 @@ import type { ReactElement } from 'react'
 import { Circle, Group, Layer, Line, Rect, Stage, Text } from 'react-konva'
 import { HEAD_DIAMETER } from '@shared/types'
 import { COURT } from '@renderer/core/geometry/court'
-import { applyViewNet, isNearSide, netDepth, netHalfExtent, netProject, netToPx, type NetViewport } from '@renderer/core/geometry/transform'
+import { applyViewNet, isNearSide, netDepth, netHalfExtent, netOrient, netProject, netToPx, type NetViewport } from '@renderer/core/geometry/transform'
 import { tween } from '@renderer/components/tween'
 import { COLORS } from '@renderer/theme/colors'
 import { useElementSize } from '@renderer/components/useElementSize'
 import { useZoomPan } from '@renderer/components/useZoomPan'
 import { ViewControls } from '@renderer/components/ViewControls'
-import { Icon } from '@renderer/components/Icon'
 import { PipBar } from '@renderer/components/PipBar'
 import { useUi } from '@renderer/store/settingsStore'
 import { NamesButton, ViewSwapButton } from '@renderer/components/ViewToggles'
@@ -18,7 +17,8 @@ import type Konva from 'konva'
 import { NetTrajectories } from './NetTrajectories'
 import { hitsDraggable } from '../top/PlayersLayer'
 import { LaeuferBadge } from '../top/LaeuferBadge'
-import { NumberField } from '@renderer/components/NumberField'
+import { typingTarget } from '../three/keyCamera'
+import { NET_ANGLES, NET_KEY_HELP, netYawLabel } from './netAngles'
 import { useEmptyTapClose } from '@renderer/components/useEmptyTapClose'
 import { usePlayback, useScene } from '@renderer/store/playbackStore'
 import { planAt } from '@renderer/core/motion/plan'
@@ -29,11 +29,11 @@ export const HALF_W = COURT.halfWidth + COURT.freeZone
 const Z_MAX = 25
 const PAD_X = 16
 const PAD_T = 44
-/** Unten Platz für „Spieler“ und den Dreh-Regler, damit der Boden frei bleibt */
+/** Unten Platz für „Spieler“ und den Kompass, damit der Boden frei bleibt */
 const PAD_B = 64
 /** Kompakt (Pop-up): wenig Rand, die Bedienleiste liegt in der Kopfleiste darüber */
 const PAD_T_COMPACT = 12
-/** Kompakt unten: Platz für den Dreh-Regler */
+/** Kompakt unten: Platz für den Kompass */
 const PAD_B_COMPACT = 52
 /** Kompakt: sichtbare Höhe, an die das Netz angepasst wird (Netz, Antennen und typische Flugkurven) */
 const Z_COMPACT = 8
@@ -41,7 +41,7 @@ const Z_COMPACT = 8
 const BODY_WIDTH = 0.5
 
 /**
- * Netzansicht: flacher, maßstabstreuer Blick frontal aufs Netz aus dem Feld (Standard: von Seite A).
+ * Netzansicht: flacher, maßstabstreuer Blick aufs Netz – frei rundum drehbar (Standard: frontal von Seite A).
  * Horizontal = Feldbreite, vertikal = Höhe. So sieht man Flugkurven parallel zum Netz.
  * Zeichenreihenfolge = Tiefe: Spieler der anderen Seite, Netz, Spieler der eigenen Seite.
  * Darüber Flugbahnen, Ball und die Griffe für Starthöhe, Scheitel und Schlagpunkt.
@@ -49,8 +49,6 @@ const BODY_WIDTH = 0.5
 export function NetView({ compact = false }: { compact?: boolean }) {
   const [ref, size] = useElementSize<HTMLDivElement>()
   const netHeight = useUi((s) => s.netHeight)
-  const from = useUi((s) => s.netViewFrom)
-  const toggleFrom = useUi((s) => s.toggleNetViewFrom)
   const showPlayers = useUi((s) => s.netShowPlayers)
   const setShowPlayers = useUi((s) => s.setNetShowPlayers)
   const basePlayers = useCourtPlayers()
@@ -65,9 +63,10 @@ export function NetView({ compact = false }: { compact?: boolean }) {
         return { ...p, x: at.x, y: at.y, lift: at.z }
       })
     : basePlayers
-  const angleDeg = useUi((s) => s.netAngle)
-  const setAngle = useUi((s) => s.setNetAngle)
-  const angle = (angleDeg * Math.PI) / 180
+  const yaw = useUi((s) => s.netYaw)
+  const setYaw = useUi((s) => s.setNetYaw)
+  // Freier Blickwinkel rundum → Blickseite (wer steht vorn) und Drehung
+  const { from, angle } = netOrient(yaw)
   // Sichtbare halbe Breite hängt von der Drehung ab (seitlich sieht man die ganze Feldlänge)
   const halfW = netHalfExtent({ from, angle }, COURT.halfLength + COURT.freeZone, HALF_W)
 
@@ -99,7 +98,26 @@ export function NetView({ compact = false }: { compact?: boolean }) {
   const stageRef = useRef<Konva.Stage>(null)
   const vp = applyViewNet(base, view)
 
-  // Drehen: waagerecht ziehen mit Maus/Stift auf freier Fläche (Finger nur, solange nicht hineingezoomt ist)
+  // Kamerafahrt zu einem festen Blickwinkel (kürzester Weg); Ziehen und Tasten brechen sie ab
+  const flightRef = useRef<(() => void) | null>(null)
+  const stopFlight = () => {
+    flightRef.current?.()
+    flightRef.current = null
+  }
+  const flyTo = (target: number) => {
+    stopFlight()
+    const a0 = useUi.getState().netYaw
+    let d = (target - a0) % 360
+    if (d > 180) d -= 360
+    if (d < -180) d += 360
+    if (Math.abs(d) < 0.5) return setYaw(target)
+    flightRef.current = tween(Math.min(600, 250 + Math.abs(d) * 2), (k) => setYaw(k >= 1 ? target : a0 + d * k))
+  }
+  const flyRef = useRef(flyTo)
+  flyRef.current = flyTo
+  useEffect(() => stopFlight, [])
+
+  // Drehen: waagerecht ziehen mit Maus/Stift auf freier Fläche (Finger nur, solange nicht hineingezoomt ist) – rundum, ohne Anschlag
   const zoomedRef = useRef(false)
   zoomedRef.current = view.z > 1.001
   useEffect(() => {
@@ -109,11 +127,13 @@ export function NetView({ compact = false }: { compact?: boolean }) {
     const onDown = (e: PointerEvent) => {
       const ok = (e.pointerType === 'touch' && !zoomedRef.current) || (e.pointerType !== 'touch' && e.button === 0)
       if (!ok || drag || hitsDraggable(stageRef.current, e.clientX, e.clientY)) return
-      drag = { id: e.pointerId, x: e.clientX, a0: useUi.getState().netAngle }
+      stopFlight()
+      drag = { id: e.pointerId, x: e.clientX, a0: useUi.getState().netYaw }
     }
     const onMove = (e: PointerEvent) => {
       if (!drag || e.pointerId !== drag.id) return
-      setAngle(Math.round(drag.a0 + (e.clientX - drag.x) * 0.35))
+      // Das Feld folgt der Maus: nach rechts ziehen schiebt das Bild nach rechts
+      setYaw(Math.round(drag.a0 - (e.clientX - drag.x) * 0.35))
     }
     const onUp = (e: PointerEvent) => {
       if (drag && e.pointerId === drag.id) drag = null
@@ -128,7 +148,27 @@ export function NetView({ compact = false }: { compact?: boolean }) {
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onUp)
     }
-  }, [ref, compact, setAngle])
+  }, [ref, compact, setYaw])
+
+  // Tastatur: 1–8 feste Blickwinkel rund ums Feld, Q/E drehen (Shift = schneller)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || typingTarget(e)) return
+      const ui = useUi.getState()
+      if (ui.dialog || ui.teamsOpen || ui.settingsOpen) return
+      const n = /^(?:Digit|Numpad)([1-8])$/.exec(e.code)
+      if (n && !e.repeat) {
+        e.preventDefault()
+        flyRef.current(NET_ANGLES[Number(n[1]) - 1].yaw)
+      } else if (e.code === 'KeyQ' || e.code === 'KeyE') {
+        e.preventDefault()
+        stopFlight()
+        ui.setNetYaw(Math.round(ui.netYaw + (e.code === 'KeyE' ? 1 : -1) * (e.shiftKey ? 9 : 3)))
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   // Tippen ins Leere schließt Flugbahn- und Spieler-Karte
   useEmptyTapClose(ref, stageRef)
@@ -138,10 +178,10 @@ export function NetView({ compact = false }: { compact?: boolean }) {
     return () => cancelAnimationFrame(id)
   }, [size.width, size.height])
 
+  // Zurücksetzen: Zoom weg und zurück zum Standard (frontal von A)
   const resetAll = () => {
     reset()
-    const a0 = useUi.getState().netAngle
-    if (a0 !== 0) tween(400, (k) => setAngle(a0 * (1 - k)))
+    flyTo(0)
   }
 
   // Nach Tiefe zeichnen (Maler-Algorithmus): vom Betrachter am weitesten entfernt zuerst.
@@ -170,40 +210,25 @@ export function NetView({ compact = false }: { compact?: boolean }) {
       </div>
       {compact ? (
         <>
-        {/* Kompakte Leiste im Pop-up: Spieler, Blickseite, Tauschen, Minimieren; unten Drehen */}
-        <PipBar>
-          <label className="pip-check">
-            <input type="checkbox" checked={showPlayers} onChange={(e) => setShowPlayers(e.target.checked)} />
-            Spieler
-          </label>
-          <button
-            className="icon-only"
-            title={`Von Seite ${from === 'A' ? 'B' : 'A'} aufs Netz schauen`}
-            aria-label={`Blickseite wechseln, aktuell von Seite ${from}`}
-            onClick={toggleFrom}
-          >
-            <Icon name="flip" />
-          </button>
-        </PipBar>
-        <AngleSlider value={angleDeg} onChange={setAngle} compact />
+          {/* Kompakte Leiste im Pop-up: Spieler, Tauschen, Minimieren */}
+          <PipBar>
+            <label className="pip-check">
+              <input type="checkbox" checked={showPlayers} onChange={(e) => setShowPlayers(e.target.checked)} />
+              Spieler
+            </label>
+          </PipBar>
+          <Compass yaw={yaw} onReset={() => flyTo(0)} compact />
         </>
       ) : (
         <>
-      <label className="pane-check">
-        <input type="checkbox" checked={showPlayers} onChange={(e) => setShowPlayers(e.target.checked)} />
-        Spieler
-      </label>
-      <AngleSlider value={angleDeg} onChange={setAngle} />
-      <ViewControls onZoomIn={zoomIn} onZoomOut={zoomOut} onReset={resetAll} lead={<ViewSwapButton />}>
-        <NamesButton />
-        <button
-          title={`Von Seite ${from === 'A' ? 'B' : 'A'} aufs Netz schauen`}
-          aria-label={`Blickseite wechseln, aktuell von Seite ${from}`}
-          onClick={toggleFrom}
-        >
-          <Icon name="flip" />
-        </button>
-      </ViewControls>
+          <label className="pane-check">
+            <input type="checkbox" checked={showPlayers} onChange={(e) => setShowPlayers(e.target.checked)} />
+            Spieler
+          </label>
+          <Compass yaw={yaw} onReset={() => flyTo(0)} />
+          <ViewControls onZoomIn={zoomIn} onZoomOut={zoomOut} onReset={resetAll} lead={<ViewSwapButton />}>
+            <NamesButton />
+          </ViewControls>
         </>
       )}
     </>
@@ -348,40 +373,31 @@ export function PlayerFigure({ vp, p, dim = false }: { vp: NetViewport; p: Court
   )
 }
 
-/** Markierungen auf dem Dreh-Regler; in deren Nähe rastet der Regler ein */
-const ANGLE_STOPS = [-90, -45, 0, 45, 90]
-const SNAP_DEG = 4
-
-/** Regler für den Blickwinkel mit Markierungen bei −90°, −45°, 0°, 45°, 90° */
-function AngleSlider({ value, onChange, compact = false }: { value: number; onChange: (deg: number) => void; compact?: boolean }) {
-  const snap = (v: number) => ANGLE_STOPS.find((s) => Math.abs(s - v) <= SNAP_DEG) ?? v
+/**
+ * Kompass unten in der Mitte: kleine Draufsicht (A links, B rechts) mit dem Standpunkt des Betrachters,
+ * daneben der Name des Blickwinkels. Antippen = zurück zum Standard (frontal von A).
+ */
+function Compass({ yaw, onReset, compact = false }: { yaw: number; onReset: () => void; compact?: boolean }) {
+  const S = compact ? 30 : 36
+  const c = S / 2
+  const R = c - 3.5
+  const th = (yaw * Math.PI) / 180
+  // Betrachter steht der Blickrichtung entgegen; in der Draufsicht zeigt +y nach oben
+  const vx = c - Math.cos(th) * R
+  const vy = c + Math.sin(th) * R
+  const cw = S * 0.5
+  const ch = cw / 2
+  const help = NET_KEY_HELP.map((k) => `${k.keys}: ${k.label}`).join('\n')
   return (
-    <label className={`net-angle ${compact ? 'compact' : ''}`} title="Blickwinkel drehen (auch: waagerecht ziehen) · Doppelklick = frontal">
-      {!compact && <span>Drehen</span>}
-      <span className="angle-track">
-        <input
-          type="range"
-          min={-90}
-          max={90}
-          step={1}
-          value={value}
-          aria-label="Blickwinkel der Netzansicht in Grad"
-          onChange={(e) => onChange(snap(Number(e.target.value)))}
-          onDoubleClick={() => onChange(0)}
-        />
-        <span className="angle-ticks" aria-hidden="true">
-          {ANGLE_STOPS.map((s) => (
-            <span key={s} className={`tick ${s === value ? 'on' : ''}`} style={{ left: `${((s + 90) / 180) * 100}%` }}>
-              <span className="tick-label">{s}°</span>
-            </span>
-          ))}
-        </span>
-      </span>
-      {compact ? (
-        <span className="value">{value}°</span>
-      ) : (
-        <NumberField label="Blickwinkel in Grad" value={value} min={-90} max={90} digits={0} unit="°" onCommit={onChange} />
-      )}
-    </label>
+    <button className={`net-compass ${compact ? 'compact' : ''}`} onClick={onReset} title={`Zurück zu „Von A“ (0°)\n\n${help}`} aria-label={`Blickwinkel ${netYawLabel(yaw)} – zurück zu Von A`}>
+      <svg width={S} height={S} viewBox={`0 0 ${S} ${S}`} aria-hidden="true">
+        <circle cx={c} cy={c} r={R} fill="none" stroke="currentColor" strokeOpacity={0.25} strokeWidth={1} />
+        <rect x={c - cw / 2} y={c - ch / 2} width={cw} height={ch} rx={1} fill="none" stroke="currentColor" strokeOpacity={0.7} strokeWidth={1.2} />
+        <line x1={c} y1={c - ch / 2 - 2} x2={c} y2={c + ch / 2 + 2} stroke="currentColor" strokeWidth={1.4} />
+        <line x1={vx} y1={vy} x2={c + (vx - c) * 0.45} y2={c + (vy - c) * 0.45} stroke="var(--accent-ring)" strokeWidth={1.6} strokeLinecap="round" />
+        <circle cx={vx} cy={vy} r={3.2} fill="var(--accent-ring)" />
+      </svg>
+      <span className="value">{netYawLabel(yaw)}</span>
+    </button>
   )
 }

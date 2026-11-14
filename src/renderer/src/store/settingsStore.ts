@@ -1,6 +1,6 @@
 import { create } from 'zustand'
-import type { CourtSide, NetPresetId } from '@shared/types'
-import type { PxRect } from '@renderer/core/geometry/transform'
+import type { NetPresetId } from '@shared/types'
+import { normYaw, type PxRect } from '@renderer/core/geometry/transform'
 import { NET_PRESETS, clampNetHeight, presetForHeight } from '@renderer/core/geometry/court'
 
 /** 2D = eine große Ansicht + die andere als Pop-up (Bild-im-Bild); 3D = 3D-Ansicht */
@@ -46,14 +46,11 @@ interface UiState {
   main2D: Main2D
   /** Große Ansicht und Pop-up tauschen */
   swapMain2D: () => void
-  /** Netzansicht: von welcher Feldseite man aufs Netz schaut */
-  netViewFrom: CourtSide
   /** Netzansicht: Spieler einblenden */
   netShowPlayers: boolean
-  toggleNetViewFrom: () => void
-  /** Drehung der Netzansicht um die senkrechte Achse in Grad (−90 … 90), 0 = frontal */
-  netAngle: number
-  setNetAngle: (deg: number) => void
+  /** Blickwinkel der Netzansicht rundum in Grad (0 … <360): 0 = frontal von A, 180 = frontal von B */
+  netYaw: number
+  setNetYaw: (deg: number) => void
   setNetShowPlayers: (show: boolean) => void
   /** 2D: Pop-up eingeklappt (die große Ansicht nutzt dann die volle Fläche) */
   netPipCollapsed: boolean
@@ -96,12 +93,10 @@ export const useUi = create<UiState>((set) => ({
   viewMode: '2d',
   main2D: 'top',
   swapMain2D: () => set((s) => ({ main2D: s.main2D === 'top' ? 'net' : 'top' })),
-  netViewFrom: 'A',
   // Spieler in der Netzansicht standardmäßig ausgeblendet
   netShowPlayers: false,
-  netAngle: 0,
-  setNetAngle: (deg) => set({ netAngle: Math.max(-90, Math.min(90, Number.isFinite(deg) ? deg : 0)) }),
-  toggleNetViewFrom: () => set((s) => ({ netViewFrom: s.netViewFrom === 'A' ? 'B' : 'A' })),
+  netYaw: 0,
+  setNetYaw: (deg) => set({ netYaw: normYaw(deg) }),
   setNetShowPlayers: (netShowPlayers) => set({ netShowPlayers }),
   // Pop-up (Netzansicht) startet eingeklappt
   netPipCollapsed: true,

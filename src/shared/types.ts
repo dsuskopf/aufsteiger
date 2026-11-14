@@ -292,7 +292,7 @@ export interface PlayDoc {
   netHeight: number
   display: PlayDisplay
   netViewFrom: CourtSide
-  /** Drehung der Netzansicht in Grad (−90 … 90) */
+  /** Drehung der Netzansicht in Grad (−90 … 90) – zusammen mit netViewFrom der Blickwinkel rundum */
   netAngle: number
   netShowPlayers: boolean
 }

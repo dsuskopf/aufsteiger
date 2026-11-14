@@ -12,6 +12,10 @@ import {
   netProject,
   netDepth,
   netHalfExtent,
+  netOrient,
+  netViewDir,
+  normYaw,
+  yawFromOrient,
   threeToWorld,
   topToWorld,
   worldToThree,
@@ -177,6 +181,21 @@ describe('Netzansicht gedreht', () => {
     expect(netDepth(r, 0, 4.5)).toBeCloseTo(4.5)
     expect(netHalfExtent(r, 11, 6.5)).toBeCloseTo(11)
     expect(netHalfExtent(vp, 11, 6.5)).toBeCloseTo(6.5)
+  })
+  it('freier Blickwinkel rundum: Richtung durchgehend, umkehrbar', () => {
+    for (let deg = -400; deg <= 400; deg += 15) {
+      const o = netOrient(deg)
+      const d = netViewDir({ from: o.from, angle: o.angle })
+      const th = (deg * Math.PI) / 180
+      expect(d.dx).toBeCloseTo(Math.cos(th))
+      expect(d.dy).toBeCloseTo(Math.sin(th))
+      expect(Math.abs(o.angleDeg)).toBeLessThanOrEqual(90)
+      expect(yawFromOrient(o.from, o.angleDeg)).toBeCloseTo(normYaw(deg))
+    }
+    expect(netOrient(0).from).toBe('A')
+    expect(netOrient(180).from).toBe('B')
+    expect(netOrient(180).angleDeg).toBeCloseTo(0)
+    expect(normYaw(-45)).toBe(315)
   })
   it('Höhe bleibt senkrecht (nie von oben)', () => {
     const r = { ...vp, angle: 0.7 }

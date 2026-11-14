@@ -15,19 +15,19 @@ import { QuickTeamList } from './QuickTeam'
 const GRID = [4, 3, 2, 5, 6, 1] as const
 
 /**
- * Reiter „Aufstellung“: pro Feldseite Team wählen, Rotation (Läufer) einstellen, sehen wer auf welcher Position
+ * Aufstellung: pro Feldseite Team wählen, Rotation (Läufer) einstellen, sehen wer auf welcher Position
  * steht, und Spieler ein- und auswechseln.
  */
 export function LineupTab({ onManageTeams }: { onManageTeams: () => void }) {
   return (
-    <div className="panel-body">
+    <>
       <SideCard side="A" />
       <SideCard side="B" />
       <button className="plain start" onClick={onManageTeams}>
         <Icon name="people" />
         Teams und Spieler verwalten
       </button>
-    </div>
+    </>
   )
 }
 

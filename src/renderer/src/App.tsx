@@ -16,9 +16,9 @@ import { onBallEvent, usePlayback } from './store/playbackStore'
 import { SaveDialog } from './components/SaveDialog'
 import { Library } from './components/Library'
 import { ExportDialog } from './components/ExportDialog'
-import { Sidebar } from './components/Sidebar'
+import { Sidebar } from './components/sidebar/Sidebar'
 import { QuickTeamChip } from './components/QuickTeam'
-import { useSelectionKeys } from './components/PlayPanel'
+import { useSelectionKeys } from './components/sidebar/keys'
 import { quickSave } from './store/actions'
 import { playSfx } from './audio/sfx'
 import { hardness } from './views/three/effects'
@@ -85,11 +85,12 @@ export function App() {
     []
   )
 
-  // Einen Ballweg wählen zeigt seine Einstellungen (Reiter „Spielzug“)
+  // Etwas im Feld wählen öffnet seine Detailseite – auch wenn die Seitenleiste ausgeblendet war
   useEffect(
     () =>
       usePlay.subscribe((s, prev) => {
-        if (s.selected && s.selected !== prev.selected && useUi.getState().sidebarTab !== 'play') useUi.setState({ sidebarTab: 'play' })
+        const picked = (s.selected && s.selected !== prev.selected) || (s.selectedPlayer && s.selectedPlayer !== prev.selectedPlayer)
+        if (picked && !useUi.getState().sidebarOpen) useUi.setState({ sidebarOpen: true })
       }),
     []
   )

@@ -178,3 +178,24 @@
   background: linear-gradient(to bottom, transparent, var(--surface) 30%);
 }
 .step-nav .grow { justify-content: center; }
+
+/* 3D gesperrt: kleiner Hinweis oben in der Mitte */
+.lock-badge {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--glass);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 0 0 1px var(--separator-strong);
+  color: var(--label);
+  font-size: 12px;
+  font-weight: 600;
+  pointer-events: none;
+}

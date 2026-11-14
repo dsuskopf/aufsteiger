@@ -72,6 +72,7 @@ export function ThreeView() {
   const showZones = useUi((s) => s.showZones)
   const showNames = useUi((s) => s.showNames)
   const followBall = useUi((s) => s.followBall)
+  const lock3d = useUi((s) => s.lock3d)
   const setFollowBall = useUi((s) => s.setFollowBall)
   const markers = useLaeuferMarkers()
   const contacts = usePlay((s) => s.contacts)
@@ -166,7 +167,8 @@ export function ThreeView() {
     const layers = () => [sceneRef.current?.picks ?? null, sceneRef.current?.paths ?? null, playersRef.current?.group ?? null]
     let press: { id: number; x: number; y: number; time: number; pick: Pick | null; dragging: boolean; offset: { dx: number; dy: number }; h: number } | null = null
     const onDown = (e: PointerEvent) => {
-      if (e.button !== 0 || press) return
+      // Gesperrt: die Maus gehört ganz der Kamera
+      if (e.button !== 0 || press || useUi.getState().lock3d) return
       aim(e)
       const hit = pickAt(raycaster, layers())
       press = { id: e.pointerId, x: e.clientX, y: e.clientY, time: performance.now(), pick: hit?.pick ?? null, dragging: false, offset: { dx: 0, dy: 0 }, h: 0 }
@@ -184,8 +186,8 @@ export function ThreeView() {
     const onMove = (e: PointerEvent) => {
       aim(e)
       if (!press || e.pointerId !== press.id) {
-        // Zeiger zeigt, was man anfassen kann
-        const hit = e.buttons === 0 ? pickAt(raycaster, layers()) : null
+        // Zeiger zeigt, was man anfassen kann (gesperrt: nichts)
+        const hit = e.buttons === 0 && !useUi.getState().lock3d ? pickAt(raycaster, layers()) : null
         renderer.domElement.style.cursor = hit ? (draggable(hit.pick) ? 'grab' : 'pointer') : ''
         return
       }
@@ -525,6 +527,9 @@ export function ThreeView() {
       } else if (e.code === 'KeyB') {
         e.preventDefault()
         ui.setFollowBall(!ui.followBall)
+      } else if (e.code === 'KeyL') {
+        e.preventDefault()
+        ui.setLock3d(!ui.lock3d)
       }
     }
     window.addEventListener('keydown', onKey)
@@ -552,9 +557,24 @@ export function ThreeView() {
         >
           <Icon name="follow" />
         </button>
+        <button
+          className={lock3d ? 'selected' : ''}
+          aria-pressed={lock3d}
+          title={lock3d ? 'Entsperren: Spieler und Bahnen wieder anklicken und verschieben (L)' : 'Sperren: nichts anklicken, die Maus bedient nur die Kamera (L)'}
+          aria-label={lock3d ? 'Entsperren' : 'Sperren'}
+          onClick={() => useUi.getState().setLock3d(!lock3d)}
+        >
+          <Icon name={lock3d ? 'lock' : 'unlock'} />
+        </button>
         <NamesButton />
         <ZonesButton />
       </ViewControls>
+      {lock3d && (
+        <div className="lock-badge" role="status">
+          <Icon name="lock" size={14} />
+          Gesperrt – nur Kamera
+        </div>
+      )}
     </>
   )
 }

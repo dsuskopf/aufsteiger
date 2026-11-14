@@ -32,6 +32,9 @@ interface UiState {
   /** 3D: Die Kamera folgt dem Ball */
   followBall: boolean
   setFollowBall: (follow: boolean) => void
+  /** 3D gesperrt: nichts anklickbar oder verschiebbar, die Maus bedient nur die Kamera */
+  lock3d: boolean
+  setLock3d: (lock: boolean) => void
   tool: Tool
   setTool: (t: Tool) => void
   settingsOpen: boolean
@@ -82,6 +85,8 @@ export const useUi = create<UiState>((set) => ({
   setShowNames: (showNames) => set({ showNames }),
   followBall: false,
   setFollowBall: (followBall) => set({ followBall }),
+  lock3d: false,
+  setLock3d: (lock3d) => set({ lock3d }),
   tool: 'select',
   setTool: (tool) => set({ tool }),
   settingsOpen: false,

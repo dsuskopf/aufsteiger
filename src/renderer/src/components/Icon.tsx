@@ -75,7 +75,10 @@ const PATHS = {
   link: 'M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1',
   chevronLeft: 'M15 6l-6 6 6 6',
   // Seitenleiste links
-  panel: 'M4 5h16v14H4zM9 5v14'
+  panel: 'M4 5h16v14H4zM9 5v14',
+  // Sperren / entsperren: Schloss zu und offen
+  lock: 'M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3M12 14.5v2',
+  unlock: 'M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 6.9-.8M12 14.5v2'
 } as const
 
 export type IconName = keyof typeof PATHS

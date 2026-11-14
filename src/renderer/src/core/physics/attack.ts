@@ -39,7 +39,7 @@ export interface AttackInput {
   speed: number
   /** Topspin in U/s (negativ = Backspin) */
   topspin: number
-  /** Seitendrall in U/s (positiv = Kurve nach rechts aus Sicht des Angreifers) */
+  /** Seitendrall in U/s (positiv = Rechtsdrall: rechts getroffen, der Ball kurvt nach links aus Sicht des Angreifers) */
   sidespin: number
 }
 
@@ -85,7 +85,9 @@ function spinVector(dir: { dx: number; dy: number }, topspin: number, sidespin: 
   // links der Flugrichtung = (−dy, dx, 0); oben = (0, 0, 1)
   const wt = 2 * Math.PI * topspin
   const ws = 2 * Math.PI * sidespin
-  return [-dir.dy * wt, dir.dx * wt, -ws]
+  // Rechtsdrall (rechts getroffen): die rechte Seite dreht nach vorn → Drehung gegen den Uhrzeigersinn (von oben),
+  // die Magnus-Kraft ω × v zeigt nach links – der Ball kurvt nach links
+  return [-dir.dy * wt, dir.dx * wt, ws]
 }
 
 function accel(v: V3, w: V3): V3 {

@@ -23,18 +23,34 @@ describe('Schlag', () => {
     expect(top.reachable && back.reachable).toBe(true)
   })
 
-  it('Seitendrall nach rechts: Kurve, startet links der Geraden und landet trotzdem am Ziel', () => {
+  it('Rechtsdrall (rechts getroffen): Kurve nach links – startet rechts der Geraden und landet trotzdem am Ziel', () => {
     const s = solveAttack({ ...base, sidespin: 6 })
     expect(s.reachable).toBe(true)
     const mid = attackPositionAt(s, s.tHit / 2)
-    // links der Geraden Start → Ziel (positive Seite)
+    // Abstand zur Geraden Start → Ziel: positiv = links, negativ = rechts (aus Sicht des Angreifers)
     const dx = 7
     const dy = -3
     const side = (-(mid.x + 1) * dy + (mid.y - 2) * dx) / Math.hypot(dx, dy)
-    expect(side).toBeGreaterThan(0.1)
-    const left = solveAttack({ ...base, sidespin: -6 })
-    const mid2 = attackPositionAt(left, left.tHit / 2)
-    expect((-(mid2.x + 1) * dy + (mid2.y - 2) * dx) / Math.hypot(dx, dy)).toBeLessThan(-0.1)
+    // Ein Ball, der nach links kurvt, muss rechts ausholen, um am Ziel zu landen
+    expect(side).toBeLessThan(-0.1)
+    const links = solveAttack({ ...base, sidespin: -6 })
+    const mid2 = attackPositionAt(links, links.tHit / 2)
+    expect((-(mid2.x + 1) * dy + (mid2.y - 2) * dx) / Math.hypot(dx, dy)).toBeGreaterThan(0.1)
+  })
+
+  it('Rechtsdrall lenkt den Ball nach links ab (gleiche Abflugrichtung, Landepunkt links)', () => {
+    const none = solveAttack({ ...base })
+    const spun = solveAttack({ ...base, sidespin: 6 })
+    // Seitliche Beschleunigung am Anfang: nach links der Flugrichtung
+    const p0 = attackPositionAt(spun, 0.02)
+    const p1 = attackPositionAt(spun, spun.tHit * 0.9)
+    const q0 = attackPositionAt(none, 0.02)
+    const q1 = attackPositionAt(none, none.tHit * 0.9)
+    const turn = (a: { x: number; y: number }, b: { x: number; y: number }, c: { x: number; y: number }) => (b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x)
+    const mid = attackPositionAt(spun, spun.tHit / 2)
+    // Die Bahn biegt nach links (gegen den Uhrzeigersinn von oben)
+    expect(turn(p0, mid, p1)).toBeGreaterThan(0)
+    expect(Math.abs(turn(q0, attackPositionAt(none, none.tHit / 2), q1))).toBeLessThan(1e-3)
   })
 
   it('zu langsam für die Weite: landet zu kurz, als nicht erreichbar markiert', () => {

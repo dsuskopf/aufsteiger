@@ -104,7 +104,7 @@ export function SchlagEditor() {
             <div className="spin-row">
               <SpinPad topspin={schlag.topspin} sidespin={schlag.sidespin} onChange={(topspin, sidespin) => setSchlag({ ...schlag, topspin, sidespin })} />
             </div>
-            <p className="caption">Oben Topspin (Ball fällt steiler), unten Rückwärtsdrall (trägt), links/rechts Kurve.</p>
+            <p className="caption">Der Punkt ist die Trefferstelle am Ball: oben Topspin (fällt steiler), unten Rückwärtsdrall (trägt). Rechts getroffen kurvt der Ball nach links, links getroffen nach rechts.</p>
           </details>
         </>
       )}
@@ -134,13 +134,13 @@ export function SchlagEditor() {
   )
 }
 
-/** Drall in Worten, z. B. „Topspin 3 · rechts 1“ */
+/** Drall in Worten, z. B. „Topspin 3 · Rechtsdrall 1“ */
 function spinSummary(top: number, side: number): string {
   const parts: string[] = []
   if (top > 0) parts.push(`Topspin ${fmt(top, 1)}`)
   if (top < 0) parts.push(`Rückwärts ${fmt(-top, 1)}`)
-  if (side > 0) parts.push(`rechts ${fmt(side, 1)}`)
-  if (side < 0) parts.push(`links ${fmt(-side, 1)}`)
+  if (side > 0) parts.push(`Rechtsdrall ${fmt(side, 1)}`)
+  if (side < 0) parts.push(`Linksdrall ${fmt(-side, 1)}`)
   return parts.length ? parts.join(' · ') + ' U/s' : 'ohne'
 }
 
@@ -194,7 +194,7 @@ function SpinPad({ topspin, sidespin, onChange }: { topspin: number; sidespin: n
       height={SIZE}
       role="slider"
       tabIndex={0}
-      aria-label="Drall: oben Topspin, unten Backspin, rechts und links Seitendrall"
+      aria-label="Drall als Trefferstelle: oben Topspin, unten Backspin, rechts getroffen kurvt nach links, links getroffen nach rechts"
       aria-valuetext={`Topspin ${topspin}, Seitendrall ${sidespin} Umdrehungen pro Sekunde`}
       onPointerDown={(e) => {
         if (e.button !== 0) return

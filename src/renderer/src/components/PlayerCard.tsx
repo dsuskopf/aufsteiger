@@ -197,7 +197,7 @@ export function PlayerEditor({ side, playerId }: { side: CourtSide; playerId: st
       <Task
         icon="spike"
         title="Täuscht einen Schlag an"
-        state={plays('schlag') ? 'Er schlägt selbst' : c.fake ? (jump && !jump.sync ? 'Schlägt am höchsten Punkt seines Sprungs ins Leere' : 'Springt mit dem echten Angriff hoch und schlägt ins Leere') : 'Nein'}
+        state={plays('schlag') ? 'Er schlägt selbst' : c.fake ? (jump && !jump.sync ? 'Schlägt am höchsten Punkt seines Sprungs ins Leere' : 'Schlägt ins Leere, wenn das Zuspiel ihm am nächsten kommt') : 'Nein'}
         on={!!c.fake}
         control={
           <label className="switch-label">

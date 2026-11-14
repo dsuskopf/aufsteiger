@@ -164,3 +164,17 @@
 .disclosure[open] > summary::after { transform: rotate(90deg); }
 .disclosure > summary .secondary { font-weight: 400; font-size: 12px; }
 .disclosure > :not(summary) { margin: 0 12px 12px; }
+
+/* Unten auf der Schritt-Seite: weiter zum nächsten Schritt, zurück zum vorigen – bleibt beim Scrollen sichtbar */
+.step-nav {
+  position: sticky;
+  bottom: -10px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px -10px -10px;
+  padding: 10px;
+  background: linear-gradient(to bottom, transparent, var(--surface) 30%);
+}
+.step-nav .grow { justify-content: center; }

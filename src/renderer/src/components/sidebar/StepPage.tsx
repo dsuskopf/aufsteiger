@@ -1,4 +1,5 @@
-import type { BallType, CourtSide } from '@shared/types'
+import { BALL_TYPES, type BallType, type CourtSide } from '@shared/types'
+import { usePlayback } from '@renderer/store/playbackStore'
 import { formatTime } from '@renderer/core/timeline/timeline'
 import { usePlay } from '@renderer/store/playStore'
 import { useScene } from '@renderer/store/playbackStore'
@@ -73,7 +74,61 @@ export function StepPage({ type }: { type: BallType }) {
       </Section>
 
       {type === 'schlag' && side && <BlockSection attacking={side} />}
+
+      <StepNav type={type} />
     </div>
+  )
+}
+
+/**
+ * Unten auf jeder Schritt-Seite: direkt zum nächsten Schritt (oder ihn zeichnen), zurück zum vorigen –
+ * ohne Umweg über die Übersicht. Nach dem Angriff geht es zur Übersicht mit dem Ergebnis.
+ */
+function StepNav({ type }: { type: BallType }) {
+  const i = BALL_TYPES.indexOf(type)
+  const prev = BALL_TYPES[i - 1]
+  const next = BALL_TYPES[i + 1]
+  const nextExists = usePlay((s) => (next ? (next === 'schlag' ? !!s.schlag : !!s.trajectories[next]) : false))
+  const scene = useScene()
+  const go = (t: BallType) => {
+    usePlay.getState().select(t)
+    const seg = scene.timeline.segments.find((s) => s.type === t)
+    if (seg && !usePlayback.getState().playing) usePlayback.getState().setT(seg.t0)
+  }
+  return (
+    <nav className="step-nav" aria-label="Schritte">
+      {prev && (
+        <button className="plain small" onClick={() => go(prev)} title={`Zurück zu ${STEP_LABELS[prev]}`}>
+          <Icon name="chevronLeft" size={16} />
+          {STEP_INDEX[prev]} · {STEP_LABELS[prev]}
+        </button>
+      )}
+      {next ? (
+        nextExists ? (
+          <button className="prominent grow" onClick={() => go(next)}>
+            Weiter: {STEP_INDEX[next]} · {STEP_LABELS[next]}
+            <Icon name="chevronRight" size={18} />
+          </button>
+        ) : (
+          <button
+            className="prominent grow"
+            onClick={() => {
+              // Zurück zur Übersicht: dort steht beim nächsten Schritt, was im Feld zu tun ist
+              usePlay.getState().select(null)
+              startDrawing(next)
+            }}
+          >
+            <Icon name="pencil" size={16} />
+            Weiter: {STEP_LABELS[next]} zeichnen
+          </button>
+        )
+      ) : (
+        <button className="grow" onClick={() => usePlay.getState().select(null)}>
+          Fertig – zum Ergebnis
+          <Icon name="chevronRight" size={18} />
+        </button>
+      )}
+    </nav>
   )
 }
 
@@ -107,7 +162,7 @@ function BlockSection({ attacking }: { attacking: CourtSide }) {
           </p>
         )}
       </Section>
-      <Section title="Schlag antäuschen" icon="spike" hint="Wer springt mit und schlägt ins Leere? Das bindet den Block.">
+      <Section title="Schlag antäuschen" icon="spike" hint="Wer springt mit und schlägt ins Leere – in dem Moment, in dem das Zuspiel ihm am nächsten kommt? Das bindet den Block.">
         <PlayerPicker players={mates} isOn={(p) => !!p.court.fake} onPick={(p) => toggle(p.side, p.playerId, 'fake', !p.court.fake)} />
       </Section>
     </>

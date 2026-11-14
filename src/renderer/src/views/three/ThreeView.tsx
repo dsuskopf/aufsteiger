@@ -8,7 +8,8 @@ import { CAMERA_LIMITS, clampTarget } from './camera'
 import { ViewControls } from '@renderer/components/ViewControls'
 import { NamesButton, ZonesButton } from '@renderer/components/ViewToggles'
 import { Icon } from '@renderer/components/Icon'
-import { useEmptyTapClose } from '@renderer/components/useEmptyTapClose'
+import { applyDrag, buildPickables, dragAnchor, draggable, faceCamera, groundPoint, pickAt, selectPick, type Pick } from './picking'
+import { rewind } from '@renderer/store/actions'
 import { ZOOM_DURATION_MS, ZOOM_STEP, tween } from '@renderer/components/tween'
 import { useCourtPlayers, useLaeuferMarkers, useVisibleTrajectories, type CourtPlayerView } from '@renderer/store/selectors'
 import { HumanoidPlayerFactory, setLaeuferMark, showNameTag, visualKey } from './players'
@@ -54,6 +55,7 @@ export function ThreeView() {
     trajectories: THREE.Group | null
     zones: THREE.Group | null
     paths: THREE.Group | null
+    picks: THREE.Group | null
     ball: THREE.Group
     camera: THREE.PerspectiveCamera
     controls: OrbitControls
@@ -72,8 +74,7 @@ export function ThreeView() {
   const followBall = useUi((s) => s.followBall)
   const setFollowBall = useUi((s) => s.setFollowBall)
   const markers = useLaeuferMarkers()
-  // In 3D gibt es nichts anzutippen: jeder kurze Tipp (ohne Drehen) schließt die Auswahl
-  useEmptyTapClose(hostRef)
+  const contacts = usePlay((s) => s.contacts)
   const zoneStyle = useSettings((s) => s.settings.zoneStyle)
 
   useEffect(() => {
@@ -138,7 +139,87 @@ export function ThreeView() {
     })
     controls.update()
 
-    sceneRef.current = { scene, net: null, trajectories: null, zones: null, paths: null, ball, camera, controls }
+    sceneRef.current = { scene, net: null, trajectories: null, zones: null, paths: null, picks: null, ball, camera, controls }
+
+    // Gewählter Spieler: heller Ring am Boden unter ihm
+    const selRing = new THREE.Mesh(
+      new THREE.RingGeometry(0.42, 0.5, 48),
+      new THREE.MeshBasicMaterial({ color: COLORS.accent, transparent: true, opacity: 0.9, depthWrite: false })
+    )
+    selRing.rotation.x = -Math.PI / 2
+    selRing.visible = false
+    scene.add(selRing)
+
+    /*
+     * Anklicken und Ziehen: Tippen wählt (Spieler, Ballweg), Ziehen verschiebt (Spieler, Griffe an Start und Ziel,
+     * Laufweg-Ende). Beginnt ein Druck auf etwas Ziehbarem, dreht die Kamera nicht mit.
+     * Tippen ins Leere hebt die Auswahl auf; Ziehen ins Leere dreht wie gewohnt die Kamera.
+     */
+    const raycaster = new THREE.Raycaster()
+    raycaster.camera = camera
+    const ndc = new THREE.Vector2()
+    const aim = (e: PointerEvent) => {
+      const r = renderer.domElement.getBoundingClientRect()
+      ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1)
+      raycaster.setFromCamera(ndc, camera)
+    }
+    const layers = () => [sceneRef.current?.picks ?? null, sceneRef.current?.paths ?? null, playersRef.current?.group ?? null]
+    let press: { id: number; x: number; y: number; time: number; pick: Pick | null; dragging: boolean; offset: { dx: number; dy: number }; h: number } | null = null
+    const onDown = (e: PointerEvent) => {
+      if (e.button !== 0 || press) return
+      aim(e)
+      const hit = pickAt(raycaster, layers())
+      press = { id: e.pointerId, x: e.clientX, y: e.clientY, time: performance.now(), pick: hit?.pick ?? null, dragging: false, offset: { dx: 0, dy: 0 }, h: 0 }
+      if (hit && draggable(hit.pick)) {
+        const anchor = dragAnchor(hit.pick)
+        const g = anchor && groundPoint(raycaster, anchor.h)
+        if (anchor && g) {
+          press.offset = { dx: anchor.x - g.x, dy: anchor.y - g.y }
+          press.h = anchor.h
+          // Die Kamera bleibt stehen, solange man etwas zieht
+          controls.enabled = false
+        }
+      }
+    }
+    const onMove = (e: PointerEvent) => {
+      aim(e)
+      if (!press || e.pointerId !== press.id) {
+        // Zeiger zeigt, was man anfassen kann
+        const hit = e.buttons === 0 ? pickAt(raycaster, layers()) : null
+        renderer.domElement.style.cursor = hit ? (draggable(hit.pick) ? 'grab' : 'pointer') : ''
+        return
+      }
+      const p = press
+      if (!p.pick || controls.enabled) return
+      if (!p.dragging) {
+        if (Math.hypot(e.clientX - p.x, e.clientY - p.y) < (e.pointerType === 'touch' ? 10 : 5)) return
+        p.dragging = true
+        // Verschieben gilt für die Grundstellung: an den Anfang
+        rewind()
+        selectPick(p.pick)
+        renderer.domElement.style.cursor = 'grabbing'
+      }
+      const g = groundPoint(raycaster, p.h)
+      if (g) applyDrag(p.pick, g.x + p.offset.dx, g.y + p.offset.dy)
+    }
+    const onUp = (e: PointerEvent) => {
+      const p = press
+      if (!p || e.pointerId !== p.id) return
+      press = null
+      controls.enabled = true
+      const tap = !p.dragging && Math.hypot(e.clientX - p.x, e.clientY - p.y) < 6 && performance.now() - p.time < 600
+      if (tap && useUi.getState().tool === 'select') selectPick(p.pick)
+      renderer.domElement.style.cursor = p.dragging ? 'grab' : renderer.domElement.style.cursor
+    }
+    const onCancel = (e: PointerEvent) => {
+      if (press && e.pointerId === press.id) press = null
+      controls.enabled = true
+    }
+    // Vor den OrbitControls (Capture), damit sie bei einem Griff gar nicht erst anfangen zu drehen
+    renderer.domElement.addEventListener('pointerdown', onDown, true)
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onCancel)
     // Nur für automatische Tests (?test): Kamera steuerbar
     const testHook = (window as unknown as { __vbp?: Record<string, unknown> }).__vbp
     if (testHook) testHook.three = { camera, controls }
@@ -161,6 +242,11 @@ export function ThreeView() {
           const plan = sc.plans.get(key)
           if (plan) pr.factory.pose(item.obj, skeletonAt(plan, t, b))
         }
+      // Ring unter dem gewählten Spieler
+      const sp = usePlay.getState().selectedPlayer
+      const obj = sp ? pr?.items.get(`${sp.side}:${sp.playerId}`)?.obj : undefined
+      selRing.visible = !!obj
+      if (obj) selRing.position.set(obj.position.x, 0.016, obj.position.z)
     }
     update()
     const unsubA = usePlayback.subscribe(update)
@@ -215,6 +301,7 @@ export function ThreeView() {
       // Zonen-Beschriftung immer zur Kamera ausrichten (lesbar aus jedem Winkel)
       const zones = sceneRef.current?.zones
       if (zones) orientZoneLabels(zones, camera, controls.target)
+      faceCamera(sceneRef.current?.picks ?? null, camera)
       // Kamera-Wackeln bei harten Ballkontakten – nur beim Abspielen, nur fürs Bild (die Kamera selbst bleibt, wo sie ist)
       const pb = usePlayback.getState()
       const shaking = pb.playing && useSettings.getState().settings.cameraShake
@@ -227,6 +314,10 @@ export function ThreeView() {
     })
 
     return () => {
+      renderer.domElement.removeEventListener('pointerdown', onDown, true)
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onCancel)
       keys.dispose()
       unsubA()
       unsubB()
@@ -266,6 +357,7 @@ export function ThreeView() {
         pr.group.add(item.obj)
         pr.items.set(p.key, item)
       }
+      item.obj.userData.pick = { kind: 'player', side: p.side, playerId: p.playerId } satisfies Pick
       const plan = sc.plans.get(p.key)
       if (plan) pr.factory.pose(item.obj, skeletonAt(plan, t, b))
       showNameTag(item.obj, showNames)
@@ -291,12 +383,25 @@ export function ThreeView() {
     updateTrajectoryProgress(ref.trajectories, rally.timeline, usePlayback.getState().t, rally.total)
     ref.trajectories.visible = !hidePaths
     ref.scene.add(ref.trajectories)
-  }, [trajectories, selected, schlag, pathOpacity, rally])
+    // Trefferflächen und Griffe zum Anklicken und Ziehen
+    if (ref.picks) {
+      ref.scene.remove(ref.picks)
+      disposeObject(ref.picks)
+    }
+    const flights = [
+      ...trajectories.map((tv) => ({ type: tv.type, start: tv.input.start, end: tv.input.end, endH: tv.input.hitH })),
+      ...(schlag ? [{ type: 'schlag' as const, start: schlag.start, end: schlag.end, endH: 0.06 }] : [])
+    ]
+    ref.picks = buildPickables(rally.timeline, flights, selected)
+    ref.picks.visible = !hidePaths
+    ref.scene.add(ref.picks)
+  }, [trajectories, selected, schlag, pathOpacity, rally, contacts])
 
   // „Nur Ball“ beim Abspielen: Bahnen aus-/einblenden, ohne sie neu aufzubauen
   useEffect(() => {
     const ref = sceneRef.current
     if (ref?.trajectories) ref.trajectories.visible = !hidePaths
+    if (ref?.picks) ref.picks.visible = !hidePaths
   }, [hidePaths])
 
   // Laufwege als gestrichelte Linien auf dem Boden („Nur Ball“ blendet sie beim Abspielen aus)
@@ -478,6 +583,12 @@ function buildPaths(players: CourtPlayerView[]): THREE.Group {
     ring.rotation.x = -Math.PI / 2
     ring.position.set(...worldToThree(end.x, end.y, 0.013))
     g.add(ring)
+    // Ende des Laufwegs: zum Verschieben anfassen (große, unsichtbare Trefferfläche)
+    const grab = new THREE.Mesh(new THREE.CircleGeometry(0.45, 24), new THREE.MeshBasicMaterial({ visible: false }))
+    grab.rotation.x = -Math.PI / 2
+    grab.position.set(...worldToThree(end.x, end.y, 0.02))
+    grab.userData.pick = { kind: 'pathEnd', side: p.side, playerId: p.playerId, x: end.x, y: end.y } satisfies Pick
+    g.add(grab)
   }
   return g
 }

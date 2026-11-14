@@ -87,6 +87,12 @@ export function App() {
         e.preventDefault()
         usePlayback.getState().toggle()
       }
+      // F: Flugbahn ein/aus (wie die Checkbox unten rechts) – in 2D und 3D
+      if (e.code === 'KeyF' && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey && !ui.teamsOpen && !ui.dialog && !ui.settingsOpen) {
+        e.preventDefault()
+        const play = usePlay.getState()
+        play.setDisplay({ ballOnly: !play.display.ballOnly })
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -168,9 +174,8 @@ export function App() {
                 <kbd>A</kbd>
                 <kbd>S</kbd>
                 <kbd>D</kbd> bewegen · <kbd>Q</kbd>
-                <kbd>E</kbd> drehen · <kbd>R</kbd>
-                <kbd>F</kbd> zoomen · <kbd>T</kbd>
-                <kbd>G</kbd> kippen · <kbd>1</kbd>–<kbd>6</kbd> Blickwinkel
+                <kbd>E</kbd> drehen · <kbd>T</kbd>
+                <kbd>G</kbd> kippen · Mausrad zoomt · <kbd>1</kbd>–<kbd>6</kbd> Blickwinkel · <kbd>F</kbd> Flugbahn
               </div>
               <ThreeView />
             </section>

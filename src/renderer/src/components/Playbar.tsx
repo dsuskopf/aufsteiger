@@ -114,7 +114,7 @@ export function Playbar() {
       </button>
       <span className="playbar-sep" aria-hidden="true" />
       <div className="playbar-toggles" role="group" aria-label="Flugbahnen anzeigen">
-        <label title="Flugbahnen auch beim Abspielen zeigen (aus: nur der Ball fliegt)">
+        <label title="Flugbahnen auch beim Abspielen zeigen (aus: nur der Ball fliegt) · Taste F">
           <input type="checkbox" checked={!display.ballOnly} onChange={(e) => setDisplay({ ballOnly: !e.target.checked })} />
           Flugbahn
         </label>

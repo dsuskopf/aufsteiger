@@ -5,22 +5,24 @@ import { CAMERA_LIMITS, clampTarget } from './camera'
 /**
  * Kamera per Tastatur, wie in Aufbau- und Strategiespielen – alles um WASD herum:
  *   W/S vor/zurück, A/D links/rechts (parallel zum Boden, in Blickrichtung)
- *   Q/E um das Ziel drehen, R/F heran-/wegzoomen, T/G steiler/flacher kippen, Shift = schneller.
+ *   Q/E um das Ziel drehen, T/G steiler/flacher kippen, Shift = schneller. Zoomen nur mit dem Mausrad
+ *   (F schaltet die Flugbahn, siehe App).
  * Es zählen die Tasten an ihrer Stelle (KeyboardEvent.code), nicht die Beschriftung –
  * auf deutscher und englischer Tastatur liegen sie gleich.
  */
 export const KEY_HELP: { keys: string; label: string }[] = [
   { keys: 'W A S D', label: 'bewegen' },
   { keys: 'Q E', label: 'drehen' },
-  { keys: 'R F', label: 'zoomen' },
   { keys: 'T G', label: 'kippen' },
+  { keys: 'Mausrad', label: 'zoomen' },
   { keys: 'Shift', label: 'schneller' },
   { keys: '1–6', label: 'Blickwinkel' },
   { keys: 'B', label: 'Ballkamera' },
-  { keys: 'L', label: 'Sperren (nur Kamera)' }
+  { keys: 'L', label: 'Sperren (nur Kamera)' },
+  { keys: 'F', label: 'Flugbahn ein/aus' }
 ]
 
-const MOVE_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE', 'KeyR', 'KeyF', 'KeyT', 'KeyG'])
+const MOVE_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE', 'KeyT', 'KeyG'])
 
 /** Tastatureingabe gehört gerade einem Eingabefeld (dann keine Kamera) */
 export function typingTarget(e: KeyboardEvent): boolean {
@@ -49,8 +51,8 @@ export function createKeyCamera(
 ): KeyCamera {
   const down = new Set<string>()
   let shift = false
-  // Geglättete Geschwindigkeiten: vor, rechts, Drehung, Zoom, Kippen
-  const v = { f: 0, r: 0, rot: 0, zoom: 0, tilt: 0 }
+  // Geglättete Geschwindigkeiten: vor, rechts, Drehung, Kippen
+  const v = { f: 0, r: 0, rot: 0, tilt: 0 }
 
   const onDown = (e: KeyboardEvent) => {
     shift = e.shiftKey
@@ -85,7 +87,6 @@ export function createKeyCamera(
         f: axis('KeyW', 'KeyS') * boost,
         r: axis('KeyD', 'KeyA') * boost,
         rot: axis('KeyQ', 'KeyE') * boost,
-        zoom: axis('KeyF', 'KeyR') * boost,
         tilt: axis('KeyG', 'KeyT') * boost
       }
       // Weich anfahren und abbremsen
@@ -118,7 +119,6 @@ export function createKeyCamera(
       sph.setFromVector3(offset)
       sph.theta += v.rot * 1.7 * dt
       sph.phi = Math.min(CAMERA_LIMITS.maxPolar, Math.max(CAMERA_LIMITS.minPolar + 0.02, sph.phi + v.tilt * 0.9 * dt))
-      sph.radius = Math.min(CAMERA_LIMITS.maxDistance, Math.max(CAMERA_LIMITS.minDistance, sph.radius * Math.exp(v.zoom * 1.3 * dt)))
       camera.position.setFromSpherical(sph).add(controls.target)
       camera.lookAt(controls.target)
       return true

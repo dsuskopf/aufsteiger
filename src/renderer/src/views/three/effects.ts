@@ -177,11 +177,14 @@ export function netHits(events: BallEvent[], t: number, total: number): NetHit[]
  */
 export function cameraShake(events: BallEvent[], t: number, out: THREE.Vector3): THREE.Vector3 {
   out.set(0, 0, 0)
+  // Nur der erste Aufprall darf wackeln; das Nachspringen danach ist kaum zu spüren
+  const firstFloor = events.find((e) => e.kind === 'boden')
   for (const e of events) {
     const age = t - e.t
     if (age < 0 || age > 0.4) continue
-    const h = hardness(e)
-    if (h < 0.25) continue
+    const later = e.kind === 'boden' && e !== firstFloor
+    const h = hardness(e) * (later ? 0.15 : 1)
+    if (h < (later ? 0.08 : 0.25)) continue
     const amp = h * Math.exp(-age / 0.085) * 0.0065
     out.x += amp * Math.sin(age * 96 + e.t * 7)
     out.y += amp * Math.sin(age * 121 + 1.3 + e.t * 3)

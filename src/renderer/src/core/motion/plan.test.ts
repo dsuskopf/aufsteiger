@@ -3,7 +3,7 @@ import type { Contacts, CourtSide, PlaySide } from '@shared/types'
 import { newAttack } from '../physics/attack'
 import { buildRally } from '../physics/rally'
 import type { TrajectoryInput } from '../physics/trajectory'
-import { buildTimeline } from '../timeline/timeline'
+import { ballAt, buildTimeline } from '../timeline/timeline'
 import { attachFirstContact, pruneContacts, suggestContact } from './couple'
 import { jumpRise } from './motion'
 import { planAt, planDuration, planPlayers, planXY, standPoint } from './plan'
@@ -75,14 +75,23 @@ describe('Bewegungsplan', () => {
     expect(synced.jumps[0].at + jumpRise(0.5)).toBeCloseTo(synced.actions[0].t, 9)
   })
 
-  it('Fake-Schlag: springt mit dem echten Angriff hoch und schlägt ohne Ball', () => {
+  it('Schlag antäuschen: schlägt ohne Ball, wenn das Zuspiel ihm am nächsten kommt', () => {
     const s = sides()
     s.A.players.push({ playerId: 'fake', role: 'MB', x: -1.2, y: 0, fake: true })
     const plans = plan(s)
     const f = plans.get('A:fake')!
     const out = plans.get('A:out')!
+    const zu = buildTimeline([...items]).segments[1]
     expect(f.actions[0].kind).toBe('fake')
-    expect(f.actions[0].t).toBeCloseTo(out.actions[0].t, 9)
+    // Mitten im Zuspiel (der Ball fliegt bei y ≈ 0 an ihm vorbei), also vor dem echten Angriff
+    expect(f.actions[0].t).toBeGreaterThan(zu.t0)
+    expect(f.actions[0].t).toBeLessThan(out.actions[0].t - 0.1)
+    const dist = (t: number) => {
+      const b = ballAt(buildTimeline([...items]), t)!
+      return Math.hypot(b.x - -1.2, b.y - 0)
+    }
+    expect(dist(f.actions[0].t)).toBeLessThanOrEqual(dist(zu.t0) + 1e-9)
+    expect(dist(f.actions[0].t)).toBeLessThanOrEqual(dist(zu.t1) + 1e-9)
     expect(f.jumps[0].at + jumpRise(f.jumps[0].height)).toBeCloseTo(f.actions[0].t, 9)
     // Am höchsten Punkt ist die Schlaghand oben
     const sk = skeletonAt(f, f.actions[0].t, null)

@@ -48,13 +48,13 @@ export function SchlagEditor() {
           role="radio"
           aria-checked={!schlag.finte}
           className={!schlag.finte ? 'selected' : ''}
-          title="Harter Angriff mit Tempo und Drall"
+          title="Harter Schlag mit Tempo und Drall"
           onClick={() => {
             rewind()
             setSchlag({ ...schlag, finte: false })
           }}
         >
-          Angriff
+          Schlag
         </button>
         <button
           role="radio"
@@ -95,9 +95,17 @@ export function SchlagEditor() {
             unit="km/h"
             onChange={(v) => setSchlag({ ...schlag, speed: v / 3.6 })}
           />
-          <div className="spin-row">
-            <SpinPad topspin={schlag.topspin} sidespin={schlag.sidespin} onChange={(topspin, sidespin) => setSchlag({ ...schlag, topspin, sidespin })} />
-          </div>
+          {/* Drall ist für Fortgeschrittene: eingeklappt, die Zusammenfassung sagt, was eingestellt ist */}
+          <details className="disclosure">
+            <summary>
+              <span className="grow">Drall</span>
+              <span className="secondary">{spinSummary(schlag.topspin, schlag.sidespin)}</span>
+            </summary>
+            <div className="spin-row">
+              <SpinPad topspin={schlag.topspin} sidespin={schlag.sidespin} onChange={(topspin, sidespin) => setSchlag({ ...schlag, topspin, sidespin })} />
+            </div>
+            <p className="caption">Oben Topspin (Ball fällt steiler), unten Rückwärtsdrall (trägt), links/rechts Kurve.</p>
+          </details>
         </>
       )}
       {!sol.reachable && (
@@ -124,6 +132,16 @@ export function SchlagEditor() {
       </dl>
     </>
   )
+}
+
+/** Drall in Worten, z. B. „Topspin 3 · rechts 1“ */
+function spinSummary(top: number, side: number): string {
+  const parts: string[] = []
+  if (top > 0) parts.push(`Topspin ${fmt(top, 1)}`)
+  if (top < 0) parts.push(`Rückwärts ${fmt(-top, 1)}`)
+  if (side > 0) parts.push(`rechts ${fmt(side, 1)}`)
+  if (side < 0) parts.push(`links ${fmt(-side, 1)}`)
+  return parts.length ? parts.join(' · ') + ' U/s' : 'ohne'
 }
 
 /**

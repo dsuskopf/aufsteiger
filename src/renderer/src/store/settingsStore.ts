@@ -13,15 +13,16 @@ export type Tool = 'select' | 'annahme' | 'zuspiel' | 'schlag' | 'laufweg'
 
 export type Dialog = 'library' | 'save' | 'saveAs' | 'export'
 /** Reiter der Seitenleiste: Ablauf des Spielzugs oder Aufstellung der Teams */
-export type SidebarTab = 'play' | 'lineup'
+/** Seite der Seitenleiste ohne Auswahl: Übersicht oder Aufstellung (eine Auswahl im Feld öffnet ihre Detailseite) */
+export type SidebarPage = 'overview' | 'lineup'
 
 interface UiState {
   /** Seitenleiste links (Ablauf, Aufstellung) eingeblendet */
   sidebarOpen: boolean
   setSidebarOpen: (open: boolean) => void
-  sidebarTab: SidebarTab
+  sidebarPage: SidebarPage
   /** Reiter wählen (blendet die Seitenleiste ein) */
-  showSidebar: (tab: SidebarTab) => void
+  showSidebar: (page: SidebarPage) => void
   /** Zonen auf dem Feldboden einblenden (welche Art: Einstellungen → Zonen) */
   showZones: boolean
   setShowZones: (show: boolean) => void
@@ -31,6 +32,9 @@ interface UiState {
   /** 3D: Die Kamera folgt dem Ball */
   followBall: boolean
   setFollowBall: (follow: boolean) => void
+  /** 3D gesperrt: nichts anklickbar oder verschiebbar, die Maus bedient nur die Kamera */
+  lock3d: boolean
+  setLock3d: (lock: boolean) => void
   tool: Tool
   setTool: (t: Tool) => void
   settingsOpen: boolean
@@ -73,14 +77,16 @@ interface UiState {
 export const useUi = create<UiState>((set) => ({
   sidebarOpen: true,
   setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
-  sidebarTab: 'play',
-  showSidebar: (sidebarTab) => set({ sidebarTab, sidebarOpen: true }),
+  sidebarPage: 'overview',
+  showSidebar: (sidebarPage) => set({ sidebarPage, sidebarOpen: true }),
   showZones: false,
   setShowZones: (showZones) => set({ showZones }),
   showNames: false,
   setShowNames: (showNames) => set({ showNames }),
   followBall: false,
   setFollowBall: (followBall) => set({ followBall }),
+  lock3d: false,
+  setLock3d: (lock3d) => set({ lock3d }),
   tool: 'select',
   setTool: (tool) => set({ tool }),
   settingsOpen: false,

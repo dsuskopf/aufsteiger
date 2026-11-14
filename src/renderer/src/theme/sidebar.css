@@ -1,0 +1,201 @@
+/*
+ * Seitenleiste als Navigation in Ebenen: Übersicht (Spielzug als Geschichte) → Detailseiten.
+ * Signatur: die durchgehende Zeitleiste mit nummerierten Punkten links – sie zeigt, wo man im Spielzug steht.
+ */
+.sb-stack { flex: 1; display: flex; flex-direction: column; min-height: 0; animation: sb-in 160ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+@keyframes sb-in { from { opacity: 0; transform: translateX(10px); } }
+.sb-overview, .sb-page { gap: 10px; padding: 10px; }
+
+/* ---------- Übersicht: Geschichte ---------- */
+.story { position: relative; display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.story-step { position: relative; display: grid; grid-template-columns: 30px 1fr; gap: 8px; align-items: stretch; }
+/* Verbindungslinie zwischen den Punkten */
+.story-step:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  top: 30px;
+  bottom: -10px;
+  width: 2px;
+  background: var(--separator-strong);
+}
+.story-step.done:not(:last-child)::before { background: color-mix(in srgb, var(--accent) 45%, transparent); }
+.story-dot {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  margin-top: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.story-step.next .story-dot { background: var(--surface); color: var(--accent-text); box-shadow: inset 0 0 0 2px var(--accent); }
+.story-step.later .story-dot { background: var(--surface); color: var(--label-2); box-shadow: inset 0 0 0 1.5px var(--separator-strong); }
+.story-step.gone .story-dot { background: var(--control); color: var(--label-2); }
+.story-step.result .story-dot { background: var(--control-active); color: var(--label); }
+.story-step.result.good .story-dot { background: #2f7d4f; color: #fff; }
+.story-step.result.bad .story-dot { background: var(--danger-fill); color: #fff; }
+
+.story-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 54px;
+  padding: 8px 10px 8px 12px;
+  border-radius: var(--radius-m);
+  background: var(--elevated);
+  text-align: left;
+  justify-content: flex-start;
+}
+.story-card:hover:not(:disabled):not(.static) { background: color-mix(in srgb, var(--elevated) 70%, var(--control-hover)); }
+.story-card.static { cursor: default; }
+.story-step.next .story-card { box-shadow: inset 0 0 0 1.5px var(--accent-ring); background: color-mix(in srgb, var(--accent) 7%, var(--elevated)); }
+.story-step.drawing .story-card { box-shadow: inset 0 0 0 2px var(--accent); }
+.story-step.later .story-card { background: transparent; box-shadow: inset 0 0 0 1px var(--separator); }
+.story-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; line-height: 1.25; }
+.story-title { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+.story-step.later .story-title { color: var(--label-2); }
+.story-sub { font-size: 12px; color: var(--label-2); overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.story-step.next .story-sub, .story-step.drawing .story-sub { color: var(--label); white-space: normal; }
+.story-step.drawing .story-sub { color: var(--accent-text); font-weight: 600; }
+.story-extra { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; color: var(--label); }
+.story-extra span::before { content: "· "; color: var(--label-2); }
+.story-extra span:first-child::before { content: ""; }
+.story-teams { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; }
+.team-tag { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
+.team-tag.missing { color: var(--label-2); font-weight: 400; font-style: italic; }
+.story-ball { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 50%; background: var(--control); color: var(--label-2); flex: none; }
+.story-card .avatar { flex: none; border-radius: 50%; background: var(--control); }
+.tag { padding: 1px 7px; border-radius: 999px; background: var(--control-active); color: var(--label); font-size: 11px; font-weight: 600; }
+
+/* Karten unter der Geschichte */
+.sb-card { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: var(--radius-m); background: var(--elevated); }
+.mover-list { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.mover { width: 100%; justify-content: flex-start; gap: 10px; min-height: 44px; padding: 4px 8px; background: transparent; text-align: left; }
+.mover .grow { display: flex; flex-direction: column; line-height: 1.25; }
+.mover .avatar { border-radius: 50%; background: var(--control); }
+.howto ol { display: flex; flex-direction: column; gap: 6px; margin: 0; padding-left: 20px; font-size: 13px; color: var(--label-2); }
+.howto b { color: var(--label); font-weight: 600; }
+.sb-footer { display: flex; justify-content: center; padding-top: 4px; }
+
+/* ---------- Detailseiten ---------- */
+.sb-page-head { display: flex; flex-direction: column; gap: 4px; padding: 0 2px 4px; }
+.sb-back { align-self: flex-start; min-height: 36px; gap: 2px; padding: 0 10px 0 4px; color: var(--accent-text); font-weight: 600; }
+.sb-back:hover:not(:disabled) { color: var(--accent-text); }
+.sb-title-row { display: flex; align-items: center; gap: 10px; padding-left: 6px; }
+.sb-title-row h2 { display: flex; align-items: center; gap: 10px; margin: 0; font: 600 20px/1.2 var(--font-display); }
+.sb-title-row .avatar { border-radius: 50%; background: var(--control); flex: none; }
+.sb-sub { margin: 4px 0 0; font-size: 13px; color: var(--label-2); }
+.sb-step-nr {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font: 700 14px/1 var(--font);
+}
+.sb-section { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: var(--radius-m); background: var(--elevated); }
+.sb-section-title { display: flex; align-items: center; gap: 8px; margin: 0; font: 600 14px/1.2 var(--font); color: var(--label); }
+.sb-section-title .icon { color: var(--label-2); }
+.sb-hint { margin: 0; font-size: 12px; line-height: 1.4; color: var(--label-2); }
+.sb-status { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 13px; font-weight: 600; }
+.sb-status.good { color: #6fd39a; }
+.sb-status.warn { color: var(--danger); }
+.sb-page .side-card { padding: 12px; }
+
+/* Spieler zum Antippen */
+.picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); gap: 6px; }
+.picker .pick {
+  position: relative;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 74px;
+  padding: 6px 2px;
+  border-radius: var(--radius-m);
+  background: var(--surface);
+}
+.picker .pick .avatar { border-radius: 50%; background: var(--control); }
+.picker .pick-nr { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.picker .pick-role { font-size: 10px; color: var(--label-2); font-weight: 600; }
+.picker .pick.on { background: color-mix(in srgb, var(--accent) 18%, var(--surface)); box-shadow: inset 0 0 0 2px var(--accent); }
+.picker .pick-check { position: absolute; top: 4px; right: 4px; display: inline-flex; padding: 2px; border-radius: 50%; background: var(--accent); color: var(--on-accent); }
+.picker .pick.none .pick-none-icon { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: var(--control); color: var(--label-2); }
+
+/* Aufgaben des Spielers */
+.tasks { display: flex; flex-direction: column; gap: 6px; }
+.task { border-radius: var(--radius-m); background: var(--surface); }
+.task-head { display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 8px 10px; }
+.task-icon { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex: none; border-radius: 10px; background: var(--control); color: var(--label-2); }
+.task.on .task-icon { background: var(--accent); color: var(--on-accent); }
+.task-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; line-height: 1.25; }
+.task-title { font-weight: 600; }
+.task-state { font-size: 12px; color: var(--label-2); }
+.task.on .task-state { color: var(--label); }
+.task-body { display: flex; flex-direction: column; gap: 6px; padding: 0 12px 12px 52px; }
+.task-body:empty { display: none; }
+.switch-label { display: inline-flex; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Eingeklappte Einstellungen (z. B. Drall) */
+.disclosure { border-radius: var(--radius-s); background: var(--surface); }
+.disclosure > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  list-style: none;
+  cursor: default;
+}
+.disclosure > summary::-webkit-details-marker { display: none; }
+.disclosure > summary::after { content: "›"; font-size: 18px; color: var(--label-2); transition: transform 160ms ease; }
+.disclosure[open] > summary::after { transform: rotate(90deg); }
+.disclosure > summary .secondary { font-weight: 400; font-size: 12px; }
+.disclosure > :not(summary) { margin: 0 12px 12px; }
+
+/* Unten auf der Schritt-Seite: weiter zum nächsten Schritt, zurück zum vorigen – bleibt beim Scrollen sichtbar */
+.step-nav {
+  position: sticky;
+  bottom: -10px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px -10px -10px;
+  padding: 10px;
+  background: linear-gradient(to bottom, transparent, var(--surface) 30%);
+}
+.step-nav .grow { justify-content: center; }
+
+/* 3D gesperrt: kleiner Hinweis oben in der Mitte */
+.lock-badge {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--glass);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 0 0 1px var(--separator-strong);
+  color: var(--label);
+  font-size: 12px;
+  font-weight: 600;
+  pointer-events: none;
+}

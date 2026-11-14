@@ -16,7 +16,8 @@ export const KEY_HELP: { keys: string; label: string }[] = [
   { keys: 'T G', label: 'kippen' },
   { keys: 'Shift', label: 'schneller' },
   { keys: '1–6', label: 'Blickwinkel' },
-  { keys: 'B', label: 'Ballkamera' }
+  { keys: 'B', label: 'Ballkamera' },
+  { keys: 'L', label: 'Sperren (nur Kamera)' }
 ]
 
 const MOVE_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE', 'KeyR', 'KeyF', 'KeyT', 'KeyG'])

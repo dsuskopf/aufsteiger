@@ -1,18 +1,21 @@
-import { BALL_TYPES, type BallType, type CourtSide } from '@shared/types'
+import type { ReactNode } from 'react'
+import { BALL_TYPES, ROLE_LABELS, type BallType, type CourtSide } from '@shared/types'
 import { JUMP_HEIGHT, RUN_SPEED, jumpRise, pathCurve, pathEnd } from '@renderer/core/motion/motion'
 import { usePlay } from '@renderer/store/playStore'
 import { useScene } from '@renderer/store/playbackStore'
 import { useCourtPlayers } from '@renderer/store/selectors'
 import { useUi } from '@renderer/store/settingsStore'
 import { rewind } from '@renderer/store/actions'
-import { Icon } from './Icon'
+import { Icon, type IconName } from './Icon'
 import { NumberField } from './NumberField'
 
 const fmt = (v: number, d = 2) => v.toFixed(d).replace('.', ',')
-const CONTACT_VERB: Record<BallType, string> = { annahme: 'Nimmt an', zuspiel: 'Stellt', schlag: 'Schlägt' }
+const CONTACT: Record<BallType, string> = { annahme: 'Annahme', zuspiel: 'Zuspiel', schlag: 'Angriff' }
 
 /**
- * Was der gewählte Spieler im Spielzug tut: Ballkontakt (annehmen, stellen, schlagen), Laufweg, Sprung, Block.
+ * Was der gewählte Spieler im Spielzug tut – als Liste von Aufgaben in klarer Sprache:
+ * Spielt den Ball · Läuft · Springt · Blockt · Täuscht an. Jede Aufgabe sagt in einem Satz, was gerade passiert;
+ * eingeschaltete Aufgaben zeigen darunter ihre Einstellungen.
  * Mit Ballkontakt oder Block läuft und springt er von selbst passend; eigene Angaben haben Vorrang.
  */
 export function PlayerEditor({ side, playerId }: { side: CourtSide; playerId: string }) {
@@ -38,104 +41,97 @@ export function PlayerEditor({ side, playerId }: { side: CourtSide; playerId: st
   const autoRun = !path && plan && plan.legs.length > 0
   const timeMax = Math.max(3, Math.ceil(scene.total + 1))
   const plays = (type: BallType) => contacts[type]?.side === side && contacts[type]?.playerId === playerId
-  const anyFlight = BALL_TYPES.some((t) => flights[t])
+  const played = BALL_TYPES.filter(plays)
+  const available = BALL_TYPES.filter((t) => flights[t])
+  const drawingPath = tool === 'laufweg'
 
   return (
-    <>
-      {anyFlight && (
-        <section className="card-section">
-          <div className="row">
-            <Icon name="ball" size={18} />
-            <span className="grow section-title">Am Ball</span>
-          </div>
-          <div className="chips" role="group" aria-label="Ballkontakt des Spielers">
-            {BALL_TYPES.filter((t) => flights[t]).map((type) => (
+    <div className="tasks">
+      <Task
+        icon="ball"
+        title="Spielt den Ball"
+        state={played.length ? played.map((t) => CONTACT[t]).join(' und ') : available.length ? 'Nein – antippen, um ihn zu koppeln' : 'Noch keine Ballwege gezeichnet'}
+        on={played.length > 0}
+      >
+        {available.length > 0 && (
+          <div className="chips" role="group" aria-label="Ballkontakte des Spielers">
+            {available.map((type) => (
               <button
                 key={type}
                 className={`chip ${plays(type) ? 'selected' : ''}`}
                 aria-pressed={plays(type)}
-                title={plays(type) ? 'Kopplung lösen' : `Dieser Spieler spielt den Ball (${CONTACT_VERB[type]})`}
                 onClick={() => {
                   rewind()
                   setContact(type, plays(type) ? null : { side, playerId })
                 }}
               >
-                {CONTACT_VERB[type]}
+                {CONTACT[type]}
               </button>
             ))}
           </div>
-        </section>
-      )}
+        )}
+      </Task>
 
-      <section className="card-section">
-        <div className="row">
-          <Icon name="run" size={18} />
-          <span className="grow section-title">Laufweg</span>
-          {path ? (
+      <Task
+        icon="run"
+        title="Läuft"
+        state={path ? `Eigener Laufweg · ${fmt(length, 1)} m, Ankunft nach ${fmt(pathEnd(c, path))} s` : autoRun ? 'Von selbst rechtzeitig zum Ball' : drawingPath ? 'Im Feld vom Spieler aus den Weg ziehen' : 'Bleibt auf seinem Platz'}
+        on={!!path || !!autoRun}
+        control={
+          path ? (
             <button className="icon-only plain small" title="Laufweg löschen" aria-label="Laufweg löschen" onClick={() => setPath(side, playerId, null)}>
               <Icon name="trash" size={18} />
             </button>
           ) : (
-            <button className={`small ${tool === 'laufweg' ? 'selected' : ''}`} onClick={() => useUi.getState().setTool(tool === 'laufweg' ? 'select' : 'laufweg')}>
-              <Icon name="pencil" size={16} />
-              {tool === 'laufweg' ? 'Abbrechen' : 'Zeichnen'}
+            <button className={`small ${drawingPath ? 'selected' : ''}`} onClick={() => useUi.getState().setTool(drawingPath ? 'select' : 'laufweg')}>
+              <Icon name={drawingPath ? 'close' : 'pencil'} size={16} />
+              {drawingPath ? 'Abbrechen' : 'Zeichnen'}
             </button>
-          )}
-        </div>
-        {path ? (
+          )
+        }
+      >
+        {path && (
           <>
-            <ValueSlider label="Start nach" value={path.delay} min={0} max={timeMax} step={0.05} unit="s" onChange={(delay) => setPath(side, playerId, { ...path, delay })} />
-            <ValueSlider
-              label="Tempo"
-              value={path.speed}
-              min={RUN_SPEED.min}
-              max={RUN_SPEED.max}
-              step={0.1}
-              unit="m/s"
-              digits={1}
-              onChange={(speed) => setPath(side, playerId, { ...path, speed })}
-            />
-            <p className="caption">
-              {fmt(length, 1)} m · Ankunft nach {fmt(pathEnd(c, path))} s
-            </p>
+            <ValueSlider label="Startet nach" value={path.delay} min={0} max={timeMax} step={0.05} unit="s" onChange={(delay) => setPath(side, playerId, { ...path, delay })} />
+            <ValueSlider label="Tempo" value={path.speed} min={RUN_SPEED.min} max={RUN_SPEED.max} step={0.1} unit="m/s" digits={1} onChange={(speed) => setPath(side, playerId, { ...path, speed })} />
           </>
-        ) : (
-          <p className="caption">{autoRun ? 'Läuft von selbst rechtzeitig zum Ball. Ein gezeichneter Laufweg hat Vorrang.' : 'Im Feld vom Spieler aus den Weg ziehen – auch in Kurven.'}</p>
         )}
-      </section>
+      </Task>
 
-      <section className="card-section">
-        <label className="row">
-          <Icon name="jump" size={18} />
-          <span className="grow section-title">Sprung</span>
-          <input
-            type="checkbox"
-            className="switch"
-            checked={!!jump}
-            onChange={(e) =>
-              setJump(
-                side,
-                playerId,
-                e.target.checked
-                  ? {
-                      at: autoJump ? Math.max(0, Math.round(autoJump.at * 100) / 100) : path ? pathEnd(c, path) : 0.5,
-                      height: autoJump ? Math.round(autoJump.height * 100) / 100 : JUMP_HEIGHT.default,
-                      ...(hasAction ? { sync: true } : {})
-                    }
-                  : null
-              )
-            }
-          />
-        </label>
-        {autoJump && <p className="caption">Springt von selbst {fmt(autoJump.height)} m – so hoch, wie der Ball es verlangt. Einschalten, um Höhe und Zeitpunkt selbst festzulegen.</p>}
+      <Task
+        icon="jump"
+        title="Springt"
+        state={jump ? `${fmt(jump.height)} m hoch${jump.sync && hasAction ? ', genau zum Ballkontakt' : `, am höchsten nach ${fmt(jump.at + jumpRise(jump.height))} s`}` : autoJump ? `Von selbst ${fmt(autoJump.height)} m – so hoch, wie der Ball es verlangt` : 'Nein'}
+        on={!!jump || !!autoJump}
+        control={
+          <label className="switch-label" title={jump ? 'Eigenen Sprung entfernen' : 'Sprung selbst festlegen'}>
+            <span className="sr-only">Eigener Sprung</span>
+            <input
+              type="checkbox"
+              className="switch"
+              checked={!!jump}
+              onChange={(e) =>
+                setJump(
+                  side,
+                  playerId,
+                  e.target.checked
+                    ? {
+                        at: autoJump ? Math.max(0, Math.round(autoJump.at * 100) / 100) : path ? pathEnd(c, path) : 0.5,
+                        height: autoJump ? Math.round(autoJump.height * 100) / 100 : JUMP_HEIGHT.default,
+                        ...(hasAction ? { sync: true } : {})
+                      }
+                    : null
+                )
+              }
+            />
+          </label>
+        }
+      >
         {jump && (
           <>
             {hasAction && (
               <label className="field-row">
-                <span className="grow">
-                  Zeitpunkt automatisch
-                  <span className="caption block">Höchster Punkt genau beim Ballkontakt bzw. Block</span>
-                </span>
+                <span className="grow">Höchster Punkt genau beim Ballkontakt</span>
                 <input
                   type="checkbox"
                   className="switch"
@@ -148,9 +144,8 @@ export function PlayerEditor({ side, playerId }: { side: CourtSide; playerId: st
               </label>
             )}
             {!(jump.sync && hasAction) && (
-              // Eingestellt wird, wann er am höchsten ist (dort trifft er den Ball); der Absprung ergibt sich
               <ValueSlider
-                label="Höchster Punkt bei"
+                label="Am höchsten nach"
                 value={jump.at + jumpRise(jump.height)}
                 min={jumpRise(jump.height)}
                 max={timeMax}
@@ -172,71 +167,80 @@ export function PlayerEditor({ side, playerId }: { side: CourtSide; playerId: st
                 setJump(side, playerId, { ...jump, height, at: Math.max(0, Math.round((apex - jumpRise(height)) * 1000) / 1000) })
               }}
             />
-            <p className="caption">Absprung bei {fmt(Math.max(0, plan?.jumps[0]?.at ?? jump.at))} s</p>
           </>
         )}
-      </section>
+      </Task>
 
-      <section className="card-section">
-        <label className="row">
-          <Icon name="block" size={18} />
-          <span className="grow section-title">Block</span>
-          <input
-            type="checkbox"
-            className="switch"
-            checked={!!c.block}
-            onChange={(e) => {
-              rewind()
-              setBlock(side, playerId, e.target.checked)
-            }}
-          />
-        </label>
-        <p className="caption">
-          {c.block
-            ? 'Springt mit beiden Armen hoch, wenn der Schlag kommt. Trifft der Ball seine Hände, prallt er ab – stell ihn ans Netz in die Bahn.'
-            : 'Spieler ans Netz stellen und blocken lassen: Der Schlag prallt an seinen Händen ab.'}
-        </p>
-      </section>
+      <Task
+        icon="block"
+        title="Blockt"
+        state={c.block ? 'Springt mit beiden Armen hoch, wenn der Schlag kommt' : 'Nein'}
+        on={!!c.block}
+        control={
+          <label className="switch-label">
+            <span className="sr-only">Blockt</span>
+            <input
+              type="checkbox"
+              className="switch"
+              checked={!!c.block}
+              onChange={(e) => {
+                rewind()
+                setBlock(side, playerId, e.target.checked)
+              }}
+            />
+          </label>
+        }
+      >
+        {c.block && <p className="caption">Trifft der Ball seine Hände, prallt er ab. Im Feld in die Schlagbahn schieben.</p>}
+      </Task>
 
-      <section className="card-section">
-        <label className="row">
-          <Icon name="spike" size={18} />
-          <span className="grow section-title">Schlag antäuschen</span>
-          <input
-            type="checkbox"
-            className="switch"
-            checked={!!c.fake}
-            disabled={plays('schlag')}
-            onChange={(e) => {
-              rewind()
-              setFake(side, playerId, e.target.checked)
-            }}
-          />
-        </label>
-        <p className="caption">
-          {plays('schlag')
-            ? 'Er schlägt selbst – antäuschen können nur die anderen Angreifer.'
-            : c.fake
-              ? jump && !jump.sync
-                ? 'Holt aus und schlägt am höchsten Punkt seines Sprungs – ohne Ball.'
-                : 'Springt mit dem echten Angriff hoch und schlägt ins Leere – das bindet den Block.'
-              : 'Täuschen: Er springt und macht die Schlagbewegung, ohne den Ball zu treffen.'}
-        </p>
-      </section>
-    </>
+      <Task
+        icon="spike"
+        title="Täuscht einen Schlag an"
+        state={plays('schlag') ? 'Er schlägt selbst' : c.fake ? (jump && !jump.sync ? 'Schlägt am höchsten Punkt seines Sprungs ins Leere' : 'Schlägt ins Leere, wenn das Zuspiel ihm am nächsten kommt') : 'Nein'}
+        on={!!c.fake}
+        control={
+          <label className="switch-label">
+            <span className="sr-only">Schlag antäuschen</span>
+            <input
+              type="checkbox"
+              className="switch"
+              checked={!!c.fake}
+              disabled={plays('schlag')}
+              onChange={(e) => {
+                rewind()
+                setFake(side, playerId, e.target.checked)
+              }}
+            />
+          </label>
+        }
+      />
+    </div>
   )
 }
 
-function ValueSlider(props: {
-  label: string
-  value: number
-  min: number
-  max: number
-  step: number
-  unit: string
-  digits?: number
-  onChange: (v: number) => void
-}) {
+/** Eine Aufgabe: Symbol, Name, Zustand in einem Satz, Schalter oder Knopf – darunter die Einstellungen */
+function Task({ icon, title, state, on, control, children }: { icon: IconName; title: string; state: string; on: boolean; control?: ReactNode; children?: ReactNode }) {
+  return (
+    <section className={`task ${on ? 'on' : ''}`}>
+      <div className="task-head">
+        <span className="task-icon">
+          <Icon name={icon} size={18} />
+        </span>
+        <span className="task-text">
+          <span className="task-title">{title}</span>
+          <span className="task-state">{state}</span>
+        </span>
+        {control}
+      </div>
+      {children && <div className="task-body">{children}</div>}
+    </section>
+  )
+}
+
+export { ROLE_LABELS }
+
+function ValueSlider(props: { label: string; value: number; min: number; max: number; step: number; unit: string; digits?: number; onChange: (v: number) => void }) {
   const { label, value, min, max, step, unit, digits = 2, onChange } = props
   return (
     <label className="traj-slider">

@@ -159,11 +159,17 @@ export function planPlayers(input: PlanInput): Map<string, PlayerPlan> {
       }
       // Block: Zeitpunkt = Ball erreicht die Hände (sonst kurz nach dem Schlag)
       if (c.block) plan.actions.push(blockAction(c, plan, schlagSeg, input.netHeight))
-      // Fake-Schlag: Schlagbewegung am höchsten Punkt des Sprungs – zur Zeit des echten Angriffs,
-      // mit eigenem (nicht gekoppeltem) Sprung zu dessen höchstem Punkt. Wer selbst schlägt, täuscht nicht.
+      // Schlag antäuschen: Schlagbewegung am höchsten Punkt des Sprungs – dann, wenn das Zuspiel ihm am nächsten
+      // kommt (so sieht es für den Block aus, als käme der Ball zu ihm). Mit eigenem, nicht gekoppeltem Sprung an
+      // dessen höchstem Punkt. Wer selbst schlägt, täuscht nicht an.
       if (c.fake && !plan.actions.some((a) => a.kind === 'schlag')) {
         const zuspielSeg = input.timeline.segments.find((s) => s.type === 'zuspiel')
-        const t = c.jump && !c.jump.sync ? c.jump.at + jumpRise(c.jump.height) : (schlagSeg?.t0 ?? zuspielSeg?.t1 ?? 1)
+        const t =
+          c.jump && !c.jump.sync
+            ? c.jump.at + jumpRise(c.jump.height)
+            : zuspielSeg
+              ? closestPass(zuspielSeg, (tt) => planXY(plan, tt))
+              : (schlagSeg?.t0 ?? 1)
         plan.actions.push({ kind: 'fake', t, ball: { x: c.x, y: c.y, z: 0 }, yaw: netYaw })
       }
       plan.actions.sort((a, b) => a.t - b.t)
@@ -213,6 +219,24 @@ export function planPlayers(input: PlanInput): Map<string, PlayerPlan> {
       out.set(plan.key, plan)
     }
   return out
+}
+
+/** Zeitpunkt, zu dem der Ball (waagerecht) dem Spieler am nächsten ist – während des Flugs seg */
+export function closestPass(seg: Timeline<string>['segments'][number], at: (t: number) => Vec2): number {
+  const n = 80
+  let best = seg.t1
+  let bestD = Infinity
+  for (let i = 0; i <= n; i++) {
+    const t = seg.t0 + ((seg.t1 - seg.t0) * i) / n
+    const b = segmentPosition(seg, t - seg.t0)
+    const p = at(t)
+    const d = Math.hypot(b.x - p.x, b.y - p.y)
+    if (d < bestD - 1e-9) {
+      bestD = d
+      best = t
+    }
+  }
+  return best
 }
 
 function blockAction(c: CourtPlayer, plan: PlayerPlan, schlagSeg: Timeline<string>['segments'][number] | undefined, netHeight: number): PlayerAction {

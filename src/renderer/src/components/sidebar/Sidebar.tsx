@@ -54,9 +54,7 @@ function PlayerPage({ side, playerId }: { side: 'A' | 'B'; playerId: string }) {
         onBack={back}
         trailing={<Avatar look={p.look} jersey={p.jersey.fill} size={48} />}
       />
-      <Section title="Was macht er im Spielzug?" hint="Tippe an, was er tun soll. Gezeichnet wird im Feld.">
-        <PlayerEditor side={side} playerId={playerId} />
-      </Section>
+      <PlayerEditor side={side} playerId={playerId} />
     </div>
   )
 }

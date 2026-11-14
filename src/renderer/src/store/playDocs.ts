@@ -5,6 +5,7 @@ import { useTeams } from './teamsStore'
 import { useSettings } from './appSettings'
 import { usePlayback } from './playbackStore'
 import { inferSlots } from '@renderer/core/lineup/lineup'
+import { clearHistory } from './history'
 
 /** Aktuellen Spielzug als speicherbares Dokument (Teams als Referenz + Kopie) */
 export function currentDoc(meta: { id: string; code: string; title: string; createdAt: string }): PlayDoc {
@@ -75,6 +76,7 @@ export function openDoc(doc: PlayDoc): void {
     current: { id: doc.id, code: doc.code, title: doc.title, createdAt: doc.createdAt }
   })
   usePlay.setState({ dirty: false })
+  clearHistory()
 }
 
 /** Neuer, leerer Spielzug mit den Standardwerten aus den Einstellungen */
@@ -97,6 +99,7 @@ export function newPlay(): void {
   const first = useTeams.getState().teams[0]
   if (first) usePlay.getState().setTeam('A', first.id)
   usePlay.setState({ dirty: false })
+  clearHistory()
 }
 
 export async function duplicatePlay(id: string): Promise<PlaySummary | null> {

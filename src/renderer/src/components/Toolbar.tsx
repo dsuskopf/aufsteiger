@@ -3,6 +3,7 @@ import { useUi, type ViewMode } from '@renderer/store/settingsStore'
 import { isPlayEmpty, usePlay } from '@renderer/store/playStore'
 import { newPlay } from '@renderer/store/playDocs'
 import { quickSave } from '@renderer/store/actions'
+import { redo, undo, useHistory } from '@renderer/store/history'
 import { Icon, type IconName } from './Icon'
 
 const VIEW_MODES: { id: ViewMode; label: string; title: string }[] = [
@@ -31,6 +32,7 @@ export function Toolbar() {
         </button>
         <DocMenu />
         <SaveButton />
+        <UndoRedo />
       </div>
 
       <div className="segmented view-switch" role="radiogroup" aria-label="Ansicht">
@@ -55,6 +57,22 @@ export function Toolbar() {
         </button>
       </div>
     </header>
+  )
+}
+
+/** Rückgängig und Wiederholen – auch für Stift und Finger (sonst Strg+Z / Strg+Y) */
+function UndoRedo() {
+  const canUndo = useHistory((s) => s.canUndo)
+  const canRedo = useHistory((s) => s.canRedo)
+  return (
+    <div className="undo-redo">
+      <button className="icon-only plain" disabled={!canUndo} title="Rückgängig (Strg+Z)" aria-label="Rückgängig" onClick={undo}>
+        <Icon name="undo" />
+      </button>
+      <button className="icon-only plain" disabled={!canRedo} title="Wiederholen (Strg+Y)" aria-label="Wiederholen" onClick={redo}>
+        <Icon name="redo" />
+      </button>
+    </div>
   )
 }
 

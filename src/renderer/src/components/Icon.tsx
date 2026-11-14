@@ -76,6 +76,9 @@ const PATHS = {
   chevronLeft: 'M15 6l-6 6 6 6',
   // Seitenleiste links
   panel: 'M4 5h16v14H4zM9 5v14',
+  // Rückgängig / Wiederholen
+  undo: 'M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11',
+  redo: 'M15 14l5-5-5-5M20 9H9.5a5.5 5.5 0 0 0 0 11H13',
   // Sperren / entsperren: Schloss zu und offen
   lock: 'M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3M12 14.5v2',
   unlock: 'M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 6.9-.8M12 14.5v2'

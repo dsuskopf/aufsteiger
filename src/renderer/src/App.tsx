@@ -20,6 +20,7 @@ import { Sidebar } from './components/sidebar/Sidebar'
 import { QuickTeamChip } from './components/QuickTeam'
 import { useSelectionKeys } from './components/sidebar/keys'
 import { quickSave } from './store/actions'
+import { clearHistory, redo, undo } from './store/history'
 import { playSfx } from './audio/sfx'
 import { hardness } from './views/three/effects'
 import './store/playDocs'
@@ -63,6 +64,22 @@ export function App() {
         return
       }
       const tag = (e.target as HTMLElement | null)?.tagName
+      const typing = (tag === 'INPUT' && !['range', 'checkbox'].includes((e.target as HTMLInputElement).type)) || tag === 'TEXTAREA'
+      // Strg+Z rückgängig, Strg+Y (oder Strg+Umschalt+Z) wiederholen – in Textfeldern bleibt es beim Text
+      const ui = useUi.getState()
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !typing && !ui.dialog && !ui.teamsOpen && !ui.settingsOpen) {
+        const k = e.key.toLowerCase()
+        if (k === 'z' && !e.shiftKey) {
+          e.preventDefault()
+          undo()
+          return
+        }
+        if (k === 'y' || (k === 'z' && e.shiftKey)) {
+          e.preventDefault()
+          redo()
+          return
+        }
+      }
       if (tag === 'INPUT' && (e.target as HTMLInputElement).type !== 'range') return
       if (tag === 'SELECT' || tag === 'TEXTAREA') return
       if (e.key === ' ' && !e.repeat && !useUi.getState().teamsOpen && !useUi.getState().dialog) {
@@ -104,6 +121,8 @@ export function App() {
         const first = useTeams.getState().teams[0]
         if (first && usePlay.getState().sides.A.teamId === null) usePlay.getState().setTeam('A', first.id)
         usePlay.setState({ dirty: false })
+        // Das Aufstellen beim Start ist kein Schritt zum Rückgängigmachen
+        clearHistory()
       })
   }, [])
 

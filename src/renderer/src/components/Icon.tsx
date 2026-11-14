@@ -54,13 +54,34 @@ const PATHS = {
   newfile: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M12 12v6M9 15h6',
   doc: 'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9zM14 3v6h6M8 13h8M8 17h5',
   video: 'M3 6h12v12H3zM15 10l6-4v12l-6-4',
-  folder: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'
+  folder: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
+  // Blickwinkel: Kamera
+  camera: 'M3 8a2 2 0 0 1 2-2h2.5l1.5-2h6l1.5 2H19a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM12 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z',
+  // Ballkamera: Fadenkreuz um den Ball
+  follow: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM12 3v3M12 18v3M3 12h3M18 12h3M5.5 5.5l1.5 1.5M17 17l1.5 1.5M18.5 5.5 17 7M7 17l-1.5 1.5',
+  // Block: zwei Hände über der Netzkante
+  block: 'M3 14h18M7 14V6.5a1.5 1.5 0 0 1 3 0V14M14 14V6.5a1.5 1.5 0 0 1 3 0V14M5 18h14',
+  // Ball
+  ball: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 3c2 3 2.5 6 1 9s-1 6 1 9M3.5 9.5c3 1.5 6 1.5 9.5 2.5s6 3 7.5 5',
+  // Person
+  person: 'M12 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM5 20a7 7 0 0 1 14 0',
+  // Ton an / aus
+  sound: 'M4 9.5v5h3.5L12 18V6L7.5 9.5zM15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11',
+  mute: 'M4 9.5v5h3.5L12 18V6L7.5 9.5zM16 9.5l5 5M21 9.5l-5 5',
+  // Mehr (drei Punkte)
+  more: 'M5 12h.01M12 12h.01M19 12h.01',
+  // Rotieren (im Uhrzeigersinn)
+  rotateCw: 'M20 12a8 8 0 1 1-2.35-5.65M20 4v4.5h-4.5',
+  link: 'M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1',
+  chevronLeft: 'M15 6l-6 6 6 6',
+  // Seitenleiste links
+  panel: 'M4 5h16v14H4zM9 5v14'
 } as const
 
 export type IconName = keyof typeof PATHS
 
 export function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
-  const bold = name === 'formation'
+  const bold = name === 'formation' || name === 'more'
   return (
     <svg
       className="icon"

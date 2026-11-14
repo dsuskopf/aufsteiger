@@ -1,5 +1,5 @@
-import { useEffect, useId } from 'react'
-import { TRAJECTORY_LABELS } from '@shared/types'
+import { useId } from 'react'
+import type { TrajectoryType } from '@shared/types'
 import {
   APEX_EPS,
   APEX_H_MAX,
@@ -12,57 +12,26 @@ import {
   type TrajectoryInput
 } from '@renderer/core/physics/trajectory'
 import { usePlay } from '@renderer/store/playStore'
-import { useUi } from '@renderer/store/settingsStore'
-import { Icon } from './Icon'
 import { NumberField } from './NumberField'
 
 const m = (v: number) => `${v.toFixed(2).replace('.', ',')} m`
 
 /**
- * Karte zur gewählten Flugbahn: Höhen per Schieberegler (ziehen, live) und die berechneten Werte.
- * Dieselben Höhen lassen sich in der Netzansicht direkt an den Griffen ziehen; die Karte wirkt auch in 3D.
+ * Höhen einer Flugbahn (Annahme oder Zuspiel) per Schieberegler und die berechneten Werte.
+ * Dieselben Höhen lassen sich in der Netzansicht direkt an den Griffen ziehen.
  */
-export function TrajectoryCard() {
-  // Diese Karte gilt für Annahme und Zuspiel; der Schlag hat seine eigene Karte
-  const selected = usePlay((s) => (s.selected === 'schlag' ? null : s.selected))
-  const t = usePlay((s) => (s.selected && s.selected !== 'schlag' ? s.trajectories[s.selected] : undefined))
-  const coupled = usePlay((s) => s.selected === 'zuspiel' && !!s.trajectories.annahme)
+export function TrajectoryEditor({ type: selected }: { type: TrajectoryType }) {
+  const t = usePlay((s) => s.trajectories[selected])
+  const coupled = usePlay((s) => selected === 'zuspiel' && !!s.trajectories.annahme)
   const annahme = usePlay((s) => s.trajectories.annahme)
-  const { setTrajectory, removeTrajectory, select } = usePlay()
-
-  // Entf löscht die gewählte Flugbahn, Esc hebt die Auswahl auf (nicht in Eingabefeldern)
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement | null)?.tagName
-      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return
-      const sel = usePlay.getState().selected
-      if (!sel) return
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (sel === 'schlag') usePlay.getState().removeSchlag()
-        else removeTrajectory(sel)
-      }
-      if (e.key === 'Escape' && useUi.getState().tool === 'select') select(null)
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [removeTrajectory, select])
-
-  if (!selected || !t) return null
+  const setTrajectory = usePlay((s) => s.setTrajectory)
+  if (!t) return null
   const sol = solveTrajectory(t)
   const speed = Math.hypot(sol.vH, sol.vZ0) * 3.6
   const minApex = Math.max(t.start.h, t.hitH) + APEX_EPS
 
   return (
-    <aside className="traj-card" aria-label={`${TRAJECTORY_LABELS[selected]} bearbeiten`}>
-      <header>
-        <h3>{TRAJECTORY_LABELS[selected]}</h3>
-        <button className="icon-only plain" title="Flugbahn löschen (Entf)" aria-label="Flugbahn löschen" onClick={() => removeTrajectory(selected)}>
-          <Icon name="trash" />
-        </button>
-        <button className="icon-only plain" title="Schließen (Esc)" aria-label="Auswahl aufheben" onClick={() => select(null)}>
-          <Icon name="close" />
-        </button>
-      </header>
+    <>
       {coupled && annahme ? (
         // Zuspielhöhe = Ende der Annahme: verschiebt den Schlagpunkt der Annahme, beide Bahnen folgen
         <HitSlider label="Zuspiel" input={annahme} hint="Ende der Annahme – verschiebt beide Flugbahnen" onChange={(n) => setTrajectory('annahme', n)} />
@@ -96,7 +65,7 @@ export function TrajectoryCard() {
           <dd>{Math.round(speed)} km/h</dd>
         </div>
       </dl>
-    </aside>
+    </>
   )
 }
 

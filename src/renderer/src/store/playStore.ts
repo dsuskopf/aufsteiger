@@ -10,6 +10,8 @@ import {
   type RunPath,
   type Attack,
   type BallType,
+  type Contacts,
+  type PlayerRef,
   type Trajectory,
   type TrajectoryType
 } from '@shared/types'
@@ -29,6 +31,7 @@ import { tween } from '@renderer/components/tween'
 import { clampInput, coupleTrajectories } from '@renderer/core/physics/trajectory'
 import { clampAttack } from '@renderer/core/physics/attack'
 import { useTeams } from './teamsStore'
+import { attachFirstContact, pruneContacts, suggestContact } from '@renderer/core/motion/couple'
 
 interface PlayState {
   sides: Record<CourtSide, PlaySide>
@@ -54,6 +57,18 @@ interface PlayState {
   schlag: Attack | null
   setSchlag: (a: Attack) => void
   removeSchlag: () => void
+  /**
+   * Ballkontakte, die an Spieler gekoppelt sind (wer nimmt an, stellt, schlägt).
+   * Der erste Ballflug startet dann beim Spieler; zu späteren Kontakten läuft und springt er von selbst.
+   */
+  contacts: Contacts
+  setContact: (type: BallType, ref: PlayerRef | null) => void
+  /** Neuen Ballflug dem naheliegenden Spieler zuordnen (nur wenn noch niemand gekoppelt ist) */
+  autoContact: (type: BallType) => void
+  /** Spieler blockt (springt am Netz mit beiden Armen hoch) */
+  setBlock: (side: CourtSide, playerId: string, block: boolean) => void
+  /** Fake-Schlag: Spieler springt und schlägt ohne Ball */
+  setFake: (side: CourtSide, playerId: string, fake: boolean) => void
   display: PlayDisplay
   selected: BallType | null
   setTrajectory: (type: TrajectoryType, t: Trajectory) => void
@@ -62,7 +77,7 @@ interface PlayState {
   clearTrajectories: () => void
   /** Laufwege und Sprünge aller Spieler löschen (beide Seiten) */
   clearMoves: () => void
-  /** Laufweg und Sprung eines Spielers löschen */
+  /** Laufweg, Sprung und Block eines Spielers löschen */
   clearPlayerMoves: (side: CourtSide, playerId: string) => void
   select: (type: BallType | null) => void
   /** Gewählter Spieler (Karte mit Laufweg und Sprung); schließt die Flugbahn-Auswahl aus */
@@ -79,6 +94,21 @@ interface PlayState {
 }
 
 const emptySide = (): PlaySide => ({ teamId: null, players: [] })
+
+/** Schalter am Spieler setzen (Block, Fake-Schlag); unverändert → dieselbe Seite */
+function setFlag(s: PlaySide, playerId: string, key: 'block' | 'fake', on: boolean): PlaySide {
+  if (!s.players.some((c) => c.playerId === playerId && !!c[key] !== on)) return s
+  return {
+    ...s,
+    players: s.players.map((c) => {
+      if (c.playerId !== playerId) return c
+      const next = { ...c }
+      if (on) next[key] = true
+      else delete next[key]
+      return next
+    })
+  }
+}
 
 /** Schlag startet am Schlagpunkt des Zuspiels (Lage und Höhe) – gibt dasselbe Objekt zurück, wenn es schon passt */
 function coupleSchlag(schlag: Attack | null, zuspiel: Trajectory | undefined): Attack | null {
@@ -120,6 +150,7 @@ export const usePlay = create<PlayState>((set, get) => {
     sides: { A: emptySide(), B: emptySide() },
     trajectories: {},
     schlag: null,
+    contacts: {},
     display: { ...DEFAULT_DISPLAY },
     selected: null,
     selectedPlayer: null,
@@ -132,23 +163,44 @@ export const usePlay = create<PlayState>((set, get) => {
         return { trajectories, schlag: coupleSchlag(st.schlag, trajectories.zuspiel) }
       }),
     setSchlag: (a) => set((st) => ({ schlag: coupleSchlag(clampAttack(a), st.trajectories.zuspiel) })),
-    removeSchlag: () => set((st) => ({ schlag: null, selected: st.selected === 'schlag' ? null : st.selected })),
+    removeSchlag: () =>
+      set((st) => {
+        const { schlag: _s, ...contacts } = st.contacts
+        return { schlag: null, contacts, selected: st.selected === 'schlag' ? null : st.selected }
+      }),
     removeTrajectory: (type) =>
       set((st) => {
         const next = { ...st.trajectories }
         delete next[type]
-        return { trajectories: next, selected: st.selected === type ? null : st.selected }
+        const contacts = { ...st.contacts }
+        delete contacts[type]
+        return { trajectories: next, contacts, selected: st.selected === type ? null : st.selected }
       }),
-    clearTrajectories: () => set({ trajectories: {}, schlag: null, selected: null }),
+    clearTrajectories: () => set({ trajectories: {}, schlag: null, contacts: {}, selected: null }),
+    setContact: (type, ref) =>
+      set((st) => {
+        const contacts = { ...st.contacts }
+        if (ref) contacts[type] = { side: ref.side, playerId: ref.playerId }
+        else delete contacts[type]
+        return { contacts }
+      }),
+    autoContact: (type) => {
+      const st = get()
+      if (st.contacts[type]) return
+      const ref = suggestContact(type, st)
+      if (ref) st.setContact(type, ref)
+    },
+    setBlock: (side, playerId, block) => mapSide(side, (s) => setFlag(s, playerId, 'block', block)),
+    setFake: (side, playerId, fake) => mapSide(side, (s) => setFlag(s, playerId, 'fake', fake)),
     clearMoves: () =>
       set((st) => {
         const strip = (s: PlaySide): PlaySide =>
-          s.players.some((c) => c.path || c.jump)
+          s.players.some((c) => c.path || c.jump || c.block || c.fake)
             ? {
                 ...s,
                 players: s.players.map((c) => {
-                  if (!c.path && !c.jump) return c
-                  const { path: _p, jump: _j, ...rest } = c
+                  if (!c.path && !c.jump && !c.block && !c.fake) return c
+                  const { path: _p, jump: _j, block: _b, fake: _f, ...rest } = c
                   return rest
                 })
               }
@@ -161,8 +213,8 @@ export const usePlay = create<PlayState>((set, get) => {
       mapSide(side, (s) => ({
         ...s,
         players: s.players.map((c) => {
-          if (c.playerId !== playerId || (!c.path && !c.jump)) return c
-          const { path: _p, jump: _j, ...rest } = c
+          if (c.playerId !== playerId || (!c.path && !c.jump && !c.block && !c.fake)) return c
+          const { path: _p, jump: _j, block: _b, fake: _f, ...rest } = c
           return rest
         })
       })),
@@ -254,14 +306,29 @@ export const usePlay = create<PlayState>((set, get) => {
  */
 export function isPlayEmpty(): boolean {
   const s = usePlay.getState()
-  const moves = [...s.sides.A.players, ...s.sides.B.players].some((c) => c.path || c.jump)
+  const moves = [...s.sides.A.players, ...s.sides.B.players].some((c) => c.path || c.jump || c.block || c.fake)
   return !s.trajectories.annahme && !s.trajectories.zuspiel && !s.schlag && !moves
 }
 
 // Jede inhaltliche Änderung markiert den Spielzug als ungespeichert
 usePlay.subscribe((s, prev) => {
-  if (!s.dirty && (s.sides !== prev.sides || s.trajectories !== prev.trajectories || s.schlag !== prev.schlag || s.display !== prev.display))
+  if (
+    !s.dirty &&
+    (s.sides !== prev.sides || s.trajectories !== prev.trajectories || s.schlag !== prev.schlag || s.display !== prev.display || s.contacts !== prev.contacts)
+  )
     usePlay.setState({ dirty: true })
+})
+
+// Gekoppelte Ballkontakte nachführen: Kontakte von Spielern, die nicht mehr auf dem Feld stehen, fallen weg;
+// der erste Ballflug startet immer beim gekoppelten Spieler (auch wenn man ihn verschiebt).
+usePlay.subscribe((s, prev) => {
+  if (s.sides === prev.sides && s.trajectories === prev.trajectories && s.schlag === prev.schlag && s.contacts === prev.contacts) return
+  const contacts = pruneContacts(s.contacts, s.sides, s.trajectories, s.schlag)
+  const heightOf = (side: CourtSide, playerId: string) =>
+    teamById(s.sides[side].teamId)?.players.find((p) => p.id === playerId)?.height ?? 1.75
+  const fixed = attachFirstContact({ trajectories: s.trajectories, schlag: s.schlag, contacts, sides: s.sides }, heightOf)
+  if (contacts !== s.contacts || fixed.trajectories !== s.trajectories || fixed.schlag !== s.schlag)
+    usePlay.setState({ contacts, trajectories: fixed.trajectories, schlag: fixed.schlag })
 })
 
 // Änderungen an den Teams (Spieler gelöscht, Positionen geändert, Team gelöscht) in den Spielzug übernehmen

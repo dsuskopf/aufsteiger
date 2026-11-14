@@ -9,23 +9,25 @@ interface Props {
   icon?: IconName
   onConfirm: () => void
   disabled?: boolean
+  /** Icon und Beschriftung zusammen zeigen (kleiner, unauffälliger Button) */
+  text?: boolean
 }
 
 /**
  * Zweistufiger Lösch-Button (Warnung ohne Dialog): erstes Tippen fragt nach, zweites löscht;
  * nach 3 s ohne Bestätigung zurück (= Abbrechen).
  */
-export function ConfirmButton({ label, confirmLabel, icon, onConfirm, disabled = false }: Props) {
+export function ConfirmButton({ label, confirmLabel, icon, onConfirm, disabled = false, text = false }: Props) {
   const [armed, setArmed] = useState(false)
   useEffect(() => {
     if (!armed) return
     const t = setTimeout(() => setArmed(false), 3000)
     return () => clearTimeout(t)
   }, [armed])
-  const iconOnly = icon && !armed
+  const iconOnly = icon && !armed && !text
   return (
     <button
-      className={`danger ${armed ? 'armed' : ''} ${iconOnly ? 'icon-only plain' : ''}`}
+      className={`danger ${armed ? 'armed' : ''} ${iconOnly ? 'icon-only plain' : ''} ${text ? 'small' : ''} ${text && !armed ? 'plain' : ''}`}
       title={label}
       disabled={disabled}
       aria-label={armed ? confirmLabel : label}
@@ -37,7 +39,16 @@ export function ConfirmButton({ label, confirmLabel, icon, onConfirm, disabled =
       }}
       onBlur={() => setArmed(false)}
     >
-      {iconOnly ? <Icon name={icon} /> : armed ? confirmLabel : label}
+      {iconOnly ? (
+        <Icon name={icon} />
+      ) : armed ? (
+        confirmLabel
+      ) : (
+        <>
+          {text && icon && <Icon name={icon} size={16} />}
+          {label}
+        </>
+      )}
     </button>
   )
 }

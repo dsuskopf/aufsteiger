@@ -14,7 +14,9 @@ import { NetTrajectories } from '@renderer/views/net/NetTrajectories'
 import { buildCourt, buildNet, disposeObject } from '@renderer/views/three/courtScene'
 import { buildZones, orientZoneLabels } from '@renderer/views/three/zones'
 import { useSettings } from '@renderer/store/appSettings'
-import { CylinderPlayerFactory, placePlayer, showNameTag } from '@renderer/views/three/players'
+import { HumanoidPlayerFactory, showNameTag } from '@renderer/views/three/players'
+import { currentScene } from '@renderer/store/playbackStore'
+import { skeletonAt } from '@renderer/core/motion/pose'
 import { buildTrajectories } from '@renderer/views/three/trajectories'
 import { courtPlayers, visibleTrajectories } from '@renderer/store/selectors'
 import { usePlay } from '@renderer/store/playStore'
@@ -107,18 +109,21 @@ export function snapshotsThree(width = 900, height = 560): { label: string; url:
   // Eingeblendete Zonen kommen mit ins Bild
   const zones = useUi.getState().showZones ? buildZones(useSettings.getState().settings.zoneStyle) : null
   if (zones) scene.add(zones)
-  const factory = new CylinderPlayerFactory()
+  const factory = new HumanoidPlayerFactory()
+  const sc = currentScene()
   const created: THREE.Object3D[] = []
   for (const p of courtPlayers(usePlay.getState().sides, useTeams.getState().teams)) {
     const obj = factory.create(p)
     showNameTag(obj, useUi.getState().showNames)
-    placePlayer(obj, p.x, p.y)
+    // Haltung am Anfang des Spielzugs
+    const plan = sc.plans.get(p.key)
+    if (plan) factory.pose(obj, skeletonAt(plan, 0, null))
     scene.add(obj)
     created.push(obj)
   }
   const { trajectories, display } = usePlay.getState()
   const schlag = usePlay.getState().schlag
-  scene.add(buildTrajectories(visibleTrajectories(trajectories, display), null, schlag, useSettings.getState().settings.trajectoryOpacity3d / 100))
+  scene.add(buildTrajectories(visibleTrajectories(trajectories, display), null, schlag, useSettings.getState().settings.trajectoryOpacity3d / 100, sc))
 
   const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 200)
   const out: { label: string; url: string }[] = []

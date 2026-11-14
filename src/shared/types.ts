@@ -1,3 +1,5 @@
+import type { Look, TeamGender } from './looks'
+
 /** Schema-Version aller gespeicherten Dokumente (Migrationen ab Phase 5). */
 export const SCHEMA_VERSION = 1
 
@@ -25,8 +27,10 @@ export interface Player {
   number: number
   /** Eine oder mehrere Positionen; die erste gilt als Hauptposition. */
   positions: Role[]
-  /** Körpergröße in Metern; der Körper (Zylinder) der Figur ist genau so hoch, das Schild sitzt obendrauf */
+  /** Körpergröße in Metern (Figur in 3D genau so groß) */
   height: number
+  /** Aussehen der 3D-Figur; ohne Angabe fest-zufällig */
+  look?: Look
 }
 
 /** Körpergröße: Standard und erlaubter Bereich (Meter) */
@@ -51,6 +55,8 @@ export interface Team {
   color: string
   /** Libero-Trikotfarbe (Hex) – ein Spieler in der Rolle L trägt automatisch diese Farbe */
   liberoColor: string
+  /** Männer, Frauen oder gemischt – bestimmt die 3D-Figuren (fehlt = Männer) */
+  gender?: TeamGender
   players: Player[]
   /** Läufersystem: gespeicherte Aufstellungen je „Läufer-Situation“ (z. B. „1-annahme“) */
   rotations?: Record<string, Formation>
@@ -78,6 +84,16 @@ export interface CourtPlayer {
   path?: RunPath
   /** Sprung (senkrecht) während des Spielzugs */
   jump?: Jump
+  /** Blockt: springt am Netz mit beiden Armen hoch; der Schlag prallt an seinen Händen ab, wenn er sie trifft */
+  block?: boolean
+  /** Fake-Schlag: springt und schlägt am höchsten Punkt seines Sprungs – ohne Ball (bindet den Block) */
+  fake?: boolean
+}
+
+/** Verweis auf einen Spieler auf dem Feld */
+export interface PlayerRef {
+  side: CourtSide
+  playerId: string
 }
 
 /** Laufweg: Punkte nach dem Start (Start = Platz des Spielers), Startverzögerung und Tempo */
@@ -93,6 +109,11 @@ export interface RunPath {
 export interface Jump {
   at: number
   height: number
+  /**
+   * Zeitpunkt automatisch: Der höchste Punkt fällt auf den Ballkontakt bzw. Block des Spielers
+   * (at wird dann ignoriert). Ohne Ballkontakt/Block gilt at.
+   */
+  sync?: boolean
 }
 
 export interface PlaySide {
@@ -127,17 +148,26 @@ export type TrajectoryType = 'annahme' | 'zuspiel'
 /** Alle Ballflüge eines Spielzugs: Annahme, Zuspiel (Parabeln) und Schlag (mit Drall) */
 export type BallType = TrajectoryType | 'schlag'
 export const BALL_LABELS: Record<BallType, string> = { annahme: 'Annahme', zuspiel: 'Zuspiel', schlag: 'Schlag' }
+export const BALL_TYPES: readonly BallType[] = ['annahme', 'zuspiel', 'schlag']
+/**
+ * Wer den Ball spielt: je Ballflug der Spieler am Start (Annahme = Annehmer, Zuspiel = Steller, Schlag = Angreifer).
+ * Gekoppelte Spieler führen die Bewegung aus (Bagger, Pritschen, Schlag) und laufen/springen von selbst zum Ball.
+ */
+export type Contacts = Partial<Record<BallType, PlayerRef>>
 
 /**
- * Schlag (Angriff): Start = Schlagpunkt des Zuspiels, Ziel standardmäßig auf dem Boden.
- * Eingestellt werden Abschlaggeschwindigkeit und Drall; Winkel und höchster Punkt werden berechnet.
+ * Schlag (Angriff): Start = Schlagpunkt des Zuspiels, Ziel auf dem Boden.
+ * Angriff: eingestellt werden Abschlaggeschwindigkeit und Drall; Winkel und höchster Punkt werden berechnet.
+ * Finte: der Ball wird nur leicht über den Block getippt – eingestellt wird die Bogenhöhe, das Tempo ergibt sich.
  */
 export interface Attack {
   start: { x: number; y: number; h: number }
   end: { x: number; y: number }
-  /** Höhe am Ziel (0 = Boden) */
-  endH: number
-  /** Abschlaggeschwindigkeit in m/s */
+  /** Finte (Tipp über den Block) statt hartem Angriff */
+  finte?: boolean
+  /** Finte: höchster Punkt des Bogens über dem Schlagpunkt (m) */
+  arc?: number
+  /** Abschlaggeschwindigkeit in m/s (nur Angriff) */
   speed: number
   /** Topspin in U/s (negativ = Backspin) */
   topspin: number
@@ -202,6 +232,12 @@ export interface Settings {
   showLaeuferMark: boolean
   /** Art der Zonen auf dem Feldboden (eingeblendet per Button in der Ansicht) */
   zoneStyle: ZoneStyle
+  /** 3D: Kamera wackelt kurz bei harten Ballkontakten (Schlag, Block, Aufprall) */
+  cameraShake: boolean
+  /** Geräusche bei Ballkontakten beim Abspielen */
+  sound: boolean
+  /** Lautstärke der Geräusche in Prozent (0–100) */
+  soundVolume: number
 }
 
 /** Zonen: Standard 1–6, erweitert 1–9, erweitert mit Unterzonen A–D */
@@ -226,7 +262,10 @@ export const DEFAULT_SETTINGS: Settings = {
   trajectoryOpacity3d: 70,
   bounce: true,
   bounceDuration: 1.5,
-  zoneStyle: 'standard'
+  zoneStyle: 'standard',
+  cameraShake: true,
+  sound: true,
+  soundVolume: 60
 }
 
 /* ---------- Gespeicherter Spielzug ---------- */
@@ -247,6 +286,8 @@ export interface PlayDoc {
   sides: Record<CourtSide, PlaySideDoc>
   trajectories: Partial<Record<TrajectoryType, Trajectory>>
   schlag?: Attack
+  /** Ballkontakte, die an Spieler gekoppelt sind */
+  contacts?: Contacts
   netPreset: NetPresetId
   netHeight: number
   display: PlayDisplay

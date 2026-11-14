@@ -127,6 +127,32 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
             )}
           </section>
           <section>
+            <h3 className="section-title">Wiedergabe</h3>
+            <label className="setting-row">
+              <span className="grow">
+                Geräusche
+                <span className="caption block">Ballkontakte sind beim Abspielen zu hören: Annahme, Zuspiel, Schlag, Block, Netz und Aufprall.</span>
+              </span>
+              <input type="checkbox" className="switch" checked={s.sound} onChange={(e) => update({ sound: e.target.checked })} />
+            </label>
+            {s.sound && (
+              <label className="traj-slider">
+                <span className="row">
+                  <span className="grow">Lautstärke</span>
+                  <NumberField label="Lautstärke" value={s.soundVolume} min={0} max={100} digits={0} unit="%" onCommit={(v) => update({ soundVolume: v })} />
+                </span>
+                <input type="range" min={0} max={100} step={5} value={s.soundVolume} onChange={(e) => update({ soundVolume: Number(e.target.value) })} />
+              </label>
+            )}
+            <label className="setting-row">
+              <span className="grow">
+                Kamera-Wackeln in 3D
+                <span className="caption block">Bei harten Kontakten (Schlag, Block, Aufprall) wackelt das Bild kurz. Nur beim Abspielen.</span>
+              </span>
+              <input type="checkbox" className="switch" checked={s.cameraShake} onChange={(e) => update({ cameraShake: e.target.checked })} />
+            </label>
+          </section>
+          <section>
             <h3 className="section-title">Läufersystem</h3>
             <label className="setting-row">
               <span className="grow">

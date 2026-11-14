@@ -20,8 +20,8 @@ import { hitsDraggable } from '../top/PlayersLayer'
 import { LaeuferBadge } from '../top/LaeuferBadge'
 import { NumberField } from '@renderer/components/NumberField'
 import { useEmptyTapClose } from '@renderer/components/useEmptyTapClose'
-import { usePlayback } from '@renderer/store/playbackStore'
-import { playerAt } from '@renderer/core/motion/motion'
+import { usePlayback, useScene } from '@renderer/store/playbackStore'
+import { planAt } from '@renderer/core/motion/plan'
 
 /** Sichtbare Breite: Feld plus Freizone (Pfosten stehen 1 m neben den Seitenlinien) */
 export const HALF_W = COURT.halfWidth + COURT.freeZone
@@ -55,11 +55,13 @@ export function NetView({ compact = false }: { compact?: boolean }) {
   const setShowPlayers = useUi((s) => s.setNetShowPlayers)
   const basePlayers = useCourtPlayers()
   // Laufwege und Sprünge: Spieler zur aktuellen Zeit (nur mit Bewegungen der Uhr folgen)
-  const moving = basePlayers.some((p) => p.court.path || p.court.jump)
+  const scene = useScene()
+  const moving = [...scene.plans.values()].some((p) => p.path || p.legs.length > 0 || p.jumps.length > 0)
   const t = usePlayback((s) => (moving ? s.t : 0))
   const players = moving
     ? basePlayers.map((p) => {
-        const at = playerAt(p.court, t)
+        const plan = scene.plans.get(p.key)
+        const at = plan ? planAt(plan, t) : { x: p.x, y: p.y, z: 0 }
         return { ...p, x: at.x, y: at.y, lift: at.z }
       })
     : basePlayers

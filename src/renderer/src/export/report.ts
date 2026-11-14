@@ -38,7 +38,7 @@ export async function buildReport(code: string, title: string): Promise<string> 
       ? (() => {
           const s = solveAttack(play.schlag)
           const d = Math.hypot(s.landing.x - play.schlag.start.x, s.landing.y - play.schlag.start.y)
-          return `<tr><td><b>Schlag</b></td><td>${m(play.schlag.start.h)}</td><td>${m(s.apexH)}</td><td>${m(play.schlag.endH)}</td><td>${m(d)}</td><td>${s.tHit.toFixed(2).replace('.', ',')} s</td><td>${Math.round(play.schlag.speed * 3.6)} km/h</td></tr>`
+          return `<tr><td><b>Schlag</b></td><td>${m(play.schlag.start.h)}</td><td>${m(s.apexH)}</td><td>Boden</td><td>${m(d)}</td><td>${s.tHit.toFixed(2).replace('.', ',')} s</td><td>${Math.round(s.speed * 3.6)} km/h${play.schlag.finte ? ' (Finte)' : ''}</td></tr>`
         })()
       : '')
 

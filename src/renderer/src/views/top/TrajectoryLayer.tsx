@@ -6,7 +6,9 @@ import { clampToArea } from '@renderer/core/lineup/lineup'
 import { BALL_RADIUS } from '@renderer/core/physics/trajectory'
 import { BALL_COLORS, COLORS } from '@renderer/theme/colors'
 import { usePlay } from '@renderer/store/playStore'
-import { useBall, usePathsHidden } from '@renderer/store/playbackStore'
+import { useBall, usePathsHidden, useScene } from '@renderer/store/playbackStore'
+import { startsAtPlayer } from '@renderer/core/motion/couple'
+import { segmentPosition } from '@renderer/core/timeline/timeline'
 import { useVisibleTrajectories, type TrajectoryView } from '@renderer/store/selectors'
 import { attackPoints, solveAttack } from '@renderer/core/physics/attack'
 
@@ -41,6 +43,15 @@ export function TrajectoryLayer({
   const select = usePlay((s) => s.select)
   const setTrajectory = usePlay((s) => s.setTrajectory)
   const ball = useBall()
+  const scene = useScene()
+  // Der erste Ballflug startet fest beim gekoppelten Spieler: dann verschiebt man den Spieler, nicht den Start
+  const allTrajectories = usePlay((s) => s.trajectories)
+  const anySchlag = usePlay((s) => s.schlag)
+  const contacts = usePlay((s) => s.contacts)
+  const sides = usePlay((s) => s.sides)
+  const atPlayer = (type: 'annahme' | 'zuspiel' | 'schlag') => startsAtPlayer(type, { trajectories: allTrajectories, schlag: anySchlag }, contacts, sides)
+  const schlagSeg = scene.timeline.segments.find((s) => s.type === 'schlag')
+  const deflection = hidden ? null : scene.deflection
   const P = (x: number, y: number) => {
     const p = worldToTop(vp, x, y)
     return [p.px, p.py]
@@ -100,7 +111,9 @@ export function TrajectoryLayer({
       {schlagInput && (() => {
         // Schlag: Bahn aus der Simulation (mit Seitendrall gebogen), Pfeil zum Ziel
         const sol = solveAttack(schlagInput)
-        const pts = attackPoints(sol, 0, sol.tHit, 48).flatMap((p) => P(p.x, p.y))
+        // Trifft der Schlag Netz oder Block, endet die Linie dort
+        const cut = scene.deflection?.type === 'schlag' && schlagSeg
+        const pts = (cut ? Array.from({ length: 33 }, (_, i) => segmentPosition(schlagSeg, ((schlagSeg.t1 - schlagSeg.t0) * i) / 32)) : attackPoints(sol, 0, sol.tHit, 48)).flatMap((p) => P(p.x, p.y))
         const isSel = selected === 'schlag'
         const mid = attackPoints(sol, sol.tHit / 2, sol.tHit / 2, 1)[0]
         const midPx = worldToTop(vp, mid.x, mid.y)
@@ -130,9 +143,25 @@ export function TrajectoryLayer({
           </Group>
         )
       })()}
+      {deflection && deflection.points.length > 1 && (
+        // Abpraller von Netz oder Block: gestrichelt bis zum Boden
+        <Arrow
+          points={deflection.points.flatMap((p) => P(p.x, p.y))}
+          stroke={COLORS.trajectory}
+          fill={COLORS.trajectory}
+          strokeWidth={2.5}
+          dash={[6, 6]}
+          pointerLength={9}
+          pointerWidth={9}
+          opacity={0.75}
+          lineCap="round"
+          lineJoin="round"
+          listening={false}
+        />
+      )}
       {interactive && schlagInput && (
         <Group>
-          {!coupledSchlag && (
+          {!coupledSchlag && !atPlayer('schlag') && (
             <Handle
               {...xy(vp, schlagInput.start.x, schlagInput.start.y)}
               hollow
@@ -163,7 +192,7 @@ export function TrajectoryLayer({
       {interactive &&
         list.map((tv) => (
           <Group key={`h-${tv.type}`}>
-            {!tv.coupled && (
+            {!tv.coupled && !atPlayer(tv.type) && (
               <Handle {...xy(vp, tv.input.start.x, tv.input.start.y)} onDrag={drag(tv, 'start')} onPick={() => select(tv.type)} hollow />
             )}
             <Handle {...xy(vp, tv.input.end.x, tv.input.end.y)} onDrag={drag(tv, 'end')} onPick={() => select(tv.type)} />

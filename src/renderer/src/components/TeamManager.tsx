@@ -6,6 +6,8 @@ import { teamStyle } from '@renderer/theme/teamStyle'
 import { ConfirmButton } from './ConfirmButton'
 import { ColorPopover } from './ColorPopover'
 import { Icon } from './Icon'
+import { Avatar, LookPopover } from './LookPopover'
+import { TEAM_GENDERS, TEAM_GENDER_LABELS, resolveLook } from '@shared/looks'
 
 /**
  * Teamverwaltung als Sheet: links die Teams, rechts Name, Farben und Spieler des gewählten Teams.
@@ -95,7 +97,8 @@ function TeamEditor({
   onAddedPlayer: (id: string) => void
   onDeleted: () => void
 }) {
-  const { renameTeam, deleteTeam, addPlayer, setTeamColor, setLiberoColor } = useTeams()
+  const { renameTeam, deleteTeam, addPlayer, setTeamColor, setLiberoColor, setTeamGender } = useTeams()
+  const gender = team.gender ?? 'm'
   const main = jerseyFor(team, 'S')
   const libero = jerseyFor(team, 'L')
 
@@ -118,6 +121,24 @@ function TeamEditor({
           }}
         />
       </div>
+
+      <section aria-labelledby="gender-title">
+        <h3 className="section-title" id="gender-title">
+          Spielerinnen und Spieler
+        </h3>
+        <div className="row">
+          <div className="segmented" role="radiogroup" aria-labelledby="gender-title">
+            {TEAM_GENDERS.map((g) => (
+              <button key={g} role="radio" aria-checked={gender === g} className={gender === g ? 'selected' : ''} onClick={() => setTeamGender(team.id, g)}>
+                {TEAM_GENDER_LABELS[g]}
+              </button>
+            ))}
+          </div>
+          <span className="caption grow">
+            Bestimmt die Figuren in 3D. Jede Person sieht zufällig etwas anders aus – zum Anpassen auf das Gesicht in der Liste tippen.
+          </span>
+        </div>
+      </section>
 
       <section aria-labelledby="colors-title">
         <h3 className="section-title" id="colors-title">
@@ -155,6 +176,7 @@ function TeamEditor({
         </h3>
         <div className="players" role="table" aria-labelledby="players-title">
           <div className="player-row head" role="row">
+            <span role="columnheader" aria-label="Aussehen" />
             <span role="columnheader">Nr.</span>
             <span role="columnheader">Name</span>
             <span role="columnheader">Größe</span>
@@ -164,7 +186,7 @@ function TeamEditor({
           {team.players.map((p) => (
             <PlayerRow
               key={p.id}
-              teamId={team.id}
+              team={team}
               player={p}
               autoFocus={p.id === focusPlayerId}
               onFocused={onFocused}
@@ -229,17 +251,21 @@ function SwatchRow({
 }
 
 function PlayerRow({
-  teamId,
+  team,
   player,
   autoFocus,
   onFocused
 }: {
-  teamId: string
+  team: Team
   player: Player
   autoFocus: boolean
   onFocused: () => void
 }) {
+  const teamId = team.id
   const { updatePlayer, togglePosition, deletePlayer } = useTeams()
+  const [lookOpen, setLookOpen] = useState(false)
+  const lookRef = useRef<HTMLButtonElement>(null)
+  const jersey = jerseyFor(team, player.positions[0] === 'L' ? 'L' : 'S').fill
   const nameRef = useRef<HTMLInputElement>(null)
   useEffect(() => {
     if (!autoFocus) return
@@ -250,6 +276,21 @@ function PlayerRow({
 
   return (
     <div className="player-row" role="row">
+      <span className="custom-wrap">
+        <button
+          ref={lookRef}
+          data-look-trigger
+          className="icon-only plain look-button"
+          title="Aussehen in 3D anpassen"
+          aria-label={`Aussehen von ${player.name || 'Spieler ' + player.number} anpassen`}
+          aria-expanded={lookOpen}
+          aria-haspopup="dialog"
+          onClick={() => setLookOpen(!lookOpen)}
+        >
+          <Avatar look={resolveLook(team.gender, player.id, player.look)} jersey={jersey} />
+        </button>
+        {lookOpen && <LookPopover team={team} player={player} anchor={lookRef.current} onClose={() => setLookOpen(false)} />}
+      </span>
       <NumberInput value={player.number} onCommit={(n) => updatePlayer(teamId, player.id, { number: n })} />
       <input
         ref={nameRef}

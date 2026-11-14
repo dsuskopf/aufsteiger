@@ -22,6 +22,7 @@ export function currentDoc(meta: { id: string; code: string; title: string; crea
     sides: { A: side('A'), B: side('B') },
     trajectories: play.trajectories,
     ...(play.schlag ? { schlag: play.schlag } : {}),
+    ...(Object.keys(play.contacts).length ? { contacts: play.contacts } : {}),
     netPreset: ui.netPreset,
     netHeight: ui.netHeight,
     display: play.display,
@@ -67,8 +68,10 @@ export function openDoc(doc: PlayDoc): void {
     sides: { A: strip('A'), B: strip('B') },
     trajectories: doc.trajectories,
     schlag: doc.schlag ?? null,
+    contacts: doc.contacts ?? {},
     display: doc.display,
     selected: null,
+    selectedPlayer: null,
     current: { id: doc.id, code: doc.code, title: doc.title, createdAt: doc.createdAt }
   })
   usePlay.setState({ dirty: false })
@@ -85,6 +88,7 @@ export function newPlay(): void {
     sides: { A: { teamId: null, players: [] }, B: { teamId: null, players: [] } },
     trajectories: {},
     schlag: null,
+    contacts: {},
     display: { ...DEFAULT_DISPLAY },
     selected: null,
     selectedPlayer: null,

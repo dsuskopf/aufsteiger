@@ -1,18 +1,27 @@
 import * as THREE from 'three'
 import { BALL_RADIUS, sampleTrajectory } from '@renderer/core/physics/trajectory'
 import { worldToThree } from '@renderer/core/geometry/transform'
-import { segmentPosition, type Timeline } from '@renderer/core/timeline/timeline'
+import { segmentPosition, type Segment, type Timeline } from '@renderer/core/timeline/timeline'
+import type { Rally } from '@renderer/core/physics/rally'
 import { COLORS } from '@renderer/theme/colors'
 import type { TrajectoryView } from '@renderer/store/selectors'
 import type { BallType, TrajectoryType } from '@shared/types'
 import { createVolleyballMesh } from './ballModel'
 import { attackPoints, solveAttack, type AttackInput } from '@renderer/core/physics/attack'
 
+/** Punkte eines Flugs bis zu seinem Ende auf der Zeitachse (bei Netz- oder Blockkontakt endet er dort) */
+function flightPoints(seg: Segment<string>, n = 64): { x: number; y: number; z: number }[] {
+  const out = []
+  const dur = seg.t1 - seg.t0
+  for (let i = 0; i <= n; i++) out.push(segmentPosition(seg, (dur * i) / n))
+  return out
+}
+
 /**
  * Drall in Umdrehungen pro Sekunde (Rückwärtsdrall). Eine Annahme mit den Unterarmen dreht deutlich,
  * ein sauberes Pritschen fast gar nicht. Rein optisch – die Flugbahn rechnet ohne Magnus-Effekt.
  */
-const SPIN_RPS: Record<TrajectoryType, number> = { annahme: 1.4, zuspiel: 0.35 }
+import { SPIN_RPS } from '@renderer/core/physics/rally'
 
 function curve(points: { x: number; y: number; z: number }[]): THREE.CatmullRomCurve3 {
   return new THREE.CatmullRomCurve3(points.map((p) => new THREE.Vector3(...worldToThree(p.x, p.y, p.z))))
@@ -22,7 +31,13 @@ function curve(points: { x: number; y: number; z: number }[]): THREE.CatmullRomC
  * Flugbahnen als Röhren in der Standardfarbe (bis zum Schlagpunkt bzw. Ziel).
  * opacity (0,1–1) macht sie durchscheinend, damit Spieler und Ball dahinter sichtbar bleiben (Einstellung).
  */
-export function buildTrajectories(list: TrajectoryView[], selected: string | null, schlag?: AttackInput | null, opacity = 1): THREE.Group {
+export function buildTrajectories(
+  list: TrajectoryView[],
+  selected: string | null,
+  schlag?: AttackInput | null,
+  opacity = 1,
+  rally?: Pick<Rally, 'timeline' | 'deflection'>
+): THREE.Group {
   const g = new THREE.Group()
   g.name = 'trajectories'
   const mat = (base = 1) => {
@@ -33,7 +48,7 @@ export function buildTrajectories(list: TrajectoryView[], selected: string | nul
    * Röhre als zwei Meshes: noch zu fliegender Teil (normal) und schon geflogener Teil (blass).
    * Welcher Abschnitt jeweils gezeichnet wird, setzt updateTrajectoryProgress() über drawRange.
    */
-  const tube = (type: BallType, points: { x: number; y: number; z: number }[], radius: number, base = 1) => {
+  const tube = (type: BallType | 'abprall', points: { x: number; y: number; z: number }[], radius: number, base = 1) => {
     const geo = new THREE.TubeGeometry(curve(points), TUBULAR, radius, RADIAL, false)
     const future = new THREE.Mesh(geo, mat(base))
     const past = new THREE.Mesh(geo.clone(), mat(base * PAST_FACTOR))
@@ -53,20 +68,33 @@ export function buildTrajectories(list: TrajectoryView[], selected: string | nul
     // Schlag: Bahn aus der Simulation (Drall biegt sie), Zielpunkt als Kugel
     const sol = solveAttack(schlag)
     const isSel = selected === 'schlag'
-    g.add(tube('schlag', attackPoints(sol, 0, sol.tHit, 64), isSel ? 0.035 : 0.025))
-    const end = attackPoints(sol, sol.tHit, sol.tHit, 1)[0]
-    const mark = new THREE.Mesh(new THREE.SphereGeometry(0.06, 16, 12), mat())
-    mark.position.set(...worldToThree(end.x, end.y, Math.max(0.06, end.z)))
-    g.add(mark)
+    const seg = rally?.timeline.segments.find((s) => s.type === 'schlag')
+    const cut = rally?.deflection?.type === 'schlag'
+    if (seg || !rally) g.add(tube('schlag', seg ? flightPoints(seg) : attackPoints(sol, 0, sol.tHit, 64), isSel ? 0.035 : 0.025))
+    if (!cut) {
+      const end = attackPoints(sol, sol.tHit, sol.tHit, 1)[0]
+      const mark = new THREE.Mesh(new THREE.SphereGeometry(0.06, 16, 12), mat())
+      mark.position.set(...worldToThree(end.x, end.y, Math.max(0.06, end.z)))
+      g.add(mark)
+    }
   }
+  // Abpraller von Netz oder Block: dünnere Bahn bis zum Boden
+  if (rally?.deflection && rally.deflection.points.length > 2) g.add(tube('abprall', rally.deflection.points, 0.016, 0.7))
   for (const tv of list) {
     const { sol, input } = tv
     const isSel = selected === tv.type
-    g.add(tube(tv.type, sampleTrajectory(sol, input.start, 0, sol.D, 64), isSel ? 0.035 : 0.025, tv.type === 'annahme' ? 0.8 : 1))
+    const seg = rally?.timeline.segments.find((s) => s.type === tv.type)
+    // Nach einem Netzkontakt finden spätere Flüge nicht mehr statt: blass zeigen, damit man sie weiter bearbeiten kann
+    const gone = !!rally && !seg
+    const cut = rally?.deflection?.type === tv.type
+    const base = (tv.type === 'annahme' ? 0.8 : 1) * (gone ? 0.3 : 1)
+    g.add(tube(tv.type, seg ? flightPoints(seg) : sampleTrajectory(sol, input.start, 0, sol.D, 64), isSel ? 0.035 : 0.025, base))
     // Schlagpunkt-Markierung und Bodenschatten der Geraden (Draufsicht-Linie)
-    const hit = new THREE.Mesh(new THREE.SphereGeometry(0.06, 16, 12), mat())
-    hit.position.set(...worldToThree(input.end.x, input.end.y, input.hitH))
-    g.add(hit)
+    if (!cut) {
+      const hit = new THREE.Mesh(new THREE.SphereGeometry(0.06, 16, 12), mat(gone ? 0.3 : 1))
+      hit.position.set(...worldToThree(input.end.x, input.end.y, input.hitH))
+      g.add(hit)
+    }
     const shadow = new THREE.Line(
       new THREE.BufferGeometry().setFromPoints([
         new THREE.Vector3(...worldToThree(input.start.x, input.start.y, 0.004)),
@@ -91,14 +119,14 @@ const BALL_GAP = 0.22
  * Während der Wiedergabe: Der schon geflogene Teil jeder Bahn wird blass, um den Ball bleibt eine kleine Lücke.
  * Am Anfang (t = 0) und am Ende sind alle Bahnen wieder normal.
  */
-export function updateTrajectoryProgress(group: THREE.Object3D | null, tl: Timeline<BallType | 'abprall'>, t: number, total: number): void {
+export function updateTrajectoryProgress(group: THREE.Object3D | null, tl: Timeline<string>, t: number, total: number): void {
   if (!group) return
   const running = t > 1e-6 && t < total - 1e-6
   const idx = RADIAL * 6
   for (const holder of group.children) {
     if (holder.name !== 'tube') continue
     const { type, points, cum, future, past } = holder.userData as {
-      type: BallType
+      type: string
       points: { x: number; y: number; z: number }[]
       cum: number[]
       future: THREE.Mesh
@@ -172,14 +200,27 @@ const _q = new THREE.Quaternion()
  * Lage des Balls zur Zeit t: Jede Flugbahn dreht ihn um die waagrechte Achse quer zur Flugrichtung
  * (Rückwärtsdrall); die Drehungen der vorherigen Flugbahnen bleiben erhalten, so springt der Ball nie.
  */
-export function ballOrientation(tl: Timeline<BallType | 'abprall'>, t: number, out = new THREE.Quaternion()): THREE.Quaternion {
+export function ballOrientation(tl: Timeline<string>, t: number, out = new THREE.Quaternion()): THREE.Quaternion {
   out.identity()
   for (const seg of tl.segments) {
     if (t <= seg.t0) break
     const local = Math.min(t, seg.t1) - seg.t0
-    // Abprall: keine eigene Drehung (der Ball behält die Lage nach dem Schlag)
-    if (seg.track) continue
-    if (seg.asol) {
+    // Abprall: Drehung aus der Simulation (Drall, Bodenreibung, Rollen)
+    if (seg.track) {
+      const q = seg.track.q
+      if (!q) continue
+      const T = seg.track.t
+      let lo = 0
+      let hi = T.length - 1
+      while (hi - lo > 1) {
+        const mid = (lo + hi) >> 1
+        if (T[mid] <= local) lo = mid
+        else hi = mid
+      }
+      const i = local >= T[hi] ? hi : lo
+      // Welt (x, y, z) → Three (x, z, −y): eine echte Drehung, also gleiche Abbildung für den Vektorteil
+      _q.set(q[i * 4], q[i * 4 + 2], -q[i * 4 + 1], q[i * 4 + 3])
+    } else if (seg.asol) {
       // Schlag: echter Drall (Topspin/Backspin, Seitendrall) um seine Achse
       if (seg.asol.spinRate === 0) continue
       const a = seg.asol.spinAxis

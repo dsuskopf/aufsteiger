@@ -58,6 +58,15 @@ export function presetForHeight(h: number): NetPresetId {
   return 'custom'
 }
 
+/**
+ * Landet der Ball im Feld? Die Linien gehören zum Feld, und es zählt schon, wenn der Ball sie nur berührt:
+ * Aus der Vogelperspektive genügt es, dass irgendein Stück des Balls (Radius r) über Feld oder Linie liegt.
+ */
+export function ballIn(x: number, y: number, r: number): boolean {
+  const edge = COURT.lineWidth / 2
+  return Math.abs(x) <= COURT.halfLength + edge + r && Math.abs(y) <= COURT.halfWidth + edge + r
+}
+
 /** Linien-Segmente des Feldes (Weltkoordinaten, Boden), für 2D und 3D gemeinsam. */
 export interface Segment {
   a: { x: number; y: number }

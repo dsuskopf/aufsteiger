@@ -1,63 +1,105 @@
 import { useRef } from 'react'
-import { ATTACK_SPEED, END_H_MAX, SPIN_MAX, netClearance, solveAttack } from '@renderer/core/physics/attack'
+import { ATTACK_SPEED, FINTE_ARC, FINTE_DEPTH, SPIN_MAX, netClearance, solveAttack } from '@renderer/core/physics/attack'
+import type { Attack } from '@shared/types'
+import { rewind } from '@renderer/store/actions'
 import { usePlay } from '@renderer/store/playStore'
 import { useUi } from '@renderer/store/settingsStore'
-import { Icon } from './Icon'
+import { useScene } from '@renderer/store/playbackStore'
 import { NumberField } from './NumberField'
 
 const fmt = (v: number, d = 2) => v.toFixed(d).replace('.', ',')
 
+/** Finte: Ziel kurz hinter das Netz legen (gleiche Richtung), falls es weiter weg liegt */
+function toFinte(a: Attack): Attack {
+  const dx = a.end.x - a.start.x
+  const dy = a.end.y - a.start.y
+  const face = Math.sign(dx) || 1
+  const depth = Math.abs(a.end.x)
+  let end = a.end
+  if (depth > FINTE_DEPTH + 0.5 && Math.abs(dx) > 0.3) {
+    const k = (face * FINTE_DEPTH - a.start.x) / dx
+    if (k > 0 && k < 1) end = { x: Math.round((a.start.x + dx * k) * 100) / 100, y: Math.round((a.start.y + dy * k) * 100) / 100 }
+  }
+  return { ...a, end, finte: true, arc: a.arc ?? FINTE_ARC.default }
+}
+
 /**
- * Karte zum Schlag: Abschlaggeschwindigkeit, Drall (Topspin/Backspin, links/rechts) und Zielhöhe.
- * Winkel, Flugzeit und höchster Punkt werden daraus berechnet; Hinweise, wenn das Ziel nicht erreichbar ist
+ * Einstellungen zum Schlag. Angriff: Abschlaggeschwindigkeit und Drall (Topspin/Backspin, links/rechts).
+ * Finte: nur die Bogenhöhe – der Ball wird leicht über den Block getippt.
+ * Winkel, Flugzeit und höchster Punkt werden berechnet; Hinweise, wenn das Ziel nicht erreichbar ist
  * oder der Ball ins Netz geht.
  */
-export function SchlagCard() {
-  const selected = usePlay((s) => s.selected === 'schlag')
+export function SchlagEditor() {
   const schlag = usePlay((s) => s.schlag)
-  const { setSchlag, removeSchlag, select } = usePlay()
+  const setSchlag = usePlay((s) => s.setSchlag)
   const netHeight = useUi((s) => s.netHeight)
-  if (!selected || !schlag) return null
+  const scene = useScene()
+  if (!schlag) return null
+  const blocked = scene.deflection?.type === 'schlag' && scene.deflection.kind === 'block'
   const sol = solveAttack(schlag)
   const dist = Math.hypot(sol.landing.x - schlag.start.x, sol.landing.y - schlag.start.y)
   const miss = Math.hypot(sol.landing.x - schlag.end.x, sol.landing.y - schlag.end.y)
   const net = netClearance(sol, netHeight)
 
   return (
-    <aside className="traj-card" aria-label="Schlag bearbeiten">
-      <header>
-        <h3>Schlag</h3>
-        <button className="icon-only plain" title="Schlag löschen (Entf)" aria-label="Schlag löschen" onClick={removeSchlag}>
-          <Icon name="trash" />
+    <>
+      <div className="segmented small fill" role="radiogroup" aria-label="Art des Schlags">
+        <button
+          role="radio"
+          aria-checked={!schlag.finte}
+          className={!schlag.finte ? 'selected' : ''}
+          title="Harter Angriff mit Tempo und Drall"
+          onClick={() => {
+            rewind()
+            setSchlag({ ...schlag, finte: false })
+          }}
+        >
+          Angriff
         </button>
-        <button className="icon-only plain" title="Schließen (Esc)" aria-label="Auswahl aufheben" onClick={() => select(null)}>
-          <Icon name="close" />
+        <button
+          role="radio"
+          aria-checked={!!schlag.finte}
+          className={schlag.finte ? 'selected' : ''}
+          title="Finte: den Ball leicht im Bogen über den Block tippen"
+          onClick={() => {
+            rewind()
+            setSchlag(toFinte(schlag))
+          }}
+        >
+          Finte
         </button>
-      </header>
-      <Slider
-        label="Abschlag"
-        value={schlag.speed * 3.6}
-        min={ATTACK_SPEED.min * 3.6}
-        max={ATTACK_SPEED.max * 3.6}
-        step={1}
-        digits={0}
-        unit="km/h"
-        onChange={(v) => setSchlag({ ...schlag, speed: v / 3.6 })}
-      />
-      <div className="spin-row">
-        <SpinPad topspin={schlag.topspin} sidespin={schlag.sidespin} onChange={(topspin, sidespin) => setSchlag({ ...schlag, topspin, sidespin })} />
       </div>
-      <Slider
-        label="Zielhöhe"
-        value={schlag.endH}
-        min={0}
-        max={END_H_MAX}
-        step={0.01}
-        digits={2}
-        unit="m"
-        display={schlag.endH < 0.005 ? 'Boden' : undefined}
-        onChange={(v) => setSchlag({ ...schlag, endH: v < 0.02 ? 0 : v })}
-      />
+      {schlag.finte ? (
+        <>
+          <Slider
+            label="Bogen über dem Schlagpunkt"
+            value={schlag.arc ?? FINTE_ARC.default}
+            min={FINTE_ARC.min}
+            max={FINTE_ARC.max}
+            step={0.05}
+            digits={2}
+            unit="m"
+            onChange={(v) => setSchlag({ ...schlag, arc: v })}
+          />
+          <p className="caption">Der Ball wird mit den Fingern leicht über den Block getippt. Ziel im Feld verschieben, Tempo ergibt sich aus Bogen und Weite.</p>
+        </>
+      ) : (
+        <>
+          <Slider
+            label="Abschlag"
+            value={schlag.speed * 3.6}
+            min={ATTACK_SPEED.min * 3.6}
+            max={ATTACK_SPEED.max * 3.6}
+            step={1}
+            digits={0}
+            unit="km/h"
+            onChange={(v) => setSchlag({ ...schlag, speed: v / 3.6 })}
+          />
+          <div className="spin-row">
+            <SpinPad topspin={schlag.topspin} sidespin={schlag.sidespin} onChange={(topspin, sidespin) => setSchlag({ ...schlag, topspin, sidespin })} />
+          </div>
+        </>
+      )}
       {!sol.reachable && (
         <p className="caption warn">
           {dist < Math.hypot(schlag.end.x - schlag.start.x, schlag.end.y - schlag.start.y)
@@ -65,11 +107,11 @@ export function SchlagCard() {
             : `Zu schnell für dieses nahe Ziel – der Ball landet ${fmt(miss, 1)} m dahinter.`}
         </p>
       )}
-      {net !== null && net < 0 && <p className="caption warn">Der Ball geht ins Netz ({fmt(-net)} m zu tief).</p>}
+      {net !== null && net < 0 && !blocked && <p className="caption warn">Der Ball geht ins Netz ({fmt(-net)} m zu tief) und prallt dort ab.</p>}
       <dl className="traj-stats">
         <div>
-          <dt>Abschlag</dt>
-          <dd>{fmt(sol.elevation, 0)}°</dd>
+          <dt>{schlag.finte ? 'Tempo' : 'Abschlag'}</dt>
+          <dd>{schlag.finte ? `${Math.round(sol.speed * 3.6)} km/h` : `${fmt(sol.elevation, 0)}°`}</dd>
         </div>
         <div>
           <dt>Flugzeit</dt>
@@ -80,7 +122,7 @@ export function SchlagCard() {
           <dd>{fmt(sol.apexH)} m</dd>
         </div>
       </dl>
-    </aside>
+    </>
   )
 }
 

@@ -1,7 +1,10 @@
 /**
  * Schlag (Angriff): Der Ball startet am Schlagpunkt des Zuspiels mit einer gewählten Abschlaggeschwindigkeit
- * und Drall. Gesucht werden Abschlagwinkel (Höhe) und Richtung, sodass er am Ziel ankommt – standardmäßig
- * auf dem Boden. Der höchste Punkt ergibt sich daraus.
+ * und Drall. Gesucht werden Abschlagwinkel (Höhe) und Richtung, sodass er am Ziel auf dem Boden ankommt.
+ * Der höchste Punkt ergibt sich daraus.
+ *
+ * Finte: Der Angreifer tippt den Ball nur leicht über den Block. Vorgegeben ist die Bogenhöhe über dem
+ * Schlagpunkt; Abfluggeschwindigkeit und Winkel ergeben sich (ohne Drall).
  *
  * Kräfte (3D): Schwerkraft, Luftwiderstand (quadratisch, wie bei Annahme/Zuspiel) und Magnus-Kraft durch Drall:
  *   a = −g·ẑ − K·|v|·v + K_M·(ω × v)
@@ -20,15 +23,19 @@ export const MAGNUS_K = (0.5 * AIR_DENSITY * Math.PI * BALL_RADIUS ** 2 * BALL_R
 export const ATTACK_SPEED = { default: 70 / 3.6, min: 20 / 3.6, max: 130 / 3.6 } as const
 /** Drall in Umdrehungen pro Sekunde */
 export const SPIN_MAX = 10
-export const END_H_MAX = 3
+/** Finte: Bogenhöhe über dem Schlagpunkt (m) */
+export const FINTE_ARC = { default: 0.6, min: 0.1, max: 3 } as const
+/** Finte: Ziel so weit hinter dem Netz, wenn man von einem harten Angriff umschaltet (m) */
+export const FINTE_DEPTH = 2.5
 
 export interface AttackInput {
   start: { x: number; y: number; h: number }
   /** Ziel in der Draufsicht */
   end: { x: number; y: number }
-  /** Höhe am Ziel (0 = Boden) */
-  endH: number
-  /** Abschlaggeschwindigkeit in m/s */
+  /** Finte: Tipp über den Block, Bogenhöhe arc über dem Schlagpunkt */
+  finte?: boolean
+  arc?: number
+  /** Abschlaggeschwindigkeit in m/s (nur Angriff) */
   speed: number
   /** Topspin in U/s (negativ = Backspin) */
   topspin: number
@@ -42,7 +49,7 @@ export interface SolvedAttack {
   x: Float64Array
   y: Float64Array
   z: Float64Array
-  /** Zeit bis zum Ziel (Höhe endH, fallend) */
+  /** Zeit bis zum Ziel (Boden) */
   tHit: number
   /** Zeit bis zum Boden */
   tGround: number
@@ -61,6 +68,8 @@ export interface SolvedAttack {
   spinRate: number
   /** Richtung Start → Ziel (Draufsicht) */
   dir: { dx: number; dy: number }
+  /** Abfluggeschwindigkeit (m/s) – bei der Finte berechnet */
+  speed: number
 }
 
 type V3 = [number, number, number]
@@ -170,7 +179,8 @@ export function clampAttack(a: AttackInput): AttackInput {
   return {
     start: { ...a.start, h: Math.min(6, Math.max(0, fin(a.start.h, 3))) },
     end: { ...a.end },
-    endH: Math.min(END_H_MAX, Math.max(0, fin(a.endH, 0))),
+    ...(a.finte ? { finte: true } : {}),
+    ...(a.arc !== undefined ? { arc: Math.min(FINTE_ARC.max, Math.max(FINTE_ARC.min, fin(a.arc, FINTE_ARC.default))) } : {}),
     speed: Math.min(ATTACK_SPEED.max, Math.max(ATTACK_SPEED.min, fin(a.speed, ATTACK_SPEED.default))),
     topspin: Math.min(SPIN_MAX, Math.max(-SPIN_MAX, fin(a.topspin, 0))),
     sidespin: Math.min(SPIN_MAX, Math.max(-SPIN_MAX, fin(a.sidespin, 0)))
@@ -188,12 +198,17 @@ export function solveAttack(input: AttackInput): SolvedAttack {
   const ey = a.end.y - a.start.y
   const D = Math.max(0.3, Math.hypot(ex, ey))
   const dir = D > 1e-9 && Math.hypot(ex, ey) > 1e-9 ? { dx: ex / Math.hypot(ex, ey), dy: ey / Math.hypot(ex, ey) } : { dx: 1, dy: 0 }
-  const w = spinVector(dir, a.topspin, a.sidespin)
+  const w = a.finte ? ([0, 0, 0] as V3) : spinVector(dir, a.topspin, a.sidespin)
   const baseAz = Math.atan2(dir.dy, dir.dx)
+  if (a.finte) {
+    const sol = solveFinte(S, dir, D, a.arc ?? FINTE_ARC.default)
+    cache.set(key, sol)
+    return sol
+  }
 
   // Weite (entlang der Zielrichtung) und seitliche Abweichung eines Versuchs
   const shoot = (theta: number, az: number) => {
-    const f = fly(S, velocity(a.speed, theta, az), w, a.endH, false)
+    const f = fly(S, velocity(a.speed, theta, az), w, 0, false)
     if (!f.hit) return { along: -Infinity, side: 0 }
     const hx = f.hit.x - S[0]
     const hy = f.hit.y - S[1]
@@ -248,7 +263,12 @@ export function solveAttack(input: AttackInput): SolvedAttack {
     az -= Math.atan2(side, D)
   }
 
-  const f = fly(S, velocity(a.speed, theta, az), w, a.endH, true)
+  const f = fly(S, velocity(a.speed, theta, az), w, 0, true)
+  return finish(f, a.end, reachable, theta, w, dir, a.speed, key)
+}
+
+/** Lösung aus einem aufgezeichneten Flug zusammenstellen und zwischenspeichern */
+function finish(f: Flight, end: { x: number; y: number }, reachable: boolean, theta: number, w: V3, dir: { dx: number; dy: number }, speed: number, key: string | null): SolvedAttack {
   const n = f.t.length
   const T = new Float64Array(n)
   const X = new Float64Array(n)
@@ -261,7 +281,7 @@ export function solveAttack(input: AttackInput): SolvedAttack {
     Z[i] = f.p[i][2]
   }
   const hit = f.hit ?? { x: X[n - 1], y: Y[n - 1], t: T[n - 1], i: n - 1 }
-  if (reachable && Math.hypot(hit.x - a.end.x, hit.y - a.end.y) > 0.15) reachable = false
+  if (reachable && Math.hypot(hit.x - end.x, hit.y - end.y) > 0.15) reachable = false
   const wl = Math.hypot(w[0], w[1], w[2])
   const sol: SolvedAttack = {
     t: T,
@@ -277,11 +297,44 @@ export function solveAttack(input: AttackInput): SolvedAttack {
     landing: { x: hit.x, y: hit.y },
     spinAxis: wl > 0 ? { x: w[0] / wl, y: w[1] / wl, z: w[2] / wl } : { x: 0, y: 0, z: 1 },
     spinRate: wl,
-    dir
+    dir,
+    speed
   }
-  cache.set(key, sol)
-  if (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value!)
+  if (key !== null) {
+    cache.set(key, sol)
+    if (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value!)
+  }
   return sol
+}
+
+/**
+ * Finte: senkrechte Abfluggeschwindigkeit aus der Bogenhöhe, waagerechte per Bisektion aus der Weite.
+ * Der Luftwiderstand drückt den Scheitel etwas – zwei Korrekturrunden heben ihn auf die gewünschte Höhe.
+ */
+function solveFinte(S: V3, dir: { dx: number; dy: number }, D: number, arc: number): SolvedAttack {
+  const w: V3 = [0, 0, 0]
+  const target = S[2] + arc
+  let vz = Math.sqrt(2 * G * arc)
+  let vh = 0
+  let f: Flight | null = null
+  for (let round = 0; round < 3; round++) {
+    let lo = 0.05
+    let hi = 40
+    for (let i = 0; i < 40; i++) {
+      const mid = (lo + hi) / 2
+      const r = fly(S, [mid * dir.dx, mid * dir.dy, vz], w, 0, false)
+      const along = r.hit ? (r.hit.x - S[0]) * dir.dx + (r.hit.y - S[1]) * dir.dy : -Infinity
+      if (along < D) lo = mid
+      else hi = mid
+    }
+    vh = (lo + hi) / 2
+    f = fly(S, [vh * dir.dx, vh * dir.dy, vz], w, 0, true)
+    const miss = target - f.apexZ
+    if (Math.abs(miss) < 0.005) break
+    vz = Math.sqrt(Math.max(0.01, vz * vz + 2 * G * miss))
+  }
+  const end = { x: S[0] + dir.dx * D, y: S[1] + dir.dy * D }
+  return finish(f!, end, true, Math.atan2(vz, vh), w, dir, Math.hypot(vh, vz), null)
 }
 
 /** Ballposition zur Zeit t seit dem Abschlag (geklemmt auf die Abtastung) */
@@ -329,6 +382,8 @@ export interface Track {
   x: Float64Array
   y: Float64Array
   z: Float64Array
+  /** Drehung des Balls seit Beginn (Quaternion x, y, z, w je Abtastung, Welt) – fehlt = dreht nicht */
+  q?: Float64Array
 }
 
 /** Stoßzahl Ball–Hallenboden (senkrecht) und verbleibender Anteil der waagerechten Geschwindigkeit je Aufprall */
@@ -342,8 +397,8 @@ const ROLL_DECEL = 0.6
  * Luftwiderstand), wird mit jedem Aufprall flacher und rollt schließlich aus. Dauer in Sekunden.
  * null, wenn der Ball am Ziel nicht den Boden berührt (Zielhöhe über 0).
  */
-export function bounceTrack(sol: SolvedAttack, endH: number, duration: number): Track | null {
-  if (endH > 0.005 || duration <= 0) return null
+export function bounceTrack(sol: SolvedAttack, duration: number): Track | null {
+  if (duration <= 0) return null
   const n = sol.t.length
   const i = Math.max(1, Math.min(n - 1, sol.iHit))
   const dt0 = Math.max(1e-6, sol.t[i] - sol.t[i - 1])
@@ -406,5 +461,5 @@ export function trackPositionAt(tr: Track, t: number): { x: number; y: number; z
 
 /** Neuer Schlag vom Schlagpunkt des Zuspiels (oder frei) zum Ziel auf dem Boden */
 export function newAttack(start: { x: number; y: number; h: number }, end: { x: number; y: number }): AttackInput {
-  return clampAttack({ start, end, endH: 0, speed: ATTACK_SPEED.default, topspin: 0, sidespin: 0 })
+  return clampAttack({ start, end, speed: ATTACK_SPEED.default, topspin: 0, sidespin: 0 })
 }

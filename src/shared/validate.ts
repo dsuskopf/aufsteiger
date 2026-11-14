@@ -1,6 +1,7 @@
 import {
   DEFAULT_DISPLAY,
   DEFAULT_SETTINGS,
+  BALL_TYPES,
   MAX_PLAYERS_PER_SIDE,
   PLAYER_HEIGHT,
   ROLES,
@@ -8,6 +9,7 @@ import {
   TRAJECTORY_TYPES,
   ZONE_STYLES,
   type Attack,
+  type Contacts,
   type CourtPlayer,
   type Formation,
   type NetPresetId,
@@ -21,6 +23,7 @@ import {
   type ZoneStyle
 } from './types'
 import { DEFAULT_LIBERO_COLOR, DEFAULT_TEAM_COLOR, isHexColor, pairedLibero } from './teamColors'
+import { TEAM_GENDERS, sanitizeLook, type TeamGender } from './looks'
 
 /** Alte Rollenkürzel (bis Phase 2) auf die neuen abbilden */
 const LEGACY_ROLES: Record<string, Role> = { AA: 'A', DA: 'D' }
@@ -45,7 +48,8 @@ export function sanitizeTeams(raw: unknown): Team[] {
         name: typeof p.name === 'string' ? p.name.slice(0, 80) : '',
         number: clampNumber(p.number),
         positions: [...new Set(positions)],
-        height: clampHeight(p.height)
+        height: clampHeight(p.height),
+        ...(sanitizeLook(p.look) ? { look: sanitizeLook(p.look) } : {})
       })
     }
     const color = isHexColor(t.color) ? t.color.toLowerCase() : DEFAULT_TEAM_COLOR
@@ -55,6 +59,7 @@ export function sanitizeTeams(raw: unknown): Team[] {
       color,
       // Ohne gespeicherte Libero-Farbe: der passende Partner der Trikotfarbe
       liberoColor: isHexColor(t.liberoColor) ? t.liberoColor.toLowerCase() : (pairedLibero(color) ?? DEFAULT_LIBERO_COLOR),
+      ...(TEAM_GENDERS.includes(t.gender as TeamGender) ? { gender: t.gender as TeamGender } : {}),
       players
     }
     const rotations = sanitizeRotations(t.rotations, new Set(players.map((p) => p.id)))
@@ -131,7 +136,10 @@ export function sanitizeSettings(raw: unknown): Settings {
     trajectoryOpacity3d: Math.round(num(r.trajectoryOpacity3d, d.trajectoryOpacity3d, 10, 100)),
     bounce: bool(r.bounce, d.bounce),
     bounceDuration: Math.round(num(r.bounceDuration, d.bounceDuration, 0.5, 5) * 10) / 10,
-    zoneStyle: ZONE_STYLES.includes(r.zoneStyle as ZoneStyle) ? (r.zoneStyle as ZoneStyle) : d.zoneStyle
+    zoneStyle: ZONE_STYLES.includes(r.zoneStyle as ZoneStyle) ? (r.zoneStyle as ZoneStyle) : d.zoneStyle,
+    cameraShake: bool(r.cameraShake, d.cameraShake),
+    sound: bool(r.sound, d.sound),
+    soundVolume: Math.round(num(r.soundVolume, d.soundVolume, 0, 100))
   }
 }
 
@@ -153,7 +161,8 @@ function sanitizeAttack(raw: unknown): Attack | undefined {
   return {
     start: { x: c(raw.start.x), y: c(raw.start.y), h: num(raw.start.h, 3, 0, 6) },
     end: { x: c(raw.end.x), y: c(raw.end.y) },
-    endH: num(raw.endH, 0, 0, 3),
+    ...(raw.finte === true ? { finte: true } : {}),
+    ...(raw.arc !== undefined ? { arc: num(raw.arc, 0.6, 0.1, 3) } : {}),
     speed: num(raw.speed, 70 / 3.6, 20 / 3.6, 130 / 3.6),
     topspin: num(raw.topspin, 0, -10, 10),
     sidespin: num(raw.sidespin, 0, -10, 10)
@@ -178,7 +187,9 @@ function sanitizeSide(raw: unknown): PlaySideDoc {
       const points = p.path.points.filter(isObj).slice(0, 16).map((q) => ({ x: num(q.x, 0, -11, 11), y: num(q.y, 0, -6.5, 6.5) }))
       if (points.length) c.path = { points, delay: num(p.path.delay, 0, 0, 10), speed: num(p.path.speed, 4, 1, 8) }
     }
-    if (isObj(p.jump)) c.jump = { at: num(p.jump.at, 0, 0, 20), height: num(p.jump.height, 0.6, 0.2, 1.1) }
+    if (isObj(p.jump)) c.jump = { at: num(p.jump.at, 0, 0, 20), height: num(p.jump.height, 0.6, 0.2, 1.1), ...(p.jump.sync === true ? { sync: true } : {}) }
+    if (p.block === true) c.block = true
+    if (p.fake === true) c.fake = true
     players.push(c)
   }
   const snap = sanitizeTeams([r.teamSnapshot])[0] ?? null
@@ -201,6 +212,20 @@ function sanitizeSide(raw: unknown): PlaySideDoc {
   return side
 }
 
+/** Gekoppelte Ballkontakte: nur Spieler, die auf dem Feld stehen */
+function sanitizeContacts(raw: unknown, sides: PlayDoc['sides']): Contacts | undefined {
+  if (!isObj(raw)) return undefined
+  const out: Contacts = {}
+  for (const type of BALL_TYPES) {
+    const r = raw[type]
+    if (!isObj(r) || (r.side !== 'A' && r.side !== 'B') || typeof r.playerId !== 'string') continue
+    const side = r.side
+    const playerId = r.playerId
+    if (sides[side].players.some((c) => c.playerId === playerId)) out[type] = { side, playerId }
+  }
+  return Object.keys(out).length ? out : undefined
+}
+
 const str = (v: unknown, max: number, fallback = '') => (typeof v === 'string' ? v.slice(0, max) : fallback)
 
 /** Prüft einen gespeicherten Spielzug; null, wenn er unbrauchbar ist. */
@@ -212,7 +237,9 @@ export function sanitizePlay(raw: unknown): PlayDoc | null {
     const v = sanitizeTrajectory(tr[t])
     if (v) trajectories[t] = v
   }
-  const sides = isObj(raw.sides) ? raw.sides : {}
+  const rawSides = isObj(raw.sides) ? raw.sides : {}
+  const sides = { A: sanitizeSide(rawSides.A), B: sanitizeSide(rawSides.B) }
+  const contacts = sanitizeContacts(raw.contacts, sides)
   const disp = isObj(raw.display) ? raw.display : {}
   const now = new Date().toISOString()
   return {
@@ -222,8 +249,9 @@ export function sanitizePlay(raw: unknown): PlayDoc | null {
     title: str(raw.title, 120),
     createdAt: str(raw.createdAt, 40, now),
     updatedAt: str(raw.updatedAt, 40, now),
-    sides: { A: sanitizeSide(sides.A), B: sanitizeSide(sides.B) },
+    sides,
     trajectories,
+    ...(contacts ? { contacts } : {}),
     netPreset: NET_PRESET_IDS.includes(raw.netPreset as NetPresetId) ? (raw.netPreset as NetPresetId) : 'herren',
     netHeight: num(raw.netHeight, 2.43, 1, 3),
     display: {

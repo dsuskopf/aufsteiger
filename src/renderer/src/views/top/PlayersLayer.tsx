@@ -1,12 +1,12 @@
-import { Circle, Group, Layer, Text } from 'react-konva'
+import { Circle, Group, Layer, Line, Text } from 'react-konva'
 import type Konva from 'konva'
 import { topToWorld, worldToTop, type TopViewport } from '@renderer/core/geometry/transform'
 import { clampToArea } from '@renderer/core/lineup/lineup'
 import { useCourtPlayers, useLaeuferMarkers, type CourtPlayerView } from '@renderer/store/selectors'
 import { usePlay } from '@renderer/store/playStore'
 import { useUi } from '@renderer/store/settingsStore'
-import { usePlayback } from '@renderer/store/playbackStore'
-import { playerAt } from '@renderer/core/motion/motion'
+import { usePlayback, useScene } from '@renderer/store/playbackStore'
+import { planAt } from '@renderer/core/motion/plan'
 import { COLORS } from '@renderer/theme/colors'
 import { LaeuferBadge } from './LaeuferBadge'
 
@@ -30,8 +30,9 @@ export function PlayersLayer({ vp, interactive = true }: { vp: TopViewport; inte
   const selected = usePlay((s) => s.selectedPlayer)
   const markers = useLaeuferMarkers()
   const r = Math.max(MIN_RADIUS_PX, RADIUS_M * vp.scale)
-  // Nur mit Laufwegen/Sprüngen der Uhr folgen (sonst kein Neuzeichnen pro Bild)
-  const moving = players.some((p) => p.court.path || p.court.jump)
+  // Nur wenn sich jemand bewegt (Laufweg, Sprung, gekoppelter Ballkontakt, Block), der Uhr folgen – sonst kein Neuzeichnen pro Bild
+  const scene = useScene()
+  const moving = [...scene.plans.values()].some((p) => p.path || p.legs.length > 0 || p.jumps.length > 0)
   const t = usePlayback((s) => (moving ? s.t : 0))
 
   const onDrag = (p: CourtPlayerView) => (e: Konva.KonvaEventObject<DragEvent>) => {
@@ -54,7 +55,8 @@ export function PlayersLayer({ vp, interactive = true }: { vp: TopViewport; inte
   return (
     <Layer listening={interactive}>
       {players.map((p) => {
-        const at = moving ? playerAt(p.court, t) : { x: p.x, y: p.y, z: 0 }
+        const plan = scene.plans.get(p.key)
+        const at = moving && plan ? planAt(plan, t) : { x: p.x, y: p.y, z: 0 }
         const pos = worldToTop(vp, at.x, at.y)
         const colors = p.jersey
         const isSel = selected?.side === p.side && selected.playerId === p.playerId
@@ -79,6 +81,17 @@ export function PlayersLayer({ vp, interactive = true }: { vp: TopViewport; inte
             onMouseLeave={(e) => setCursor(e, '')}
           >
             {isSel && <Circle radius={r + 4} stroke={COLORS.accent} strokeWidth={2.5} listening={false} />}
+            {p.court.block &&
+              (() => {
+                // Blocker: Balken (die Hände) auf der Netzseite des Spielers
+                const a = worldToTop({ ...vp, originX: 0, originY: 0 }, p.side === 'A' ? 1 : -1, 0)
+                const n = Math.hypot(a.px, a.py) || 1
+                const ux = a.px / n
+                const uy = a.py / n
+                const d = r + 5
+                const w = r * 0.85
+                return <Line points={[ux * d - uy * w, uy * d + ux * w, ux * d + uy * w, uy * d - ux * w]} stroke={colors.stroke} strokeWidth={6} lineCap="round" shadowColor="#000" shadowBlur={4} shadowOpacity={0.6} listening={false} />
+              })()}
             <Circle
               radius={r}
               fill={colors.fill}

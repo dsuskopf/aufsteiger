@@ -3,32 +3,44 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { COLORS } from '@renderer/theme/colors'
 import { useUi } from '@renderer/store/settingsStore'
-import { buildCourt, buildNet, disposeObject } from './courtScene'
+import { bendAntennas, buildCourt, buildNet, deformNet, disposeObject } from './courtScene'
 import { CAMERA_LIMITS, clampTarget } from './camera'
 import { ViewControls } from '@renderer/components/ViewControls'
 import { NamesButton, ZonesButton } from '@renderer/components/ViewToggles'
+import { Icon } from '@renderer/components/Icon'
 import { useEmptyTapClose } from '@renderer/components/useEmptyTapClose'
 import { ZOOM_DURATION_MS, ZOOM_STEP, tween } from '@renderer/components/tween'
-import { useCourtPlayers } from '@renderer/store/selectors'
-import { CylinderPlayerFactory, placePlayer, setLaeuferMark, showNameTag, visualKey, type PlayerMeshFactory } from './players'
-import { useVisibleTrajectories } from '@renderer/store/selectors'
+import { useCourtPlayers, useLaeuferMarkers, useVisibleTrajectories, type CourtPlayerView } from '@renderer/store/selectors'
+import { HumanoidPlayerFactory, setLaeuferMark, showNameTag, visualKey } from './players'
 import { usePlay } from '@renderer/store/playStore'
-import { currentBall, currentTimeline, totalDuration, usePathsHidden, usePlayback } from '@renderer/store/playbackStore'
+import { currentBall, currentScene, usePathsHidden, usePlayback, useScene } from '@renderer/store/playbackStore'
 import { ballOrientation, buildBall, buildTrajectories, placeBall, updateTrajectoryProgress } from './trajectories'
 import { buildZones, orientZoneLabels } from './zones'
-import { playerAt, pathCurve } from '@renderer/core/motion/motion'
+import { pathCurve } from '@renderer/core/motion/motion'
+import { skeletonAt } from '@renderer/core/motion/pose'
 import { worldToThree } from '@renderer/core/geometry/transform'
-import { useLaeuferMarkers, type CourtPlayerView } from '@renderer/store/selectors'
 import { useSettings } from '@renderer/store/appSettings'
+import { antennaHits, buildEffects, cameraShake, netHits, updateEffects } from './effects'
+import { KEY_HELP, createKeyCamera, typingTarget } from './keyCamera'
 
 /** Zeichenfläche der laufenden 3D-Ansicht (für den Video-Export) */
 export let activeThreeCanvas: HTMLCanvasElement | null = null
 
 interface PlayerItems {
   group: THREE.Group
-  factory: PlayerMeshFactory
+  factory: HumanoidPlayerFactory
   items: Map<string, { obj: THREE.Object3D; vkey: string }>
 }
+
+/** Feste Blickwinkel zum Durchschalten: Ziel und Kamera-Versatz (Three-Koordinaten) */
+const ANGLES: { label: string; target: [number, number, number]; offset: [number, number, number] }[] = [
+  { label: 'Schräg', target: [0, 0, 0], offset: [-16, 9, 14] },
+  { label: 'Seite', target: [0, 1.2, 0], offset: [0, 4.5, 17] },
+  { label: 'Hinter Seite A', target: [1, 1.4, 0], offset: [-17, 5.5, 0] },
+  { label: 'Hinter Seite B', target: [-1, 1.4, 0], offset: [17, 5.5, 0] },
+  { label: 'Am Netz', target: [0, 2, 0], offset: [0, 1.2, 9.5] },
+  { label: 'Von oben', target: [0, 0, 0], offset: [0, 24, 0.5] }
+]
 
 /**
  * 3D-Ansicht: Feld, Netz, Spieler, Flugbahnen und Ball.
@@ -51,13 +63,16 @@ export function ThreeView() {
   const playersRef = useRef<PlayerItems | null>(null)
   const trajectories = useVisibleTrajectories()
   const schlag = usePlay((s) => s.schlag)
+  const rally = useScene()
   const pathOpacity = useSettings((s) => s.settings.trajectoryOpacity3d)
   const selected = usePlay((s) => s.selected)
   const hidePaths = usePathsHidden()
   const showZones = useUi((s) => s.showZones)
   const showNames = useUi((s) => s.showNames)
+  const followBall = useUi((s) => s.followBall)
+  const setFollowBall = useUi((s) => s.setFollowBall)
   const markers = useLaeuferMarkers()
-  // In 3D gibt es nichts anzutippen: jeder kurze Tipp (ohne Drehen) schließt die Karten
+  // In 3D gibt es nichts anzutippen: jeder kurze Tipp (ohne Drehen) schließt die Auswahl
   useEmptyTapClose(hostRef)
   const zoneStyle = useSettings((s) => s.settings.zoneStyle)
 
@@ -66,22 +81,38 @@ export function ThreeView() {
     const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true })
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.setClearColor(COLORS.bgDeep)
+    renderer.shadowMap.enabled = true
+    renderer.shadowMap.type = THREE.PCFShadowMap
     host.appendChild(renderer.domElement)
     activeThreeCanvas = renderer.domElement
 
     const scene = new THREE.Scene()
     scene.fog = new THREE.Fog(COLORS.bgDeep, 35, 80)
-    scene.add(new THREE.HemisphereLight('#c4c4ca', '#0c0c0e', 1.2))
-    const sun = new THREE.DirectionalLight('#ffffff', 1.2)
-    sun.position.set(6, 14, 8)
+    scene.add(new THREE.HemisphereLight('#c4c4ca', '#0c0c0e', 1.15))
+    // Hallenlicht von schräg oben: wirft weiche Schatten der Spieler auf den Boden
+    const sun = new THREE.DirectionalLight('#ffffff', 1.35)
+    sun.position.set(5, 18, 7)
+    sun.castShadow = true
+    sun.shadow.mapSize.set(2048, 2048)
+    sun.shadow.camera.left = -14
+    sun.shadow.camera.right = 14
+    sun.shadow.camera.top = 10
+    sun.shadow.camera.bottom = -10
+    sun.shadow.camera.near = 1
+    sun.shadow.camera.far = 45
+    sun.shadow.bias = -0.0006
+    sun.shadow.radius = 5
     scene.add(sun)
     scene.add(buildCourt())
     const playerGroup = new THREE.Group()
     playerGroup.name = 'players'
     scene.add(playerGroup)
-    playersRef.current = { group: playerGroup, factory: new CylinderPlayerFactory(), items: new Map() }
+    const factory = new HumanoidPlayerFactory()
+    playersRef.current = { group: playerGroup, factory, items: new Map() }
     const ball = buildBall()
     scene.add(ball)
+    const effects = buildEffects()
+    scene.add(effects)
 
     const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200)
     camera.position.copy(DEFAULT_CAMERA)
@@ -112,20 +143,28 @@ export function ThreeView() {
     const testHook = (window as unknown as { __vbp?: Record<string, unknown> }).__vbp
     if (testHook) testHook.three = { camera, controls }
 
-    // Ball folgt der Uhr ohne React-Neuzeichnung (Position und Drall)
+    // Ball, Spieler und Effekte folgen der Uhr ohne React-Neuzeichnung
     const spin = new THREE.Quaternion()
-    const updateBall = () => {
-      const tl = currentTimeline()
+    const update = () => {
+      const sc = currentScene()
       const t = usePlayback.getState().t
-      placeBall(ball, currentBall(), ballOrientation(tl, t, spin))
+      const b = currentBall()
+      placeBall(ball, b, ballOrientation(sc.timeline, t, spin))
       // Schon geflogener Teil der Bahnen blass, Lücke um den Ball
-      updateTrajectoryProgress(sceneRef.current?.trajectories ?? null, tl, t, totalDuration())
+      updateTrajectoryProgress(sceneRef.current?.trajectories ?? null, sc.timeline, t, sc.total)
+      updateEffects(effects, sc.events, sc.timeline, t, sc.total)
+      deformNet(sceneRef.current?.net ?? null, netHits(sc.events, t, sc.total))
+      bendAntennas(sceneRef.current?.net ?? null, antennaHits(sc.events, t, sc.total))
+      const pr = playersRef.current
+      if (pr)
+        for (const [key, item] of pr.items) {
+          const plan = sc.plans.get(key)
+          if (plan) pr.factory.pose(item.obj, skeletonAt(plan, t, b))
+        }
     }
-    updateBall()
-    const unsubA = usePlayback.subscribe(updateBall)
-    const unsubB = usePlay.subscribe(updateBall)
-    // Spieler laufen und springen mit der Uhr (ohne React-Neuzeichnung)
-    const unsubC = usePlayback.subscribe(() => applyMotion(playersRef.current))
+    update()
+    const unsubA = usePlayback.subscribe(update)
+    const unsubB = usePlay.subscribe(update)
 
     const resize = () => {
       const w = Math.max(1, host.clientWidth)
@@ -140,18 +179,57 @@ export function ThreeView() {
     ro.observe(host)
     resize()
 
+    const shake = new THREE.Vector3()
+    const follow = new THREE.Vector3()
+    // Tastatur-Kamera (WASD …), nicht während ein Dialog offen ist
+    const keys = createKeyCamera(camera, controls, {
+      blocked: () => {
+        const ui = useUi.getState()
+        return !!ui.dialog || ui.teamsOpen || ui.settingsOpen
+      },
+      onStart: () => {
+        animRef.current.cancel?.()
+        animRef.current = { cancel: null, goalDist: null }
+      },
+      onPan: () => {
+        if (useUi.getState().followBall) useUi.getState().setFollowBall(false)
+      }
+    })
+    let lastFrame = performance.now()
     renderer.setAnimationLoop(() => {
+      const now = performance.now()
+      keys.update(Math.min(0.05, (now - lastFrame) / 1000))
+      lastFrame = now
+      // Ballkamera: das Ziel der Kamera gleitet dem Ball nach (Blickwinkel und Abstand bleiben)
+      if (useUi.getState().followBall) {
+        const b = currentBall()
+        if (b) {
+          follow.set(...worldToThree(b.x, b.y, Math.min(3, b.z * 0.6)))
+          const c = clampTarget(follow)
+          follow.set(c.x, c.y, c.z).sub(controls.target).multiplyScalar(0.07)
+          controls.target.add(follow)
+          camera.position.add(follow)
+        }
+      }
       controls.update()
       // Zonen-Beschriftung immer zur Kamera ausrichten (lesbar aus jedem Winkel)
       const zones = sceneRef.current?.zones
       if (zones) orientZoneLabels(zones, camera, controls.target)
+      // Kamera-Wackeln bei harten Ballkontakten – nur beim Abspielen, nur fürs Bild (die Kamera selbst bleibt, wo sie ist)
+      const pb = usePlayback.getState()
+      const shaking = pb.playing && useSettings.getState().settings.cameraShake
+      if (shaking) {
+        cameraShake(currentScene().events, pb.t, shake).multiplyScalar(camera.position.distanceTo(controls.target))
+        camera.position.add(shake)
+      }
       renderer.render(scene, camera)
+      if (shaking) camera.position.sub(shake)
     })
 
     return () => {
+      keys.dispose()
       unsubA()
       unsubB()
-      unsubC()
       if (activeThreeCanvas === renderer.domElement) activeThreeCanvas = null
       const pr = playersRef.current
       if (pr) for (const { obj } of pr.items.values()) pr.factory.dispose(obj)
@@ -166,10 +244,13 @@ export function ThreeView() {
     }
   }, [])
 
-  // Spieler abgleichen: neue anlegen, geänderte neu erzeugen, sonst nur verschieben
+  // Spieler abgleichen: neue anlegen, geänderte neu erzeugen; die Haltung folgt der Uhr
   useEffect(() => {
     const pr = playersRef.current
     if (!pr) return
+    const sc = currentScene()
+    const t = usePlayback.getState().t
+    const b = currentBall()
     const seen = new Set<string>()
     for (const p of players) {
       seen.add(p.key)
@@ -185,18 +266,18 @@ export function ThreeView() {
         pr.group.add(item.obj)
         pr.items.set(p.key, item)
       }
-      placePlayer(item.obj, p.x, p.y)
+      const plan = sc.plans.get(p.key)
+      if (plan) pr.factory.pose(item.obj, skeletonAt(plan, t, b))
       showNameTag(item.obj, showNames)
       setLaeuferMark(item.obj, markers.get(p.key), COLORS.accent, COLORS.bgDeep)
     }
-    applyMotion(pr)
     for (const [key, item] of pr.items) {
       if (seen.has(key)) continue
       pr.group.remove(item.obj)
       pr.factory.dispose(item.obj)
       pr.items.delete(key)
     }
-  }, [players, showNames, markers])
+  }, [players, showNames, markers, rally])
 
   // Flugbahnen neu aufbauen, wenn sie sich ändern
   useEffect(() => {
@@ -206,11 +287,11 @@ export function ThreeView() {
       ref.scene.remove(ref.trajectories)
       disposeObject(ref.trajectories)
     }
-    ref.trajectories = buildTrajectories(trajectories, selected, schlag, pathOpacity / 100)
-    updateTrajectoryProgress(ref.trajectories, currentTimeline(), usePlayback.getState().t, totalDuration())
+    ref.trajectories = buildTrajectories(trajectories, selected, schlag, pathOpacity / 100, rally)
+    updateTrajectoryProgress(ref.trajectories, rally.timeline, usePlayback.getState().t, rally.total)
     ref.trajectories.visible = !hidePaths
     ref.scene.add(ref.trajectories)
-  }, [trajectories, selected, schlag, pathOpacity])
+  }, [trajectories, selected, schlag, pathOpacity, rally])
 
   // „Nur Ball“ beim Abspielen: Bahnen aus-/einblenden, ohne sie neu aufzubauen
   useEffect(() => {
@@ -317,18 +398,55 @@ export function ThreeView() {
     flyTo(ref.controls.target.clone(), new THREE.Spherical(dist, current.phi, current.theta), dist)
   }
 
-  const resetView = () => {
-    flyTo(new THREE.Vector3(0, 0, 0), new THREE.Spherical().setFromVector3(DEFAULT_CAMERA), null)
+  const angleRef = useRef(0)
+  const goAngle = (i: number) => {
+    angleRef.current = i
+    const a = ANGLES[i]
+    setFollowBall(false)
+    flyTo(new THREE.Vector3(...a.target), new THREE.Spherical().setFromVector3(new THREE.Vector3(...a.offset)), null)
   }
+  // Tastatur: 1–6 feste Blickwinkel, B Ballkamera (WASD usw. in keyCamera.ts)
+  const goAngleRef = useRef(goAngle)
+  goAngleRef.current = goAngle
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.repeat || typingTarget(e)) return
+      const ui = useUi.getState()
+      if (ui.dialog || ui.teamsOpen || ui.settingsOpen) return
+      const n = /^Digit([1-6])$/.exec(e.code)
+      if (n) {
+        e.preventDefault()
+        goAngleRef.current(Number(n[1]) - 1)
+      } else if (e.code === 'KeyB') {
+        e.preventDefault()
+        ui.setFollowBall(!ui.followBall)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+  const keyHelp = KEY_HELP.map((k) => `${k.keys}: ${k.label}`).join('\n')
 
   return (
     <>
       <div className="canvas-host" ref={hostRef} />
-      <ViewControls
-        onZoomIn={() => zoom(1 / ZOOM_STEP)}
-        onZoomOut={() => zoom(ZOOM_STEP)}
-        onReset={resetView}
-      >
+      <ViewControls onZoomIn={() => zoom(1 / ZOOM_STEP)} onZoomOut={() => zoom(ZOOM_STEP)} onReset={() => goAngle(0)}>
+        <button
+          title={`Blickwinkel wechseln (nächster: ${ANGLES[(angleRef.current + 1) % ANGLES.length].label})\n\nTastatur:\n${keyHelp}`}
+          aria-label="Blickwinkel wechseln"
+          onClick={() => goAngle((angleRef.current + 1) % ANGLES.length)}
+        >
+          <Icon name="camera" />
+        </button>
+        <button
+          className={followBall ? 'selected' : ''}
+          aria-pressed={followBall}
+          title={followBall ? 'Ballkamera aus (B)' : 'Ballkamera: die Kamera folgt dem Ball (B)'}
+          aria-label="Ballkamera"
+          onClick={() => setFollowBall(!followBall)}
+        >
+          <Icon name="follow" />
+        </button>
         <NamesButton />
         <ZonesButton />
       </ViewControls>
@@ -337,21 +455,6 @@ export function ThreeView() {
 }
 
 const DEFAULT_CAMERA = new THREE.Vector3(-16, 9, 14)
-
-/** Spieler zur aktuellen Zeit platzieren: entlang des Laufwegs, im Sprung angehoben */
-function applyMotion(pr: PlayerItems | null): void {
-  if (!pr) return
-  const t = usePlayback.getState().t
-  const { sides } = usePlay.getState()
-  for (const side of ['A', 'B'] as const)
-    for (const c of sides[side].players) {
-      const item = pr.items.get(`${side}:${c.playerId}`)
-      if (!item) continue
-      const at = playerAt(c, t)
-      placePlayer(item.obj, at.x, at.y)
-      item.obj.position.y = at.z
-    }
-}
 
 /** Laufwege als gestrichelte Linien knapp über dem Boden, in der Trikotfarbe */
 function buildPaths(players: CourtPlayerView[]): THREE.Group {

@@ -17,6 +17,7 @@ export function buildCourt(): THREE.Group {
     new THREE.MeshStandardMaterial({ color: COLORS.freeZone, roughness: 0.95 })
   )
   floor.rotation.x = -Math.PI / 2
+  floor.receiveShadow = true
   g.add(floor)
 
   const court = new THREE.Mesh(
@@ -25,6 +26,7 @@ export function buildCourt(): THREE.Group {
   )
   court.rotation.x = -Math.PI / 2
   court.position.y = LINE_Y / 2
+  court.receiveShadow = true
   g.add(court)
 
   const lineMat = new THREE.MeshBasicMaterial({ color: COLORS.line })
@@ -58,19 +60,25 @@ export function buildNet(netHeight: number): THREE.Group {
     side: THREE.DoubleSide,
     depthWrite: false
   })
-  const net = new THREE.Mesh(new THREE.PlaneGeometry(COURT.netWidth, COURT.netBandDepth), netMat)
-  net.rotation.y = Math.PI / 2
-  net.position.set(0, netHeight - COURT.netBandDepth / 2, 0)
-  g.add(net)
+  // Fein unterteilt, damit das Netz ausbeulen kann, wenn der Ball hineinfliegt (deformNet)
+  const flex: THREE.Mesh[] = []
+  const strip = (height: number, y: number, mat: THREE.Material, segH: number) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(COURT.netWidth, height, NET_SEGMENTS, segH), mat)
+    m.rotation.y = Math.PI / 2
+    m.position.set(0, y, 0)
+    m.userData.base = Float32Array.from(m.geometry.attributes.position.array)
+    flex.push(m)
+    g.add(m)
+    return m
+  }
+  strip(COURT.netBandDepth, netHeight - COURT.netBandDepth / 2, netMat, 10)
 
-  // Oberkante + Unterkante
-  const bandMat = new THREE.MeshBasicMaterial({ color: '#c9c9cf' })
-  const top = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.07, COURT.netWidth), bandMat)
-  top.position.set(0, netHeight - 0.035, 0)
-  g.add(top)
-  const bottom = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.02, COURT.netWidth), bandMat)
-  bottom.position.set(0, netHeight - COURT.netBandDepth, 0)
-  g.add(bottom)
+  // Oberkante + Unterkante (Bänder)
+  const bandMat = new THREE.MeshBasicMaterial({ color: '#c9c9cf', side: THREE.DoubleSide })
+  strip(0.07, netHeight - 0.035, bandMat, 1)
+  strip(0.025, netHeight - COURT.netBandDepth, bandMat, 1)
+  g.userData.flex = flex
+  g.userData.netHeight = netHeight
 
   // Pfosten
   const postMat = new THREE.MeshStandardMaterial({ color: '#55555c', metalness: 0.4, roughness: 0.5 })
@@ -129,16 +137,96 @@ function buildAntenna(netHeight: number, side: number): THREE.Group {
   pocket.position.set(ax, netBottom + COURT.netBandDepth / 2, az)
   g.add(pocket)
 
-  // Rot-weiße Felder ab der Netzkante; das oberste Feld ist rot
+  // Rot-weiße Felder ab der Netzkante; das oberste Feld ist rot. Als eigene Gruppe mit dem Drehpunkt an der
+  // Netzkante, damit sich die Antenne biegen kann, wenn der Ball sie trifft (bendAntennas)
+  const top = new THREE.Group()
+  top.name = 'antennaTop'
+  top.position.set(ax, netHeight, az)
+  top.userData.side = side
   const n = Math.round(COURT.antennaHeightAboveNet / COURT.antennaStripe)
   const stripeGeo = new THREE.CylinderGeometry(COURT.antennaDisplayRadius, COURT.antennaDisplayRadius, COURT.antennaStripe, 16)
   for (let i = 0; i < n; i++) {
     const isRed = (n - 1 - i) % 2 === 0
     const stripe = new THREE.Mesh(stripeGeo, isRed ? red : white)
-    stripe.position.set(ax, netHeight + COURT.antennaStripe * (i + 0.5), az)
-    g.add(stripe)
+    stripe.position.set(0, COURT.antennaStripe * (i + 0.5), 0)
+    top.add(stripe)
   }
+  g.add(top)
   return g
+}
+
+/** Treffer an einer Antenne: Seite (Vorzeichen von y), Zeit seit dem Treffer, Stärke (rad), Flugrichtung (x, y) */
+export interface AntennaHit {
+  side: number
+  age: number
+  strength: number
+  dx: number
+  dy: number
+}
+
+/**
+ * Antennen biegen: Der getroffene Stab gibt in Flugrichtung nach und schwingt gedämpft aus (Glasfaser).
+ * Reine Funktion der Treffer – stimmt auch beim Zurückspulen.
+ */
+export function bendAntennas(net: THREE.Object3D | null, hits: AntennaHit[]): void {
+  if (!net) return
+  net.traverse((o) => {
+    if (o.name !== 'antennaTop') return
+    let bx = 0
+    let by = 0
+    for (const h of hits) {
+      if (h.side !== o.userData.side || h.age < 0) continue
+      const swing = h.strength * Math.exp(-h.age * 3.2) * Math.sin(h.age * 24)
+      bx += swing * h.dx
+      by += swing * h.dy
+    }
+    // Welt x → Three x, Welt y → Three −z: Neigung nach +x ist eine Drehung um −z, nach +y eine um −x
+    o.rotation.set(-by, 0, -bx)
+  })
+}
+
+const NET_SEGMENTS = 64
+
+/** Treffer im Netz: Ort (Welt y, z), Zeit seit dem Treffer, Stärke und Richtung (+1 = nach Seite B) */
+export interface NetHit {
+  y: number
+  z: number
+  age: number
+  strength: number
+  dir: number
+}
+
+/**
+ * Netz ausbeulen: Jeder Treffer drückt das Netz in Flugrichtung ein; die Beule schwingt gedämpft aus.
+ * Ohne Treffer hängt das Netz wieder gerade. Reine Funktion der Treffer – stimmt auch beim Zurückspulen.
+ */
+export function deformNet(net: THREE.Object3D | null, hits: NetHit[]): void {
+  const flex = net?.userData.flex as THREE.Mesh[] | undefined
+  if (!net || !flex) return
+  const active = hits.filter((h) => h.age >= 0 && h.age < 1.6)
+  if (active.length === 0 && !net.userData.bent) return
+  net.userData.bent = active.length > 0
+  const half = COURT.netWidth / 2
+  for (const m of flex) {
+    const base = m.userData.base as Float32Array
+    const pos = m.geometry.attributes.position as THREE.BufferAttribute
+    for (let i = 0; i < pos.count; i++) {
+      // Lokales x der Fläche läuft entlang der Netzbreite (= Welt y), lokales y ist die Höhe
+      const wy = base[i * 3]
+      const wz = m.position.y + base[i * 3 + 1]
+      let d = 0
+      for (const h of active) {
+        const r2 = (wy - h.y) ** 2 + ((wz - h.z) * 1.4) ** 2
+        const swing = Math.exp(-h.age * 3.4) * Math.cos(h.age * 15)
+        d += h.dir * h.strength * swing * Math.exp(-r2 / 0.9)
+      }
+      // An den Pfosten ist das Netz fest
+      const edge = 1 - (wy / half) ** 2
+      // Die Fläche ist um 90° gedreht: lokales z zeigt entlang Welt x
+      pos.setZ(i, base[i * 3 + 2] + d * Math.max(0, edge))
+    }
+    pos.needsUpdate = true
+  }
 }
 
 let cachedTexture: THREE.Texture | null = null

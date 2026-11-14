@@ -50,10 +50,16 @@ describe('Schlag', () => {
     expect(netClearance(fast, 2.43)).not.toBeNull()
   })
 
-  it('Zielhöhe über dem Boden (z. B. Block oder Abwehr)', () => {
-    const s = solveAttack({ ...base, endH: 1 })
-    expect(attackPositionAt(s, s.tHit).z).toBeCloseTo(1, 2)
-    expect(s.tGround).toBeGreaterThan(s.tHit)
+  it('Finte: hoher, langsamer Bogen mit der eingestellten Bogenhöhe, landet am Ziel', () => {
+    const tip = { ...base, end: { x: 2.5, y: 1 }, finte: true, arc: 0.8 }
+    const s = solveAttack(tip)
+    expect(s.apexH).toBeCloseTo(3.9, 1)
+    expect(s.speed).toBeLessThan(10)
+    expect(s.elevation).toBeGreaterThan(20)
+    expect(Math.hypot(s.landing.x - 2.5, s.landing.y - 1)).toBeLessThan(0.05)
+    expect(attackPositionAt(s, s.tHit).z).toBeCloseTo(0, 2)
+    // Höherer Bogen → längere Flugzeit
+    expect(solveAttack({ ...tip, arc: 1.6 }).tHit).toBeGreaterThan(s.tHit)
   })
 })
 
@@ -61,7 +67,7 @@ describe('Abprall nach dem Schlag', () => {
   it('startet am Aufprallpunkt, springt weiter in Schlagrichtung, wird flacher und dauert so lange wie eingestellt', async () => {
     const { bounceTrack, trackPositionAt } = await import('./attack')
     const s = solveAttack(base)
-    const tr = bounceTrack(s, 0, 1.5)!
+    const tr = bounceTrack(s, 1.5)!
     expect(tr.t[tr.t.length - 1]).toBeCloseTo(1.5, 1)
     expect(trackPositionAt(tr, 0)).toMatchObject({ x: s.landing.x, y: s.landing.y, z: 0 })
     let maxZ = 0
@@ -76,9 +82,8 @@ describe('Abprall nach dem Schlag', () => {
     expect((end.x - s.landing.x) * 7 + (end.y - s.landing.y) * -3).toBeGreaterThan(0)
   })
 
-  it('kein Abprall, wenn der Schlag über dem Boden endet (Zielhöhe > 0) oder die Dauer 0 ist', async () => {
+  it('kein Abprall, wenn die Dauer 0 ist', async () => {
     const { bounceTrack } = await import('./attack')
-    expect(bounceTrack(solveAttack({ ...base, endH: 1 }), 1, 1.5)).toBeNull()
-    expect(bounceTrack(solveAttack(base), 0, 0)).toBeNull()
+    expect(bounceTrack(solveAttack(base), 0)).toBeNull()
   })
 })

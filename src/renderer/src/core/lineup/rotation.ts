@@ -124,7 +124,7 @@ export function laeuferLineup(side: PlaySide, team: Team | undefined, courtSide:
   // Laufwege und Sprünge gehören zum Spieler und bleiben beim Läuferwechsel erhalten
   const extra = (playerId: string) => {
     const c = side.players.find((p) => p.playerId === playerId)
-    return { ...(c?.path ? { path: c.path } : {}), ...(c?.jump ? { jump: c.jump } : {}) }
+    return { ...(c?.path ? { path: c.path } : {}), ...(c?.jump ? { jump: c.jump } : {}), ...(c?.block ? { block: true } : {}), ...(c?.fake ? { fake: true } : {}) }
   }
   const spot = (playerId: string, slot: number, role: Role) => {
     const s = stored?.pos[playerId]

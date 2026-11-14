@@ -11,23 +11,33 @@ export type Main2D = 'top' | 'net'
 /** Werkzeug der Draufsicht: auswählen/ziehen oder eine Flugbahn zeichnen */
 export type Tool = 'select' | 'annahme' | 'zuspiel' | 'schlag' | 'laufweg'
 
+export type Dialog = 'library' | 'save' | 'saveAs' | 'export'
+/** Reiter der Seitenleiste: Ablauf des Spielzugs oder Aufstellung der Teams */
+export type SidebarTab = 'play' | 'lineup'
+
 interface UiState {
+  /** Seitenleiste links (Ablauf, Aufstellung) eingeblendet */
+  sidebarOpen: boolean
+  setSidebarOpen: (open: boolean) => void
+  sidebarTab: SidebarTab
+  /** Reiter wählen (blendet die Seitenleiste ein) */
+  showSidebar: (tab: SidebarTab) => void
   /** Zonen auf dem Feldboden einblenden (welche Art: Einstellungen → Zonen) */
   showZones: boolean
   setShowZones: (show: boolean) => void
   /** Namen der Spieler einblenden (nur wenn ein Name eingetragen ist) */
   showNames: boolean
   setShowNames: (show: boolean) => void
+  /** 3D: Die Kamera folgt dem Ball */
+  followBall: boolean
+  setFollowBall: (follow: boolean) => void
   tool: Tool
   setTool: (t: Tool) => void
-  /** Netzhöhe in der zweiten Toolbar-Reihe ausgeklappt */
-  netBarOpen: boolean
-  setNetBarOpen: (open: boolean) => void
   settingsOpen: boolean
   setSettingsOpen: (open: boolean) => void
-  /** Offenes Fenster: Bibliothek, Speichern-Dialog, Export */
-  dialog: 'library' | 'save' | 'export' | null
-  setDialog: (d: 'library' | 'save' | 'export' | null) => void
+  /** Offenes Fenster: Bibliothek, Speichern-Dialog (auch „als Kopie“), Export */
+  dialog: Dialog | null
+  setDialog: (d: Dialog | null) => void
   viewMode: ViewMode
   main2D: Main2D
   /** Große Ansicht und Pop-up tauschen */
@@ -51,9 +61,7 @@ interface UiState {
   netHeight: number
   /** Zusätzliche Drehung der Draufsicht in 90-Grad-Schritten (zur automatischen Ausrichtung). */
   topTurns: number
-  lineupOpen: boolean
   teamsOpen: boolean
-  setLineupOpen: (open: boolean) => void
   setTeamsOpen: (open: boolean) => void
   rotateTop: () => void
   setViewMode: (m: ViewMode) => void
@@ -63,14 +71,18 @@ interface UiState {
 
 /** Anzeige-Zustand der Oberfläche (nicht dauerhaft gespeichert; dauerhafte Einstellungen: appSettings.ts). */
 export const useUi = create<UiState>((set) => ({
+  sidebarOpen: true,
+  setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
+  sidebarTab: 'play',
+  showSidebar: (sidebarTab) => set({ sidebarTab, sidebarOpen: true }),
   showZones: false,
   setShowZones: (showZones) => set({ showZones }),
   showNames: false,
   setShowNames: (showNames) => set({ showNames }),
+  followBall: false,
+  setFollowBall: (followBall) => set({ followBall }),
   tool: 'select',
   setTool: (tool) => set({ tool }),
-  netBarOpen: true,
-  setNetBarOpen: (netBarOpen) => set({ netBarOpen }),
   settingsOpen: false,
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
   dialog: null,
@@ -93,9 +105,7 @@ export const useUi = create<UiState>((set) => ({
   netPreset: 'herren',
   netHeight: NET_PRESETS.herren.height,
   topTurns: 0,
-  lineupOpen: false,
   teamsOpen: false,
-  setLineupOpen: (lineupOpen) => set({ lineupOpen }),
   setTeamsOpen: (teamsOpen) => set({ teamsOpen }),
   // Ohne Modulo: der Winkel wächst weiter, damit die Animation immer in dieselbe Richtung dreht
   rotateTop: () => set((s) => ({ topTurns: s.topTurns + 1 })),

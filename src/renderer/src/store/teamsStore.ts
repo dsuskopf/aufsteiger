@@ -2,11 +2,13 @@ import { create } from 'zustand'
 import { PLAYER_HEIGHT, type Formation, type Player, type Role, type Team } from '@shared/types'
 import { clampHeight, clampNumber } from '@shared/validate'
 import {
+  COLOR_PAIRS,
   DEFAULT_LIBERO_COLOR,
   DEFAULT_TEAM_COLOR,
   nextTeamColor,
   pairedLibero
 } from '@shared/teamColors'
+import type { Look, TeamGender } from '@shared/looks'
 
 interface TeamsState {
   teams: Team[]
@@ -20,6 +22,10 @@ interface TeamsState {
   renameTeam: (teamId: string, name: string) => void
   setTeamColor: (teamId: string, color: string) => void
   setLiberoColor: (teamId: string, color: string) => void
+  /** Männer, Frauen oder gemischt (bestimmt die 3D-Figuren) */
+  setTeamGender: (teamId: string, gender: TeamGender) => void
+  /** Aussehen eines Spielers (null = wieder zufällig) */
+  setPlayerLook: (teamId: string, playerId: string, look: Look | null) => void
   deleteTeam: (teamId: string) => void
   /** Team aus einem gespeicherten Spielzug wiederherstellen, falls es nicht mehr existiert */
   restoreTeam: (team: Team) => void
@@ -33,29 +39,46 @@ interface TeamsState {
 
 const newId = () => crypto.randomUUID()
 
-function exampleTeam(): Team {
-  const p = (name: string, number: number, ...positions: Role[]): Player => ({
+/**
+ * Beispielteams für den ersten Start: Herren (steht gleich auf dem Feld) und Damen als Gegner,
+ * den man mit einem Tipp dazunehmen kann.
+ */
+function exampleTeams(): Team[] {
+  const p = (name: string, number: number, height: number, ...positions: Role[]): Player => ({ id: newId(), name, number, positions, height })
+  const herren: Team = {
     id: newId(),
-    name,
-    number,
-    positions,
-    height: PLAYER_HEIGHT.default
-  })
-  return {
-    id: newId(),
-    name: 'Beispielteam',
+    name: 'Beispiel Herren',
     color: DEFAULT_TEAM_COLOR,
     liberoColor: DEFAULT_LIBERO_COLOR,
+    gender: 'm',
     players: [
-      p('Steller', 7, 'S'),
-      p('Außen 1', 4, 'A'),
-      p('Außen 2', 12, 'A'),
-      p('Mitte 1', 9, 'MB'),
-      p('Mitte 2', 15, 'MB'),
-      p('Diagonal', 10, 'D', 'A'),
-      p('Libero', 1, 'L')
+      p('Steller', 7, 1.88, 'S'),
+      p('Außen 1', 4, 1.94, 'A'),
+      p('Außen 2', 12, 1.92, 'A'),
+      p('Mitte 1', 9, 2.02, 'MB'),
+      p('Mitte 2', 15, 2.0, 'MB'),
+      p('Diagonal', 10, 1.98, 'D', 'A'),
+      p('Libero', 1, 1.8, 'L')
     ]
   }
+  const pair = COLOR_PAIRS[1]
+  const damen: Team = {
+    id: newId(),
+    name: 'Beispiel Damen',
+    color: pair.jersey,
+    liberoColor: pair.libero,
+    gender: 'f',
+    players: [
+      p('Zuspielerin', 3, 1.76, 'S'),
+      p('Außen 1', 8, 1.82, 'A'),
+      p('Außen 2', 5, 1.8, 'A'),
+      p('Mitte 1', 11, 1.88, 'MB'),
+      p('Mitte 2', 14, 1.86, 'MB'),
+      p('Diagonal', 2, 1.84, 'D', 'A'),
+      p('Libera', 6, 1.68, 'L')
+    ]
+  }
+  return [herren, damen]
 }
 
 /** Gelöschten Spieler aus allen gespeicherten Läufer-Aufstellungen entfernen */
@@ -106,8 +129,8 @@ export const useTeams = create<TeamsState>((set, get) => {
     load: async () => {
       const file = await window.api.teams.load()
       if (file === null) {
-        // Erster Start: Beispielteam anlegen, damit man sofort loslegen kann
-        set({ teams: [exampleTeam()], loaded: true })
+        // Erster Start: zwei Beispielteams anlegen, damit man sofort loslegen kann
+        set({ teams: exampleTeams(), loaded: true })
         persist()
       } else {
         set({ teams: file.teams, loaded: true })
@@ -140,6 +163,14 @@ export const useTeams = create<TeamsState>((set, get) => {
     // Libero-Farbe bleibt beim Trikotwechsel unverändert (nur neue Teams starten mit dem passenden Paar)
     setTeamColor: (teamId, color) => mapTeam(teamId, (t) => ({ ...t, color })),
     setLiberoColor: (teamId, liberoColor) => mapTeam(teamId, (t) => ({ ...t, liberoColor })),
+    setTeamGender: (teamId, gender) => mapTeam(teamId, (t) => ({ ...t, gender })),
+    setPlayerLook: (teamId, playerId, look) =>
+      mapPlayer(teamId, playerId, (p) => {
+        const next = { ...p }
+        if (look && Object.keys(look).length) next.look = look
+        else delete next.look
+        return next
+      }),
     deleteTeam: (teamId) => mutate((teams) => teams.filter((t) => t.id !== teamId)),
     restoreTeam: (team) => {
       if (get().teams.some((t) => t.id === team.id)) return

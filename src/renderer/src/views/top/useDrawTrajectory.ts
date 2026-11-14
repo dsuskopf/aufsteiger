@@ -57,6 +57,8 @@ export function useDrawTrajectory(hostRef: RefObject<HTMLElement | null>, vp: To
         const h = z ? z.hitH : useSettings.getState().settings.defaultHitH
         const play = usePlay.getState()
         play.setSchlag(newAttack({ ...a, h }, b))
+        // Wer schlägt? Naheliegenden Spieler koppeln (lässt sich in der Seitenleiste ändern)
+        usePlay.getState().autoContact('schlag')
         play.select('schlag')
         useUi.getState().setTool('select')
         return
@@ -65,6 +67,7 @@ export function useDrawTrajectory(hostRef: RefObject<HTMLElement | null>, vp: To
       const t = newTrajectory(a, b, trajectoryDefaults(active, useSettings.getState().settings, play0.trajectories.annahme))
       const play = usePlay.getState()
       play.setTrajectory(active, t)
+      usePlay.getState().autoContact(active)
       play.select(active)
       // Danach direkt anpassen können: zurück zum Auswählen
       useUi.getState().setTool('select')

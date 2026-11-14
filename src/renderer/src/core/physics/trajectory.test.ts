@@ -16,6 +16,7 @@ import {
   positionAt,
   projectToHitBranches,
   setHitHeight,
+  setHitHeightFixed,
   solveTrajectory,
   stateAt,
   type TrajectoryInput
@@ -252,5 +253,28 @@ describe('Kopplung mit steigendem Zuspiel', () => {
     expect(c.zuspiel!.start.h).toBe(3.2)
     expect(c.zuspiel!.rising).toBeUndefined()
     expect(c.zuspiel!.hitH).toBe(3)
+  })
+})
+
+describe('Schlagpunkt-Höhe bei festem Ort', () => {
+  it('Ort bleibt, Höhe ändert sich, der höchste Punkt wandert und wird bei Bedarf angehoben', () => {
+    const lower = setHitHeightFixed(base, 2.0)
+    expect(lower.end).toEqual(base.end)
+    expect(lower.start).toEqual(base.start)
+    expect(lower.hitH).toBeCloseTo(2.0, 9)
+    expect(lower.apexH).toBeCloseTo(base.apexH, 9)
+    const s0 = solveTrajectory(base)
+    const s1 = solveTrajectory(lower)
+    expect(s1.D).toBeCloseTo(s0.D, 9)
+    // Der Scheitel liegt jetzt an einer anderen Stelle
+    expect(Math.abs(s1.sA - s0.sA)).toBeGreaterThan(0.01)
+    // Über den Scheitel hinaus: Scheitel wird mitgenommen
+    const high = setHitHeightFixed(base, 4.2)
+    expect(high.end).toEqual(base.end)
+    expect(high.apexH).toBeGreaterThan(4.2)
+    // Steigend: bleibt über dem Start
+    const rise = setHitHeightFixed(base, 0.2, true)
+    expect(rise.rising).toBe(true)
+    expect(rise.hitH).toBeGreaterThan(base.start.h)
   })
 })

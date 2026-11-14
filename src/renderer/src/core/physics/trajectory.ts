@@ -513,6 +513,27 @@ export function setHitHeight(input: TrajectoryInput, h: number, rising: boolean)
   return moveHitAlongParabola(input, Math.max(minHitDist(sol), distAtHeightFalling(sol, hc)))
 }
 
+/** Höchste einstellbare Höhe des Schlagpunkts (m) */
+export const HIT_H_MAX = 4.5
+
+/**
+ * Höhe des Schlagpunkts ändern, ohne dass er sich verschiebt: Start und Ziel bleiben, wo sie sind; die Kurve
+ * dazwischen passt sich an (ihr höchster Punkt wandert). Der Scheitel bleibt gleich hoch und wird nur angehoben,
+ * wenn er sonst nicht mehr über dem Schlagpunkt läge. Auf dem steigenden Ast bleibt der Schlagpunkt über dem Start.
+ */
+export function setHitHeightFixed(input: TrajectoryInput, h: number, rising = !!input.rising): TrajectoryInput {
+  const lo = rising ? input.start.h + RISE_EPS : 0
+  const hitH = Math.min(HIT_H_MAX, Math.max(lo, Number.isFinite(h) ? h : input.hitH))
+  const out: TrajectoryInput = {
+    start: { ...input.start },
+    end: { ...input.end },
+    apexH: Math.max(input.apexH, Math.max(input.start.h, hitH) + APEX_EPS),
+    hitH
+  }
+  if (rising) out.rising = true
+  return clampInput(out)
+}
+
 /**
  * Projiziert einen Bildschirmpunkt auf die Bahn (beide Äste, ohne die Lücke am Scheitel): sucht die Distanz s,
  * deren projizierter Punkt dem Zeiger am nächsten liegt. `project` bildet Weltpunkte auf Bildschirm-Pixel ab.

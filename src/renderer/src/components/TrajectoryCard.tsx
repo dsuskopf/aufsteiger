@@ -1,13 +1,11 @@
-import { useId } from 'react'
 import type { TrajectoryType } from '@shared/types'
 import {
   APEX_EPS,
   APEX_H_MAX,
   START_H_MAX,
-  hitRanges,
-  moveHitAlongParabola,
   RISE_EPS,
-  setHitHeight,
+  setHitHeightFixed,
+  HIT_H_MAX,
   solveTrajectory,
   type TrajectoryInput
 } from '@renderer/core/physics/trajectory'
@@ -70,44 +68,45 @@ export function TrajectoryEditor({ type: selected }: { type: TrajectoryType }) {
 }
 
 /**
- * Schlagpunkt entlang der Flugkurve: ein durchgehender Regler vom Start über den höchsten Punkt bis zum Boden.
- * Links vom Strich (Scheitel) wird der Ball noch steigend getroffen, rechts fallend. Angezeigt wird die Höhe.
+ * Höhe des Schlagpunkts: Der Punkt bleibt, wo er im Feld ist – nur seine Höhe ändert sich, die Kurve passt sich an
+ * (ihr höchster Punkt wandert und wird bei Bedarf angehoben). Darunter lässt sich wählen, ob der Ball noch steigend
+ * (vor dem höchsten Punkt) getroffen wird.
  */
 function HitSlider({ label, input, hint, onChange }: { label: string; input: TrajectoryInput; hint?: string; onChange: (t: TrajectoryInput) => void }) {
-  const id = useId()
-  const sol = solveTrajectory(input)
-  const { rising, falling } = hitRanges(sol)
-  const lo = rising ? rising[0] : falling[0]
-  const hi = Math.max(lo + 0.01, falling[1])
+  const rising = !!input.rising
+  const lo = rising ? input.start.h + RISE_EPS : 0
+  const hi = Math.max(HIT_H_MAX, input.hitH)
+  // Steigend treffen geht nur, wenn der Schlagpunkt über dem Start liegt
+  const canRise = input.hitH > input.start.h + RISE_EPS
   return (
-    <label className="traj-slider">
+    <div className="traj-slider">
       <span className="row">
         <span className="grow">{label}</span>
-        {sol.rising && <span className="tag-rising">vor dem höchsten Punkt</span>}
-        {/* Höhe eintippen: auf dem aktuellen Ast (steigend/fallend) */}
-        <NumberField
-          label={label}
-          value={input.hitH}
-          min={sol.rising ? input.start.h + RISE_EPS : 0}
-          max={Math.max(0.01, sol.apexH - APEX_EPS)}
-          unit="m"
-          onCommit={(h) => onChange(setHitHeight(input, h, sol.rising))}
-        />
+        <NumberField label={label} value={input.hitH} min={lo} max={hi} unit="m" onCommit={(h) => onChange(setHitHeightFixed(input, h))} />
       </span>
       <input
         type="range"
         min={lo}
         max={hi}
-        step={0.005}
-        list={id}
-        value={Math.min(hi, Math.max(lo, sol.D))}
-        title="Über den höchsten Punkt ziehen: Schlagpunkt vor dem Scheitel (Ball steigt noch)"
-        onChange={(e) => onChange(moveHitAlongParabola(input, Number(e.target.value)))}
+        step={0.01}
+        aria-label={label}
+        value={Math.min(hi, Math.max(lo, input.hitH))}
+        title="Höhe ändern – der Punkt im Feld bleibt, die Kurve passt sich an"
+        onChange={(e) => onChange(setHitHeightFixed(input, Number(e.target.value)))}
       />
-      {/* Markierung am höchsten Punkt */}
-      <datalist id={id}>{rising && <option value={sol.sA} />}</datalist>
+      {(canRise || rising) && (
+        <label className="row rising-row">
+          <span className="grow caption">Ball noch steigend treffen (vor dem höchsten Punkt)</span>
+          <input
+            type="checkbox"
+            className="switch small-switch"
+            checked={rising}
+            onChange={(e) => onChange(setHitHeightFixed(input, input.hitH, e.target.checked))}
+          />
+        </label>
+      )}
       {hint && <span className="caption">{hint}</span>}
-    </label>
+    </div>
   )
 }
 

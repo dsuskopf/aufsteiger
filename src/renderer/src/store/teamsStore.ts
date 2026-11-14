@@ -4,11 +4,10 @@ import { clampHeight, clampNumber } from '@shared/validate'
 import {
   COLOR_PAIRS,
   DEFAULT_LIBERO_COLOR,
-  DEFAULT_TEAM_COLOR,
   nextTeamColor,
   pairedLibero
 } from '@shared/teamColors'
-import type { Look, TeamGender } from '@shared/looks'
+import type { Body, Look, TeamGender } from '@shared/looks'
 
 interface TeamsState {
   teams: Team[]
@@ -40,45 +39,86 @@ interface TeamsState {
 const newId = () => crypto.randomUUID()
 
 /**
- * Beispielteams für den ersten Start: Herren (steht gleich auf dem Feld) und Damen als Gegner,
- * den man mit einem Tipp dazunehmen kann.
+ * Beispielteams für den ersten Start: je zwei Herren-, Mixed- und Damenteams, jedes in einer eigenen Farbe.
+ * Das erste steht gleich auf dem Feld, das zweite (gleiche Klasse) ist der Gegner für den Ein-Tipp-Knopf.
+ * Mixed: Auf dem Feld stehen immer 3 Männer und 3 Frauen – der Libero ersetzt einen Mittelblocker und ist
+ * darum ein Mann. (Keine Regel in der App, nur so angelegt.)
  */
 function exampleTeams(): Team[] {
-  const p = (name: string, number: number, height: number, ...positions: Role[]): Player => ({ id: newId(), name, number, positions, height })
-  const herren: Team = {
+  const p = (name: string, number: number, height: number, positions: Role[], body?: Body): Player => ({
     id: newId(),
-    name: 'Beispiel Herren',
-    color: DEFAULT_TEAM_COLOR,
-    liberoColor: DEFAULT_LIBERO_COLOR,
-    gender: 'm',
-    players: [
-      p('Steller', 7, 1.88, 'S'),
-      p('Außen 1', 4, 1.94, 'A'),
-      p('Außen 2', 12, 1.92, 'A'),
-      p('Mitte 1', 9, 2.02, 'MB'),
-      p('Mitte 2', 15, 2.0, 'MB'),
-      p('Diagonal', 10, 1.98, 'D', 'A'),
-      p('Libero', 1, 1.8, 'L')
-    ]
-  }
-  const pair = COLOR_PAIRS[1]
-  const damen: Team = {
+    name,
+    number,
+    positions,
+    height,
+    ...(body ? { look: { body } } : {})
+  })
+  const team = (name: string, pair: number, gender: TeamGender, players: Player[]): Team => ({
     id: newId(),
-    name: 'Beispiel Damen',
-    color: pair.jersey,
-    liberoColor: pair.libero,
-    gender: 'f',
-    players: [
-      p('Zuspielerin', 3, 1.76, 'S'),
-      p('Außen 1', 8, 1.82, 'A'),
-      p('Außen 2', 5, 1.8, 'A'),
-      p('Mitte 1', 11, 1.88, 'MB'),
-      p('Mitte 2', 14, 1.86, 'MB'),
-      p('Diagonal', 2, 1.84, 'D', 'A'),
-      p('Libera', 6, 1.68, 'L')
-    ]
-  }
-  return [herren, damen]
+    name,
+    color: COLOR_PAIRS[pair].jersey,
+    liberoColor: COLOR_PAIRS[pair].libero,
+    gender,
+    players
+  })
+  return [
+    team('Herren 1', 0, 'm', [
+      p('Steller', 7, 1.88, ['S']),
+      p('Außen 1', 4, 1.94, ['A']),
+      p('Außen 2', 12, 1.92, ['A']),
+      p('Mitte 1', 9, 2.02, ['MB']),
+      p('Mitte 2', 15, 2.0, ['MB']),
+      p('Diagonal', 10, 1.98, ['D', 'A']),
+      p('Libero', 1, 1.8, ['L'])
+    ]),
+    team('Herren 2', 6, 'm', [
+      p('Steller', 2, 1.86, ['S']),
+      p('Außen 1', 11, 1.93, ['A']),
+      p('Außen 2', 5, 1.9, ['A']),
+      p('Mitte 1', 13, 2.04, ['MB']),
+      p('Mitte 2', 8, 1.99, ['MB']),
+      p('Diagonal', 17, 1.97, ['D', 'A']),
+      p('Libero', 3, 1.78, ['L'])
+    ]),
+    // Mixed 1: Mittelblocker und ein Außen männlich – Zuspielerin, Diagonal und der zweite Außen weiblich
+    team('Mixed 1', 2, 'mixed', [
+      p('Zuspielerin', 6, 1.72, ['S'], 'f'),
+      p('Außen 1', 9, 1.9, ['A'], 'm'),
+      p('Außen 2', 14, 1.78, ['A'], 'f'),
+      p('Mitte 1', 12, 1.98, ['MB'], 'm'),
+      p('Mitte 2', 16, 1.96, ['MB'], 'm'),
+      p('Diagonal', 4, 1.8, ['D', 'A'], 'f'),
+      p('Libero', 1, 1.8, ['L'], 'm')
+    ]),
+    // Mixed 2: Mittelblocker und Diagonal männlich – Zuspielerin und beide Außen weiblich
+    team('Mixed 2', 4, 'mixed', [
+      p('Zuspielerin', 3, 1.74, ['S'], 'f'),
+      p('Außen 1', 7, 1.79, ['A'], 'f'),
+      p('Außen 2', 10, 1.77, ['A'], 'f'),
+      p('Mitte 1', 11, 1.97, ['MB'], 'm'),
+      p('Mitte 2', 15, 1.95, ['MB'], 'm'),
+      p('Diagonal', 8, 1.93, ['D', 'A'], 'm'),
+      p('Libero', 2, 1.79, ['L'], 'm')
+    ]),
+    team('Damen 1', 1, 'f', [
+      p('Zuspielerin', 3, 1.76, ['S']),
+      p('Außen 1', 8, 1.82, ['A']),
+      p('Außen 2', 5, 1.8, ['A']),
+      p('Mitte 1', 11, 1.88, ['MB']),
+      p('Mitte 2', 14, 1.86, ['MB']),
+      p('Diagonal', 2, 1.84, ['D', 'A']),
+      p('Libera', 6, 1.68, ['L'])
+    ]),
+    team('Damen 2', 5, 'f', [
+      p('Zuspielerin', 9, 1.74, ['S']),
+      p('Außen 1', 4, 1.83, ['A']),
+      p('Außen 2', 13, 1.79, ['A']),
+      p('Mitte 1', 7, 1.9, ['MB']),
+      p('Mitte 2', 12, 1.87, ['MB']),
+      p('Diagonal', 10, 1.85, ['D', 'A']),
+      p('Libera', 1, 1.66, ['L'])
+    ])
+  ]
 }
 
 /** Gelöschten Spieler aus allen gespeicherten Läufer-Aufstellungen entfernen */

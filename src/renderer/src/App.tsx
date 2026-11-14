@@ -13,7 +13,7 @@ import { TeamManager } from './components/TeamManager'
 import { Playbar } from './components/Playbar'
 import { SettingsDialog } from './components/SettingsDialog'
 import { useSettings } from './store/appSettings'
-import { onBallEvent, usePlayback } from './store/playbackStore'
+import { currentEvents, onBallEvent, usePlayback } from './store/playbackStore'
 import { SaveDialog } from './components/SaveDialog'
 import { Library } from './components/Library'
 import { ExportDialog } from './components/ExportDialog'
@@ -23,7 +23,7 @@ import { useSelectionKeys } from './components/sidebar/keys'
 import { quickSave } from './store/actions'
 import { clearHistory, redo, undo } from './store/history'
 import { playSfx } from './audio/sfx'
-import { hardness } from './views/three/effects'
+import { sfxLevel } from './views/three/effects'
 import './store/playDocs'
 
 const HINTS = {
@@ -97,8 +97,11 @@ export function App() {
     () =>
       onBallEvent((e, speed) => {
         const st = useSettings.getState().settings
+        if (!st.sound) return
+        // Nach dem ersten Bodenkontakt springt der Ball nur noch leise nach
+        const { gain, hard } = sfxLevel(currentEvents(), e)
         // Finte klingt wie ein weiches Pritschen
-        if (st.sound) playSfx(e.finte ? 'zuspiel' : e.kind, hardness(e), st.soundVolume / 100, speed)
+        playSfx(e.finte ? 'zuspiel' : e.kind, hard, (st.soundVolume / 100) * gain, speed)
       }),
     []
   )

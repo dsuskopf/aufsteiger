@@ -172,6 +172,19 @@ export function netHits(events: BallEvent[], t: number, total: number): NetHit[]
 }
 
 /**
+ * Geräusch eines Ballereignisses gedämpft wie das Kamera-Wackeln: Nur der erste Bodenkontakt klingt voll,
+ * das Nachspringen danach leise und weicher – mit jedem weiteren Aufprall noch leiser.
+ * Gibt den Lautstärke-Faktor und die Härte für den Klang zurück.
+ */
+export function sfxLevel(events: BallEvent[], e: BallEvent): { gain: number; hard: number } {
+  const hard = hardness(e)
+  if (e.kind !== 'boden') return { gain: 1, hard }
+  const i = events.filter((x) => x.kind === 'boden').indexOf(e)
+  if (i <= 0) return { gain: 1, hard }
+  return { gain: 0.22 * Math.pow(0.6, i - 1), hard: hard * 0.5 }
+}
+
+/**
  * Kamera-Wackeln zur Zeit t: kurzer, schnell abklingender Stoß nach harten Kontakten.
  * Gibt den Versatz als Anteil des Kamera-Abstands zurück (damit es in jeder Zoomstufe gleich wirkt).
  */

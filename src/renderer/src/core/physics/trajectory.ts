@@ -54,6 +54,8 @@ export interface TrajectoryInput {
   hitH: number
   /** Schlagpunkt auf dem steigenden Ast (vor dem Scheitel); Standard: fallender Ast */
   rising?: boolean
+  /** Nur Zuspiel: über Kopf nach hinten gestellt (Backset) – ändert die Haltung des Stellers, nicht die Flugbahn */
+  backset?: boolean
 }
 
 /** Dicht abgetastete Bahn vom Abwurf bis zum Bodenaufprall (Zeit ab Abwurf, Distanz ab Start). */
@@ -319,6 +321,7 @@ export function clampInput(t: TrajectoryInput): TrajectoryInput {
   const apexH = Math.min(Math.max(APEX_H_MAX, minApex), Math.max(minApex, Number.isFinite(t.apexH) ? t.apexH : minApex))
   const out: TrajectoryInput = { start: { ...t.start, h: h0 }, end: { ...t.end }, apexH, hitH }
   if (rising) out.rising = true
+  if (t.backset) out.backset = true
   return out
 }
 

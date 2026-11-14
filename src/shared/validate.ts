@@ -151,7 +151,8 @@ function sanitizeTrajectory(raw: unknown): Trajectory | undefined {
     end: { x: c(raw.end.x), y: c(raw.end.y) },
     apexH: num(raw.apexH, 3, 0, 15),
     hitH: num(raw.hitH, 2, 0, 6),
-    ...(raw.rising === true ? { rising: true } : {})
+    ...(raw.rising === true ? { rising: true } : {}),
+    ...(raw.backset === true ? { backset: true } : {})
   }
 }
 

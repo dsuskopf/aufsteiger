@@ -189,6 +189,8 @@ export interface Trajectory {
   hitH: number
   /** Schlagpunkt auf dem steigenden Ast (vor dem Scheitel) */
   rising?: boolean
+  /** Nur Zuspiel: über Kopf nach hinten gestellt (Backset) – der Steller steht mit dem Rücken zur Spielrichtung */
+  backset?: boolean
 }
 
 /** Anzeige-Optionen eines Spielzugs */

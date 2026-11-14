@@ -30,6 +30,20 @@ export function TrajectoryEditor({ type: selected }: { type: TrajectoryType }) {
 
   return (
     <>
+      {selected === 'zuspiel' && (
+        // Backset: Der Steller steht mit dem Rücken zum Ziel und stellt über den Kopf nach hinten
+        <div className="field-col">
+          <span className="field-label">Stellen</span>
+          <div className="segmented small fill" role="radiogroup" aria-label="Richtung des Zuspiels">
+            <button role="radio" aria-checked={!t.backset} className={!t.backset ? 'selected' : ''} onClick={() => t.backset && setTrajectory('zuspiel', { ...t, backset: false })}>
+              Nach vorn
+            </button>
+            <button role="radio" aria-checked={!!t.backset} className={t.backset ? 'selected' : ''} title="Backset: mit dem Rücken zum Ziel über den Kopf nach hinten stellen" onClick={() => !t.backset && setTrajectory('zuspiel', { ...t, backset: true })}>
+              Über Kopf
+            </button>
+          </div>
+        </div>
+      )}
       {coupled && annahme ? (
         // Zuspielhöhe = Ende der Annahme: verschiebt den Schlagpunkt der Annahme, beide Bahnen folgen
         <HitSlider label="Zuspiel" input={annahme} hint="Ende der Annahme – verschiebt beide Flugbahnen" onChange={(n) => setTrajectory('annahme', n)} />

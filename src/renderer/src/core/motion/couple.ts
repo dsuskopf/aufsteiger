@@ -62,7 +62,7 @@ export function attachFirstContact(
     const dx = flight.end.x - sx
     const dy = flight.end.y - sy
     const d = Math.hypot(dx, dy)
-    const yaw = contactYaw(type, netYaw, d > 1e-6 ? { dx: dx / d, dy: dy / d } : { dx: Math.cos(netYaw), dy: 0 })
+    const yaw = contactYaw(type, netYaw, d > 1e-6 ? { dx: dx / d, dy: dy / d } : { dx: Math.cos(netYaw), dy: 0 }, type === 'zuspiel' && !!(flight as Trajectory).backset)
     const nx = player.x + Math.cos(yaw) * o.f + Math.sin(yaw) * o.r
     const ny = player.y + Math.sin(yaw) * o.f - Math.cos(yaw) * o.r
     const moved = Math.hypot(nx - sx, ny - sy)

@@ -159,7 +159,10 @@ export const usePlay = create<PlayState>((set, get) => {
 
     setTrajectory: (type, t) =>
       set((st) => {
-        const trajectories = coupleTrajectories({ ...st.trajectories, [type]: clampInput(t) })
+        // Backset ist eine Einstellung des Zuspiels, keine Form der Bahn: Beim Ziehen an Höhen und Punkten
+        // (die Bahn wird dabei neu aufgebaut) bleibt sie erhalten – nur ein ausdrückliches false schaltet sie ab
+        const keep = t.backset === undefined && st.trajectories[type]?.backset
+        const trajectories = coupleTrajectories({ ...st.trajectories, [type]: clampInput(keep ? { ...t, backset: true } : t) })
         return { trajectories, schlag: coupleSchlag(st.schlag, trajectories.zuspiel) }
       }),
     setSchlag: (a) => set((st) => ({ schlag: coupleSchlag(clampAttack(a), st.trajectories.zuspiel) })),

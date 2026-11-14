@@ -114,6 +114,7 @@ function BallStep({ type, index, exists, isNext, scene, players }: { type: BallT
   const tool = useUi((s) => s.tool)
   const contact = usePlay((s) => s.contacts[type])
   const chained = usePlay((s) => (type === 'zuspiel' ? !!s.trajectories.annahme : type === 'schlag' ? !!s.trajectories.zuspiel : false))
+  const backset = usePlay((s) => type === 'zuspiel' && !!s.trajectories.zuspiel?.backset)
   const drawing = tool === type
   const seg = scene.timeline.segments.find((s) => s.type === type)
   const by = contact ? players.find((p) => p.side === contact.side && p.playerId === contact.playerId) : undefined
@@ -162,6 +163,7 @@ function BallStep({ type, index, exists, isNext, scene, players }: { type: BallT
           <span className="story-title">
             {STEP_LABELS[type]}
             {type === 'schlag' && event?.finte && <span className="tag">Finte</span>}
+            {type === 'zuspiel' && backset && <span className="tag">Backset</span>}
           </span>
           <span className="story-sub">
             {by ? playerLabel(by) : 'Niemand gekoppelt'}

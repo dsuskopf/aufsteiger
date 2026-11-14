@@ -50,6 +50,25 @@ describe('Bewegungsplan', () => {
     expect(planAt(set, 0)).toMatchObject({ x: -1.5, y: -3 })
   })
 
+  it('Backset: Steller schaut entgegen der Spielrichtung, steht am Ball und hat die Hände am Ball', () => {
+    const back = buildTimeline([items[0], { type: 'zuspiel', input: { ...zuspiel, backset: true } }, items[2]])
+    const set = planPlayers({ sides: sides(), contacts, timeline: back, heightOf: () => H, netHeight: 2.43 }).get('A:set')!
+    const a = set.actions.find((k) => k.kind === 'zuspiel')!
+    expect(a.backset).toBe(true)
+    const dir = back.segments[1].sol!.dir
+    // Blick genau entgegen der Spielrichtung
+    expect(Math.cos(a.yaw) * dir.dx + Math.sin(a.yaw) * dir.dy).toBeCloseTo(-1, 6)
+    const at = planAt(set, a.t)
+    const stand = standPoint('zuspiel', a.ball, a.yaw, H)
+    expect(Math.hypot(at.x - stand.x, at.y - stand.y)).toBeLessThan(0.02)
+    const sk = skeletonAt(set, a.t, null)
+    const mid = { x: (handWorld(sk, 'L').x + handWorld(sk, 'R').x) / 2, y: (handWorld(sk, 'L').y + handWorld(sk, 'R').y) / 2 }
+    expect(Math.hypot(mid.x - a.ball.x, mid.y - a.ball.y)).toBeLessThan(0.2)
+    // Normal: Blick in Spielrichtung
+    const fwd = plan().get('A:set')!.actions.find((k) => k.kind === 'zuspiel')!
+    expect(Math.cos(fwd.yaw) * dir.dx + Math.sin(fwd.yaw) * dir.dy).toBeCloseTo(1, 6)
+  })
+
   it('Angreifer springt so, dass er den Ball am höchsten Punkt trifft', () => {
     const plans = plan()
     const out = plans.get('A:out')!

@@ -187,25 +187,33 @@ function bagger(base: Pose, H: number, B: V3, s: number): Pose {
   }
 }
 
-/** Pritschen (Zuspiel): Hände über der Stirn, am Ball, dann in Spielrichtung gestreckt */
-function pritschen(base: Pose, H: number, B: V3, s: number): Pose {
+/**
+ * Pritschen (Zuspiel): Hände über der Stirn, am Ball, dann in Spielrichtung gestreckt.
+ * Backset: gleicher Ballkontakt über der Stirn, dann drücken die Hände nach oben-hinten über den Kopf,
+ * der Oberkörper biegt sich leicht zurück.
+ */
+function pritschen(base: Pose, H: number, B: V3, s: number, back = false): Pose {
   const toBall = ss(-0.3, -0.02, s)
   const push = ss(0, 0.16, s)
   const preL: V3 = [0.11 * H, 1.03 * H, -0.075 * H]
   const preR: V3 = [0.11 * H, 1.03 * H, 0.075 * H]
-  const atL: V3 = [B[0] - 0.035 + push * 0.14, B[1] - 0.05 + push * 0.2, B[2] - 0.095]
-  const atR: V3 = [B[0] - 0.035 + push * 0.14, B[1] - 0.05 + push * 0.2, B[2] + 0.095]
+  // Nach vorn: Hände wandern in Spielrichtung; Backset: nach oben und hinter den Kopf
+  const dx = back ? -push * 0.16 : push * 0.14
+  const dy = back ? push * 0.24 : push * 0.2
+  const atL: V3 = [B[0] - 0.035 + dx, B[1] - 0.05 + dy, B[2] - 0.095]
+  const atR: V3 = [B[0] - 0.035 + dx, B[1] - 0.05 + dy, B[2] + 0.095]
+  const palmX = back ? mix(0.55, -0.35, push) : 0.55
   return {
     ...base,
     pelvisY: base.pelvisY + (0.02 * push - 0.03 * (1 - toBall)) * H,
-    lean: -0.04,
+    lean: back ? -0.04 - 0.2 * push : -0.04,
     twist: 0,
     handL: mix3(preL, atL, toBall),
     handR: mix3(preR, atR, toBall),
     poleL: [0.3, -0.35, -1],
     poleR: [0.3, -0.35, 1],
-    palmL: [0.55, 0.65, 0.5],
-    palmR: [0.55, 0.65, -0.5]
+    palmL: [palmX, 0.65, 0.5],
+    palmR: [palmX, 0.65, -0.5]
   }
 }
 
@@ -371,7 +379,7 @@ export function skeletonAt(plan: PlayerPlan, t: number, ball: { x: number; y: nu
       a.kind === 'annahme'
         ? bagger(pose, H, B, s)
         : a.kind === 'zuspiel'
-          ? pritschen(pose, H, B, s)
+          ? pritschen(pose, H, B, s, a.backset)
           : a.kind === 'schlag'
             ? a.finte
               ? tip(pose, H, B, s)

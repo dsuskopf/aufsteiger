@@ -26,6 +26,8 @@ export interface PlayerAction {
   yaw: number
   /** Schlag als Finte: Ball nur mit den Fingern über den Block getippt */
   finte?: boolean
+  /** Zuspiel über Kopf nach hinten (Backset): Rücken zur Spielrichtung */
+  backset?: boolean
 }
 
 /** Automatischer Lauf von a nach b */
@@ -69,8 +71,10 @@ export function mixAngle(a: number, b: number, k: number): number {
 }
 
 /** Blickrichtung beim Ballkontakt: Angriff und Zuspiel in Spielrichtung, die Annahme überwiegend zum Netz */
-export function contactYaw(kind: BallType, netYaw: number, dir: { dx: number; dy: number }): number {
+export function contactYaw(kind: BallType, netYaw: number, dir: { dx: number; dy: number }, backset = false): number {
   const d = Math.atan2(dir.dy, dir.dx)
+  // Backset: Der Steller schaut entgegen der Spielrichtung und spielt den Ball über den Kopf nach hinten
+  if (kind === 'zuspiel' && backset) return d + Math.PI
   return kind === 'annahme' ? mixAngle(netYaw, d, 0.35) : d
 }
 
@@ -155,7 +159,15 @@ export function planPlayers(input: PlanInput): Map<string, PlayerPlan> {
         const seg = input.timeline.segments.find((s) => s.type === type)
         if (!seg) continue
         const dir = seg.sol?.dir ?? seg.asol?.dir ?? { dx: Math.cos(netYaw), dy: 0 }
-        plan.actions.push({ kind: type, t: seg.t0, ball: segmentPosition(seg, 0), yaw: contactYaw(type, netYaw, dir), ...(seg.attack?.finte ? { finte: true } : {}) })
+        const backset = type === 'zuspiel' && !!seg.input?.backset
+        plan.actions.push({
+          kind: type,
+          t: seg.t0,
+          ball: segmentPosition(seg, 0),
+          yaw: contactYaw(type, netYaw, dir, backset),
+          ...(seg.attack?.finte ? { finte: true } : {}),
+          ...(backset ? { backset: true } : {})
+        })
       }
       // Block: Zeitpunkt = Ball erreicht die Hände (sonst kurz nach dem Schlag)
       if (c.block) plan.actions.push(blockAction(c, plan, schlagSeg, input.netHeight))

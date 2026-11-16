@@ -25,6 +25,9 @@ const api: AppApi = {
     pdf: (name, html) => ipcRenderer.invoke('export:pdf', name, html),
     video: (name, ext, data) => ipcRenderer.invoke('export:video', name, ext, data),
     showItem: (file) => ipcRenderer.invoke('shell:showItem', file)
+  },
+  theme: {
+    set: (pref, resolved) => ipcRenderer.send('theme:set', pref, resolved)
   }
 }
 

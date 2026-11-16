@@ -152,7 +152,7 @@ function BlockSection({ attacking }: { attacking: CourtSide }) {
       <Section
         title={`Block (Seite ${defending})`}
         icon="block"
-        hint="Wer springt am Netz hoch? Ob der Ball abprallt, ergibt sich aus Flugbahn und Händen – Blocker im Feld in die Bahn schieben."
+        hint="Wer springt am Netz hoch? Schieb die Blocker im Feld in die Bahn des Balls: Trifft er ihre Hände, prallt er ab."
       >
         <PlayerPicker players={defenders} isOn={(p) => !!p.court.block} onPick={(p) => toggle(p.side, p.playerId, 'block', !p.court.block)} empty="Auf der anderen Seite steht noch kein Team." />
         {blockers.length > 0 && (
@@ -162,7 +162,7 @@ function BlockSection({ attacking }: { attacking: CourtSide }) {
           </p>
         )}
       </Section>
-      <Section title="Schlag antäuschen" icon="spike" hint="Wer springt mit und schlägt ins Leere – in dem Moment, in dem das Zuspiel ihm am nächsten kommt? Das bindet den Block.">
+      <Section title="Schlag antäuschen" icon="spike" hint="Wer springt mit und schlägt ins Leere? Er springt, wenn ihm das Zuspiel am nächsten ist, und bindet so den Block.">
         <PlayerPicker players={mates} isOn={(p) => !!p.court.fake} onPick={(p) => toggle(p.side, p.playerId, 'fake', !p.court.fake)} />
       </Section>
     </>

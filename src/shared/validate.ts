@@ -6,6 +6,9 @@ import {
   PLAYER_HEIGHT,
   ROLES,
   SCHEMA_VERSION,
+  SKETCH_COLORS,
+  SKETCH_LIMITS,
+  THEME_PREFS,
   TRAJECTORY_TYPES,
   ZONE_STYLES,
   type Attack,
@@ -18,6 +21,9 @@ import {
   type Player,
   type Role,
   type Settings,
+  type SketchColor,
+  type SketchStroke,
+  type ThemePref,
   type Team,
   type Trajectory,
   type ZoneStyle
@@ -139,7 +145,8 @@ export function sanitizeSettings(raw: unknown): Settings {
     zoneStyle: ZONE_STYLES.includes(r.zoneStyle as ZoneStyle) ? (r.zoneStyle as ZoneStyle) : d.zoneStyle,
     cameraShake: bool(r.cameraShake, d.cameraShake),
     sound: bool(r.sound, d.sound),
-    soundVolume: Math.round(num(r.soundVolume, d.soundVolume, 0, 100))
+    soundVolume: Math.round(num(r.soundVolume, d.soundVolume, 0, 100)),
+    theme: THEME_PREFS.includes(r.theme as ThemePref) ? (r.theme as ThemePref) : d.theme
   }
 }
 
@@ -227,6 +234,26 @@ function sanitizeContacts(raw: unknown, sides: PlayDoc['sides']): Contacts | und
   return Object.keys(out).length ? out : undefined
 }
 
+/** Skizze: nur gültige Striche, Punkte auf Zentimeter gerundet; zu viel wird abgeschnitten statt abgelehnt */
+export function sanitizeSketch(raw: unknown): SketchStroke[] {
+  if (!Array.isArray(raw)) return []
+  const out: SketchStroke[] = []
+  for (const s of raw) {
+    if (out.length >= SKETCH_LIMITS.strokes) break
+    if (!isObj(s) || !Array.isArray(s.points)) continue
+    const n = Math.min(s.points.length - (s.points.length % 2), SKETCH_LIMITS.points * 2)
+    if (n < 2) continue
+    const points: number[] = []
+    for (let i = 0; i < n; i++) points.push(Math.round(num(s.points[i], 0, -30, 30) * 100) / 100)
+    out.push({
+      color: SKETCH_COLORS.includes(s.color as SketchColor) ? (s.color as SketchColor) : 'ink',
+      width: num(s.width, 0.09, 0.02, 0.4),
+      points
+    })
+  }
+  return out
+}
+
 const str = (v: unknown, max: number, fallback = '') => (typeof v === 'string' ? v.slice(0, max) : fallback)
 
 /** Prüft einen gespeicherten Spielzug; null, wenn er unbrauchbar ist. */
@@ -242,6 +269,7 @@ export function sanitizePlay(raw: unknown): PlayDoc | null {
   const sides = { A: sanitizeSide(rawSides.A), B: sanitizeSide(rawSides.B) }
   const contacts = sanitizeContacts(raw.contacts, sides)
   const disp = isObj(raw.display) ? raw.display : {}
+  const sketch = sanitizeSketch(raw.sketch)
   const now = new Date().toISOString()
   return {
     schemaVersion: SCHEMA_VERSION,
@@ -253,6 +281,7 @@ export function sanitizePlay(raw: unknown): PlayDoc | null {
     sides,
     trajectories,
     ...(contacts ? { contacts } : {}),
+    ...(sketch.length ? { sketch } : {}),
     netPreset: NET_PRESET_IDS.includes(raw.netPreset as NetPresetId) ? (raw.netPreset as NetPresetId) : 'herren',
     netHeight: num(raw.netHeight, 2.43, 1, 3),
     display: {

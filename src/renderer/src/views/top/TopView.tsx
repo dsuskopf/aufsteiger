@@ -1,6 +1,6 @@
 import { Circle, Layer, Line, Stage, Text } from 'react-konva'
 import { COURT, courtLines } from '@renderer/core/geometry/court'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import type Konva from 'konva'
 import { PlayersLayer, hitsDraggable } from './PlayersLayer'
 import { TrajectoryLayer } from './TrajectoryLayer'
@@ -9,16 +9,10 @@ import { useDrawPath } from './useDrawPath'
 import { PathLayer } from './PathLayer'
 import { useEmptyTapClose } from '@renderer/components/useEmptyTapClose'
 import { useSettings } from '@renderer/store/appSettings'
-import {
-  applyViewTop,
-  fitViewport,
-  worldToTop,
-  type TopViewport
-} from '@renderer/core/geometry/transform'
-import { tween } from '@renderer/components/tween'
+import { worldToTop, type TopViewport } from '@renderer/core/geometry/transform'
+import { useCourtViewport } from './useCourtViewport'
 import { COLORS } from '@renderer/theme/colors'
 import { useElementSize } from '@renderer/components/useElementSize'
-import { useZoomPan } from '@renderer/components/useZoomPan'
 import { ViewControls } from '@renderer/components/ViewControls'
 import { Icon } from '@renderer/components/Icon'
 import { PipBar } from '@renderer/components/PipBar'
@@ -26,8 +20,7 @@ import { ZoneMarks } from './ZoneMarks'
 import { NamesButton, ViewSwapButton, ZonesButton } from '@renderer/components/ViewToggles'
 import { useUi } from '@renderer/store/settingsStore'
 
-export const WORLD_W = COURT.length + 2 * COURT.freeZone
-export const WORLD_H = COURT.width + 2 * COURT.freeZone
+export { WORLD_W, WORLD_H } from './useCourtViewport'
 
 /**
  * Draufsicht: Feld 18 × 9 m, Netz bei x = 0, maßstabstreu.
@@ -35,52 +28,19 @@ export const WORLD_H = COURT.width + 2 * COURT.freeZone
  */
 export function TopView({ compact = false }: { compact?: boolean }) {
   const [ref, size] = useElementSize<HTMLDivElement>()
-  const topTurns = useUi((s) => s.topTurns)
   const rotateTop = useUi((s) => s.rotateTop)
   const tool = useUi((s) => s.tool)
   const drawing = tool !== 'select'
-
-  // Gerät hochkant → Feld hochkant (Ansichten stehen dann untereinander). Neu berechnet bei jeder Größenänderung.
-  const autoTurns = window.innerHeight > window.innerWidth ? 1 : 0
-  const targetAngle = ((autoTurns + topTurns) * Math.PI) / 2
-  const angle = useAnimatedAngle(targetAngle)
-  // Das Netz-Bild-im-Bild liegt als Overlay darüber und verändert die Draufsicht nicht
-  const base = fitViewport(size.width, size.height, WORLD_W, WORLD_H, compact ? 8 : 16, angle)
-
-  // Inhalt (Feld + Freizone) in Basis-Pixeln, begrenzt das Verschieben
-  const corners = [
-    worldToTop(base, -WORLD_W / 2, -WORLD_H / 2),
-    worldToTop(base, WORLD_W / 2, -WORLD_H / 2),
-    worldToTop(base, WORLD_W / 2, WORLD_H / 2),
-    worldToTop(base, -WORLD_W / 2, WORLD_H / 2)
-  ]
-  const content = {
-    x0: Math.min(...corners.map((c) => c.px)),
-    x1: Math.max(...corners.map((c) => c.px)),
-    y0: Math.min(...corners.map((c) => c.py)),
-    y1: Math.max(...corners.map((c) => c.py))
-  }
   const stageRef = useRef<Konva.Stage>(null)
-  const { view, zoomIn, zoomOut, reset } = useZoomPan(ref, {
-    size,
-    content,
+  // Das Netz-Bild-im-Bild liegt als Overlay darüber und verändert die Draufsicht nicht
+  const { vp, zoomIn, zoomOut, reset } = useCourtViewport(ref, size, {
     // Im Pop-up feste Ansicht: kein Zoom, kein Verschieben (Spieler bleiben ziehbar)
-    enabled: !compact,
+    compact,
     // Finger auf einem Spieler oder Griff zieht diesen, nicht die Ansicht; zeichnet der Finger, verschiebt er nicht
     shouldIgnore: (e) =>
       (e.pointerType === 'touch' && drawing && useSettings.getState().settings.fingerDraws) ||
       (!drawing && hitsDraggable(stageRef.current, e.clientX, e.clientY))
   })
-  // Beim Drehen den Zoom weich zurücksetzen
-  const firstRef = useRef(true)
-  useEffect(() => {
-    if (firstRef.current) {
-      firstRef.current = false
-      return
-    }
-    reset()
-  }, [targetAngle])
-  const vp = applyViewTop(base, view)
   const preview = useDrawTrajectory(ref, vp, tool === 'annahme' || tool === 'zuspiel' || tool === 'schlag' ? tool : null)
   const stroke = useDrawPath(ref, vp, tool === 'laufweg')
   // Tippen ins Leere schließt Flugbahn- und Spieler-Karte
@@ -120,22 +80,6 @@ export function TopView({ compact = false }: { compact?: boolean }) {
       )}
     </>
   )
-}
-
-/** Dreht weich (Animation) zum Zielwinkel; mehrfaches Tippen setzt am aktuellen Winkel an. */
-function useAnimatedAngle(target: number): number {
-  const [angle, setAngle] = useState(target)
-  const angleRef = useRef(target)
-  useEffect(() => {
-    const from = angleRef.current
-    if (from === target) return
-    return tween(450, (k) => {
-      const a = from + (target - from) * k
-      angleRef.current = a
-      setAngle(a)
-    })
-  }, [target])
-  return angle
 }
 
 /** Welt-Rechteck → geschlossenes Polygon in Pixeln (funktioniert für jeden Drehwinkel). */
@@ -184,7 +128,7 @@ export function CourtLayer({ vp }: { vp: TopViewport }) {
       <ZoneMarks vp={vp} />
       {/* Abspannseile vom Netz zu den Pfosten: dünn und grau wie die Pfosten */}
       {[-1, 1].map((d) => (
-        <Line key={d} points={[...P(0, (d * COURT.netWidth) / 2), ...P(0, d * postY)]} stroke="#6a6a72" strokeWidth={Math.max(1, lw * 0.6)} />
+        <Line key={d} points={[...P(0, (d * COURT.netWidth) / 2), ...P(0, d * postY)]} stroke={COLORS.rope} strokeWidth={Math.max(1, lw * 0.6)} />
       ))}
       {/* Netz (9,50 m breit, über die Seitenlinien hinaus) */}
       <Line

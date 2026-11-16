@@ -9,10 +9,16 @@ Du bist mein Entwickler für dieses Projekt. Lies die gesamte Spezifikation, ers
 - Code sauber modular, Physik-Logik als eigenes, getestetes Modul (Unit-Tests mit Vitest).
 
 ## Design
-- Dunkles Theme: Hintergrund anthrazit bis fast schwarz, UI-Elemente dunkel.
-- Flugbahnen, Linien, Akzente und Fade-Effekte in der Standardfarbe der App (aktuell „Sand“ #d8c8a8). Sie ist an genau einer Stelle festgelegt: `src/renderer/src/theme/defaultColor.ts`. Alles Team-Bezogene nutzt stattdessen die jeweilige Teamfarbe.
+- Zwei Erscheinungsbilder, hell und dunkel. Einstellungen → Darstellung: „System“ (Standard, folgt Windows), „Hell“ oder „Dunkel“. Die CSS-Variablen beider Erscheinungsbilder stehen in `src/renderer/src/theme/theme.css`, die Farben für Feld, Netz und 3D in `src/renderer/src/theme/colors.ts`; umgeschaltet wird in `themeStore.ts`.
+- Flugbahnen, Linien, Akzente und Fade-Effekte in der Standardfarbe der App. Sie ist die Tinte des Erscheinungsbilds: Weiß im dunklen, fast Schwarz im hellen (`accent` in `colors.ts`). Alles Team-Bezogene nutzt stattdessen die jeweilige Teamfarbe.
 - Feldlinien dezent grau, damit Spielzüge sich klar abheben.
 - Gut bedienbar mit Stift und Finger (ausreichend große Touch-Ziele), optimiert für Querformat.
+
+## Skizze
+- Dritte Ansicht neben 2D und 3D: das Feld als Taktiktafel. Frei zeichnen und Spieler stellen, ohne Ballwege, Kurvenpunkte, 3D, Seitenleiste oder Wiedergabe.
+- Stift und Maus zeichnen, der Finger verschiebt und zoomt (mit „Finger zeichnet“ zeichnet er auch). Wer auf einem Spieler aufsetzt, zieht ihn; die Aufstellungsregeln gelten hier nicht.
+- Werkzeuge: Stift, Radierer (löscht ganze Striche; die Radierer-Taste des Surface Slim Pen radiert direkt), fünf Farben, drei Strichstärken, alles löschen. Rückgängig und Wiederholen wie überall.
+- Die Skizze gehört zum Spielzug und wird mit ihm gespeichert (`sketch` im Spielzug-Dokument); im PDF erscheint sie in der Draufsicht. Ein Spielzug, der nur aus einer Skizze besteht, öffnet sich im Skizzenmodus.
 
 ## Spielfeld
 - Echte Hallenvolleyball-Maße: Feld 18 × 9 m, Netz mittig, Angriffslinien 3 m vom Netz.

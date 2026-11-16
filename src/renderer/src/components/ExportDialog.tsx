@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { usePlay } from '@renderer/store/playStore'
+import { useTotalDuration } from '@renderer/store/playbackStore'
 import { buildReport } from '@renderer/export/report'
 import { pickVideoFormat, recordVideo } from '@renderer/export/video'
 import { Icon } from './Icon'
@@ -16,7 +17,8 @@ type State =
  */
 export function ExportDialog({ onClose }: { onClose: () => void }) {
   const current = usePlay((s) => s.current)
-  const hasTrajectory = usePlay((s) => !!s.trajectories.annahme || !!s.trajectories.zuspiel)
+  // Ein Video braucht Bewegung: einen Ballweg (auch nur den Angriff) oder Spieler, die laufen oder springen
+  const canPlay = useTotalDuration() > 0
   const [state, setState] = useState<State>({ kind: 'idle' })
   const busy = state.kind === 'busy'
   const name = current?.code || 'Spielzug'
@@ -56,23 +58,23 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
           </button>
         </header>
         <div className="form-body">
-          {!current && <p className="caption">Tipp: Speichere den Spielzug zuerst mit einem Kürzel – das Kürzel wird zum Dateinamen.</p>}
+          {!current && <p className="caption">Noch nicht gespeichert: Die Datei heißt dann „Spielzug“. Mit einem Kürzel bekommt sie dessen Namen.</p>}
           <button className="export-option" disabled={busy} onClick={() => void pdf()}>
             <Icon name="doc" size={28} />
             <span className="grow">
               <b>PDF</b>
-              <span className="caption block">Titel, Kürzel, Draufsicht, Netzansicht, vier 3D-Ansichten und die Werte der Flugbahnen</span>
+              <span className="caption block">Draufsicht mit Skizze, Netzansicht, vier 3D-Ansichten und die Werte der Ballwege</span>
             </span>
           </button>
-          <button className="export-option" disabled={busy || !video || !hasTrajectory} onClick={() => void mp4()}>
+          <button className="export-option" disabled={busy || !video || !canPlay} onClick={() => void mp4()}>
             <Icon name="video" size={28} />
             <span className="grow">
               <b>Video der 3D-Animation</b>
               <span className="caption block">
                 {!video
-                  ? 'Auf diesem System nicht verfügbar.'
-                  : !hasTrajectory
-                    ? 'Zeichne zuerst eine Flugbahn.'
+                  ? 'Dieser Rechner kann kein Video aufnehmen.'
+                  : !canPlay
+                    ? 'Noch nichts zum Abspielen: Zeichne zuerst einen Ballweg oder Laufweg.'
                     : `Aus der aktuellen 3D-Kamera, einmal in Echtzeit · ${video.ext.toUpperCase()}`}
               </span>
             </span>
@@ -93,7 +95,7 @@ export function ExportDialog({ onClose }: { onClose: () => void }) {
                 </button>
               </>
             )}
-            {state.kind === 'error' && <span className="error">Export fehlgeschlagen: {state.message}</span>}
+            {state.kind === 'error' && <span className="error">Der Export hat nicht geklappt: {state.message}</span>}
           </div>
         </div>
       </div>

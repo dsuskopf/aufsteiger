@@ -1,4 +1,4 @@
-import type { PlayDoc, PlaySummary, Settings, Team, TeamsFile } from '../shared/types'
+import type { PlayDoc, PlaySummary, Settings, Team, TeamsFile, ThemePref } from '../shared/types'
 
 export interface AppApi {
   versions: { electron: string; chrome: string }
@@ -24,6 +24,10 @@ export interface AppApi {
     pdf: (name: string, html: string) => Promise<string>
     video: (name: string, ext: 'mp4' | 'webm', data: Uint8Array) => Promise<string>
     showItem: (file: string) => Promise<void>
+  }
+  theme: {
+    /** Erscheinungsbild des Fensters: Einstellung (System, Hell, Dunkel) und was daraus gerade gilt */
+    set: (pref: ThemePref, resolved: 'light' | 'dark') => void
   }
 }
 

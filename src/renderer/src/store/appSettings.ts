@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { DEFAULT_SETTINGS, type Settings, type Trajectory } from '@shared/types'
 import { sanitizeSettings } from '@shared/validate'
+import { applyTheme } from '@renderer/theme/themeStore'
 
 interface SettingsState {
   settings: Settings
@@ -53,6 +54,11 @@ export function trajectoryDefaults(type: 'annahme' | 'zuspiel', s: Settings, ann
     return { startH: s.defaultStartHAnnahme, hitH: s.defaultEndHAnnahme, apexOffset: s.defaultApexOffsetAnnahme }
   return { startH: annahme ? annahme.hitH : s.defaultStartHZuspiel, hitH: s.defaultHitH, apexOffset: s.defaultApexOffsetZuspiel }
 }
+
+// Erscheinungsbild folgt der Einstellung (auch nach „Standardwerte“ und beim Laden)
+useSettings.subscribe((s, prev) => {
+  if (s.settings.theme !== prev.settings.theme || s.loaded !== prev.loaded) applyTheme(s.settings.theme)
+})
 
 // Beim Schließen des Fensters ausstehende Änderungen sofort speichern
 if (typeof window !== 'undefined')

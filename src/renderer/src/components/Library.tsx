@@ -30,7 +30,7 @@ export function Library({ onClose }: { onClose: () => void }) {
     window.api.plays
       .list()
       .then(setPlays)
-      .catch(() => setError('Bibliothek konnte nicht geladen werden.'))
+      .catch(() => setError('Die Bibliothek lässt sich nicht laden.'))
   useEffect(() => {
     void reload()
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -51,11 +51,21 @@ export function Library({ onClose }: { onClose: () => void }) {
 
   const open = (id: string) =>
     guarded('öffnen', async () => {
-      const doc = await window.api.plays.load(id)
-      if (!doc) return setError('Spielzug konnte nicht geöffnet werden.')
+      const doc = await window.api.plays.load(id).catch(() => null)
+      if (!doc) return setError('Der Spielzug lässt sich nicht öffnen.')
       openDoc(doc)
       onClose()
     })
+  /** Umbenennen, Duplizieren, Löschen: danach neu laden; schlägt es fehl, steht es über der Liste */
+  const act = async (job: () => Promise<unknown>, failed: string) => {
+    setError(null)
+    try {
+      await job()
+    } catch {
+      setError(failed)
+    }
+    await reload()
+  }
 
   return (
     <div className="sheet-backdrop" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
@@ -111,7 +121,7 @@ export function Library({ onClose }: { onClose: () => void }) {
           <div className="discard-overlay" onPointerDown={(e) => e.target === e.currentTarget && setPending(null)}>
             <div className="discard-pop" role="alertdialog" aria-modal="true" aria-labelledby="discard-title">
               <h3 id="discard-title">Ungespeicherte Änderungen</h3>
-              <p className="secondary">Der aktuelle Spielzug hat ungespeicherte Änderungen. Sie gehen verloren.</p>
+              <p className="secondary">Am aktuellen Spielzug ist noch etwas ungespeichert. Das geht dabei verloren.</p>
               <div className="row discard-actions">
                 <button className="plain" autoFocus onClick={() => setPending(null)}>
                   Abbrechen
@@ -138,7 +148,7 @@ export function Library({ onClose }: { onClose: () => void }) {
           ) : shown.length === 0 ? (
             <p className="empty">
               {plays.length === 0
-                ? 'Noch keine Spielzüge gespeichert. Zeichne einen Spielzug und tippe oben auf Speichern.'
+                ? 'Hier ist noch nichts. Zeichne einen Spielzug oder eine Skizze und tippe oben auf „Speichern“.'
                 : 'Kein Spielzug passt zur Suche.'}
             </p>
           ) : (
@@ -149,10 +159,7 @@ export function Library({ onClose }: { onClose: () => void }) {
                   play={p}
                   onDone={async (code, title) => {
                     setEditing(null)
-                    if (code !== null) {
-                      await renamePlay(p.id, code, title)
-                      await reload()
-                    }
+                    if (code !== null) await act(() => renamePlay(p.id, code, title), 'Umbenennen hat nicht geklappt.')
                   }}
                 />
               ) : (
@@ -169,10 +176,7 @@ export function Library({ onClose }: { onClose: () => void }) {
                     className="icon-only plain"
                     title="Duplizieren"
                     aria-label={`${p.code} duplizieren`}
-                    onClick={async () => {
-                      await duplicatePlay(p.id)
-                      await reload()
-                    }}
+                    onClick={() => act(() => duplicatePlay(p.id), 'Duplizieren hat nicht geklappt.')}
                   >
                     <Icon name="copy" />
                   </button>
@@ -180,10 +184,7 @@ export function Library({ onClose }: { onClose: () => void }) {
                     label="Löschen"
                     confirmLabel="Endgültig löschen"
                     icon="trash"
-                    onConfirm={async () => {
-                      await deletePlay(p.id)
-                      await reload()
-                    }}
+                    onConfirm={() => void act(() => deletePlay(p.id), 'Löschen hat nicht geklappt.')}
                   />
                 </div>
               )

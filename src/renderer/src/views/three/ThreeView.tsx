@@ -90,7 +90,7 @@ export function ThreeView() {
 
     const scene = new THREE.Scene()
     scene.fog = new THREE.Fog(COLORS.bgDeep, 35, 80)
-    scene.add(new THREE.HemisphereLight('#c4c4ca', '#0c0c0e', 1.15))
+    scene.add(new THREE.HemisphereLight(COLORS.skyLight, COLORS.groundLight, 1.15))
     // Hallenlicht von schräg oben: wirft weiche Schatten der Spieler auf den Boden
     const sun = new THREE.DirectionalLight('#ffffff', 1.35)
     sun.position.set(5, 18, 7)

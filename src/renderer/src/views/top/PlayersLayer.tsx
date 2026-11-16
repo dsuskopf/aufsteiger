@@ -22,7 +22,7 @@ const RADIUS_M = 0.38
  * Spieler als Kreise mit Kürzel und Rückennummer, frei ziehbar mit Maus, Stift und Finger
  * (der Finger muss direkt auf dem Spieler aufsetzen; daneben verschiebt er die Ansicht).
  */
-export function PlayersLayer({ vp, interactive = true }: { vp: TopViewport; interactive?: boolean }) {
+export function PlayersLayer({ vp, interactive = true, board = false }: { vp: TopViewport; interactive?: boolean; /** Skizze: Spieler nur stellen – keine Auswahl, keine Aufstellungsregeln */ board?: boolean }) {
   const players = useCourtPlayers()
   const movePlayer = usePlay((s) => s.movePlayer)
   const showNames = useUi((s) => s.showNames)
@@ -39,7 +39,7 @@ export function PlayersLayer({ vp, interactive = true }: { vp: TopViewport; inte
     const node = e.target
     const w = topToWorld(vp, node.x(), node.y())
     const c = clampToArea(w.x, w.y)
-    movePlayer(p.side, p.playerId, c.x, c.y)
+    movePlayer(p.side, p.playerId, c.x, c.y, board)
     // Position aus dem Store (der Libero bleibt mit Regeln hinter der 3-m-Linie)
     const now = usePlay.getState().sides[p.side].players.find((q) => q.playerId === p.playerId) ?? c
     const px = worldToTop(vp, now.x, now.y)
@@ -59,7 +59,7 @@ export function PlayersLayer({ vp, interactive = true }: { vp: TopViewport; inte
         const at = moving && plan ? planAt(plan, t) : { x: p.x, y: p.y, z: 0 }
         const pos = worldToTop(vp, at.x, at.y)
         const colors = p.jersey
-        const isSel = selected?.side === p.side && selected.playerId === p.playerId
+        const isSel = !board && selected?.side === p.side && selected.playerId === p.playerId
         // Im Sprung: etwas größer, Schatten weiter weg
         const lift = 1 + at.z * 0.45
         return (
@@ -73,8 +73,8 @@ export function PlayersLayer({ vp, interactive = true }: { vp: TopViewport; inte
             draggable
             dragDistance={3}
             onPointerDown={toStart}
-            onClick={() => selectPlayer({ side: p.side, playerId: p.playerId })}
-            onTap={() => selectPlayer({ side: p.side, playerId: p.playerId })}
+            onClick={board ? undefined : () => selectPlayer({ side: p.side, playerId: p.playerId })}
+            onTap={board ? undefined : () => selectPlayer({ side: p.side, playerId: p.playerId })}
             onDragMove={onDrag(p)}
             onDragEnd={onDrag(p)}
             onMouseEnter={(e) => setCursor(e, 'grab')}
@@ -139,7 +139,7 @@ export function PlayersLayer({ vp, interactive = true }: { vp: TopViewport; inte
                 fontSize={Math.max(11, Math.min(15, r * 0.48))}
                 fontStyle="bold"
                 fill={COLORS.text}
-                shadowColor="#000"
+                shadowColor={COLORS.halo}
                 shadowBlur={4}
                 shadowOpacity={0.9}
                 listening={false}

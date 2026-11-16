@@ -1,13 +1,26 @@
-import { BrowserWindow, app, ipcMain, shell } from 'electron'
-import { promises as fs } from 'node:fs'
+import { BrowserWindow, app, ipcMain, nativeTheme, shell } from 'electron'
+import { promises as fs, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { SCHEMA_VERSION, type PlayDoc, type PlaySummary, type Settings, type TeamsFile } from '@shared/types'
+import { SCHEMA_VERSION, THEME_PREFS, type ThemePref, type PlayDoc, type PlaySummary, type Settings, type TeamsFile } from '@shared/types'
 import { safeFileName, sanitizePlay, sanitizeSettings, sanitizeTeams } from '@shared/validate'
 import { dataPath, readJson, writeJsonAtomic, writeJsonAtomicSync } from './storage'
 
 const TEAMS_FILE = 'teams.json'
 const SETTINGS_FILE = 'settings.json'
 const PLAYS_DIR = 'plays'
+
+/** Fensterhintergrund je Erscheinungsbild (= --window in theme.css): kein Aufblitzen beim Start und beim Vergrößern */
+export const WINDOW_BG = { dark: '#0c0c0e', light: '#ececf0' } as const
+
+/** Gespeichertes Erscheinungsbild schon vor dem ersten Fenster anwenden */
+export function initTheme(): void {
+  try {
+    const raw: unknown = JSON.parse(readFileSync(dataPath(SETTINGS_FILE), 'utf-8'))
+    nativeTheme.themeSource = sanitizeSettings(raw).theme
+  } catch {
+    // keine oder beschädigte Einstellungen: wie Windows
+  }
+}
 
 const playFile = (id: string) => join(PLAYS_DIR, `${id}.json`)
 const validId = (id: unknown): id is string => typeof id === 'string' && /^[\w-]{1,64}$/.test(id)
@@ -51,6 +64,12 @@ export function registerIpc(): void {
     } catch {
       e.returnValue = false
     }
+  })
+
+  // Erscheinungsbild: Titelleiste und native Elemente folgen der Einstellung, der Fensterhintergrund dem Ergebnis
+  ipcMain.on('theme:set', (e, pref: unknown, resolved: unknown) => {
+    if (THEME_PREFS.includes(pref as ThemePref)) nativeTheme.themeSource = pref as ThemePref
+    BrowserWindow.fromWebContents(e.sender)?.setBackgroundColor(resolved === 'light' ? WINDOW_BG.light : WINDOW_BG.dark)
   })
 
   ipcMain.handle('settings:load', async (): Promise<Settings> => sanitizeSettings(await readJson<unknown>(SETTINGS_FILE)))

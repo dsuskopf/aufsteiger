@@ -103,7 +103,7 @@ function TeamTag({ name, color, missing = 'Kein Team' }: { name?: string; color?
   if (!name && !color) return <span className="team-tag missing">{missing}</span>
   return (
     <span className="team-tag">
-      <span className="chip-dot" style={{ background: color, borderColor: 'rgba(255,255,255,0.3)' }} />
+      <span className="chip-dot" style={{ background: color, borderColor: 'var(--swatch-ring)' }} />
       {name || 'Ohne Namen'}
     </span>
   )
@@ -280,6 +280,9 @@ function HowTo() {
         </li>
         <li>
           <b>Abspielen:</b> unten auf ▶ oder die Leertaste – am schönsten in 3D.
+        </li>
+        <li>
+          <b>Nur schnell etwas aufmalen?</b> Oben auf „Skizze“: Stift nehmen und loszeichnen.
         </li>
       </ol>
     </section>

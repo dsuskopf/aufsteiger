@@ -102,6 +102,21 @@ export function teamTint(hex: string, background = '#1d1d22'): string {
   return '#ffffff'
 }
 
+/** Mischt eine Farbe mit Schwarz (amount 0..1) */
+export function mixBlack(hex: string, amount: number): string {
+  const [r, g, b] = rgb(hex)
+  return toHex([r * (1 - amount), g * (1 - amount), b * (1 - amount)])
+}
+
+/** Teamfarbe als Akzent auf hellem Grund: so weit abdunkeln, bis mindestens 4.5:1 Kontrast erreicht ist. */
+export function teamTintOnLight(hex: string, background = '#ffffff'): string {
+  for (let a = 0; a <= 1.0001; a += 0.05) {
+    const c = mixBlack(hex, a)
+    if (contrastRatio(c, background) >= 4.5) return c
+  }
+  return '#000000'
+}
+
 /**
  * Hex-Eingabe des Nutzers normalisieren: „#1F4E79“, „1f4e79“, „#abc“ → „#1f4e79“ bzw. „#aabbcc“.
  * Gibt null zurück, wenn die Eingabe keine gültige Farbe ist.

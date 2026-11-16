@@ -34,7 +34,7 @@ export function SaveDialog({ asCopy = false, onClose }: { asCopy?: boolean; onCl
       await saveCurrent(code.trim(), title.trim(), copy)
       onClose()
     } catch {
-      setError('Speichern fehlgeschlagen. Bitte erneut versuchen.')
+      setError('Speichern hat nicht geklappt. Versuch es bitte noch einmal.')
       setBusy(false)
     }
   }
@@ -73,7 +73,7 @@ export function SaveDialog({ asCopy = false, onClose }: { asCopy?: boolean; onCl
             <span>Titel</span>
             <input className="field" value={title} maxLength={120} placeholder="z. B. Angriff über Position 4" onChange={(e) => setTitle(e.target.value)} />
           </label>
-          {!current && <p className="caption">Danach genügt ein Tipp auf „Speichern“ – ohne Nachfrage.</p>}
+          {!current && <p className="caption">Ab dann speichert ein Tipp auf „Speichern“ sofort. Die Skizze wird mitgespeichert.</p>}
           {error && <p className="error">{error}</p>}
         </div>
         <footer className="form-actions">

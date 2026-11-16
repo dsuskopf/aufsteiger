@@ -276,34 +276,34 @@ export function Net({ vp, netHeight }: { vp: NetViewport; netHeight: number }) {
   // Maschen nur zeichnen, wenn sie (auch schräg betrachtet) mindestens 3 px auseinander liegen
   if (step * s * Math.abs(netProject(vp, 0, 1, 0).px - netProject(vp, 0, 0, 0).px) / s >= 3) {
     for (let y = -half; y <= half + 1e-9; y += step)
-      mesh.push(<Line key={`v${y.toFixed(2)}`} points={[...P(y, bottom), ...P(y, top)]} stroke="#c8c8d0" strokeWidth={1} opacity={0.22} />)
+      mesh.push(<Line key={`v${y.toFixed(2)}`} points={[...P(y, bottom), ...P(y, top)]} stroke={COLORS.netMesh} strokeWidth={1} opacity={0.22} />)
     for (let z = bottom; z <= top + 1e-9; z += step)
-      mesh.push(<Line key={`h${z.toFixed(2)}`} points={[...P(-half, z), ...P(half, z)]} stroke="#c8c8d0" strokeWidth={1} opacity={0.22} />)
+      mesh.push(<Line key={`h${z.toFixed(2)}`} points={[...P(-half, z), ...P(half, z)]} stroke={COLORS.netMesh} strokeWidth={1} opacity={0.22} />)
   }
 
   return (
     <>
       {/* Pfosten */}
       {[-postY, postY].map((y) => (
-        <Line key={y} points={[...P(y, 0), ...P(y, top + 0.1)]} stroke="#55555c" strokeWidth={Math.max(3, 2 * COURT.postRadius * s)} lineCap="round" />
+        <Line key={y} points={[...P(y, 0), ...P(y, top + 0.1)]} stroke={COLORS.post} strokeWidth={Math.max(3, 2 * COURT.postRadius * s)} lineCap="round" />
       ))}
       {/* Abspannseile oben und unten vom Netz zu den Pfosten, unauffällig grau wie die Pfosten */}
       {[-1, 1].flatMap((d) => [
-        <Line key={`ct${d}`} points={[...P(d * half, top - 0.035), ...P(d * postY, top - 0.035)]} stroke="#6a6a72" strokeWidth={Math.max(1.2, 0.012 * s)} />,
-        <Line key={`cb${d}`} points={[...P(d * half, bottom), ...P(d * postY, bottom)]} stroke="#6a6a72" strokeWidth={Math.max(1.2, 0.012 * s)} />
+        <Line key={`ct${d}`} points={[...P(d * half, top - 0.035), ...P(d * postY, top - 0.035)]} stroke={COLORS.rope} strokeWidth={Math.max(1.2, 0.012 * s)} />,
+        <Line key={`cb${d}`} points={[...P(d * half, bottom), ...P(d * postY, bottom)]} stroke={COLORS.rope} strokeWidth={Math.max(1.2, 0.012 * s)} />
       ])}
       {/* Netzfläche als leichter Schleier: Spieler dahinter stehen sichtbar hinter dem Netz */}
-      <Line points={[...P(-half, bottom), ...P(half, bottom), ...P(half, top), ...P(-half, top)]} closed fill="#c8c8d0" opacity={0.16} />
+      <Line points={[...P(-half, bottom), ...P(half, bottom), ...P(half, top), ...P(-half, top)]} closed fill={COLORS.netMesh} opacity={0.16} />
       {mesh}
       {/* Netzoberkante (7 cm) und Unterkante */}
-      <Line points={[...P(-half, top - 0.035), ...P(half, top - 0.035)]} stroke="#d9d9de" strokeWidth={Math.max(2, 0.07 * s)} />
-      <Line points={[...P(-half, bottom), ...P(half, bottom)]} stroke="#c9c9cf" strokeWidth={Math.max(1, 0.02 * s)} />
+      <Line points={[...P(-half, top - 0.035), ...P(half, top - 0.035)]} stroke={COLORS.netTape} strokeWidth={Math.max(2, 0.07 * s)} />
+      <Line points={[...P(-half, bottom), ...P(half, bottom)]} stroke={COLORS.netBand} strokeWidth={Math.max(1, 0.02 * s)} />
       {/* Seitenbänder (5 cm) über den Seitenlinien */}
       {[-1, 1].map((d) => (
         <Line
           key={`b${d}`}
           points={[...P(d * (COURT.halfWidth - COURT.sideBandWidth / 2), bottom), ...P(d * (COURT.halfWidth - COURT.sideBandWidth / 2), top)]}
-          stroke="#e6e6ea"
+          stroke={COLORS.netTape}
           strokeWidth={Math.max(2, COURT.sideBandWidth * s)}
         />
       ))}
@@ -313,7 +313,7 @@ export function Net({ vp, netHeight }: { vp: NetViewport; netHeight: number }) {
           <Line
             key={`a${d}${i}`}
             points={[...P(d * (COURT.halfWidth + 0.01), top + i * 0.1), ...P(d * (COURT.halfWidth + 0.01), top + (i + 1) * 0.1)]}
-            stroke={i % 2 === 1 ? '#d63230' : '#e6e6ea'}
+            stroke={i % 2 === 1 ? '#d63230' : COLORS.antenna}
             strokeWidth={Math.max(2.5, 2 * COURT.antennaDisplayRadius * s)}
           />
         ))
@@ -364,7 +364,7 @@ export function PlayerFigure({ vp, p, dim = false }: { vp: NetViewport; p: Court
           fontSize={12}
           fontStyle="bold"
           fill={COLORS.text}
-          shadowColor="#000"
+          shadowColor={COLORS.halo}
           shadowBlur={4}
           shadowOpacity={0.9}
         />

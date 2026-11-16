@@ -7,24 +7,28 @@ import { redo, undo, useHistory } from '@renderer/store/history'
 import { Icon, type IconName } from './Icon'
 
 const VIEW_MODES: { id: ViewMode; label: string; title: string }[] = [
-  { id: '2d', label: '2D', title: 'Draufsicht und Netzansicht – hier wird gezeichnet und verschoben' },
-  { id: '3d', label: '3D', title: '3D-Ansicht – der Spielzug wie in der Halle' }
+  { id: '2d', label: '2D', title: 'Draufsicht und Netzansicht: Spielzug planen' },
+  { id: '3d', label: '3D', title: 'Der Spielzug wie in der Halle' },
+  { id: 'sketch', label: 'Skizze', title: 'Taktiktafel: frei auf dem Feld zeichnen und Spieler stellen' }
 ]
 
 /**
- * Toolbar in einer Reihe: links Seitenleiste und Spielzug (Name mit Menü, Speichern), in der Mitte die Ansicht,
+ * Toolbar in einer Reihe: links Seitenleiste und Spielzug (Name mit Menü, Speichern), in der Mitte die Ansicht
+ * (2D, 3D, Skizze),
  * rechts Teams, Export und Einstellungen. Gezeichnet und eingestellt wird in der Seitenleiste.
  */
 export function Toolbar() {
   const { viewMode, setViewMode, sidebarOpen, setSidebarOpen, setTeamsOpen, setSettingsOpen, setDialog } = useUi()
+  const sketching = viewMode === 'sketch'
 
   return (
     <header className="toolbar">
       <div className="toolbar-group">
         <button
-          className={`icon-only ${sidebarOpen ? 'selected-soft' : ''}`}
-          aria-pressed={sidebarOpen}
-          title={sidebarOpen ? 'Seitenleiste ausblenden' : 'Seitenleiste einblenden (Ablauf, Aufstellung)'}
+          className={`icon-only ${sidebarOpen && !sketching ? 'selected-soft' : ''}`}
+          aria-pressed={sidebarOpen && !sketching}
+          disabled={sketching}
+          title={sketching ? 'Die Skizze hat keine Seitenleiste' : sidebarOpen ? 'Seitenleiste ausblenden' : 'Seitenleiste einblenden (Ablauf, Aufstellung)'}
           aria-label="Seitenleiste"
           onClick={() => setSidebarOpen(!sidebarOpen)}
         >

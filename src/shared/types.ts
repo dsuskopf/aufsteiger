@@ -240,7 +240,13 @@ export interface Settings {
   sound: boolean
   /** Lautstärke der Geräusche in Prozent (0–100) */
   soundVolume: number
+  /** Erscheinungsbild: hell, dunkel oder wie in Windows eingestellt */
+  theme: ThemePref
 }
+
+/** Erscheinungsbild der App: „system“ folgt der Einstellung von Windows */
+export type ThemePref = 'system' | 'light' | 'dark'
+export const THEME_PREFS: readonly ThemePref[] = ['system', 'light', 'dark']
 
 /** Zonen: Standard 1–6, erweitert 1–9, erweitert mit Unterzonen A–D */
 export type ZoneStyle = 'standard' | 'advanced' | 'letters'
@@ -267,7 +273,29 @@ export const DEFAULT_SETTINGS: Settings = {
   zoneStyle: 'standard',
   cameraShake: true,
   sound: true,
-  soundVolume: 60
+  soundVolume: 60,
+  theme: 'system'
+}
+
+/* ---------- Skizze ---------- */
+
+/**
+ * Stiftfarben der Skizze. „ink“ ist die Tinte des Erscheinungsbilds: hell auf dunklem Feld, dunkel auf hellem.
+ * Gespeichert wird der Name, nicht der Farbwert – so bleibt eine Skizze in beiden Erscheinungsbildern lesbar.
+ */
+export type SketchColor = 'ink' | 'red' | 'blue' | 'green' | 'yellow'
+export const SKETCH_COLORS: readonly SketchColor[] = ['ink', 'red', 'blue', 'green', 'yellow']
+export const SKETCH_COLOR_LABELS: Record<SketchColor, string> = { ink: 'Tinte', red: 'Rot', blue: 'Blau', green: 'Grün', yellow: 'Gelb' }
+/** Strichstärken in Metern auf dem Feld (der Strich wächst beim Zoomen mit) */
+export const SKETCH_WIDTHS = [0.05, 0.09, 0.16] as const
+/** Obergrenzen, damit eine Skizze die Datei nicht sprengt */
+export const SKETCH_LIMITS = { strokes: 600, points: 1500 } as const
+
+/** Ein Strich der Skizze: Farbe, Breite (m) und die Punkte als flache Liste x0, y0, x1, y1 … (Weltkoordinaten, m) */
+export interface SketchStroke {
+  color: SketchColor
+  width: number
+  points: number[]
 }
 
 /* ---------- Gespeicherter Spielzug ---------- */
@@ -290,6 +318,8 @@ export interface PlayDoc {
   schlag?: Attack
   /** Ballkontakte, die an Spieler gekoppelt sind */
   contacts?: Contacts
+  /** Freie Skizze auf dem Feld (Skizzenmodus) */
+  sketch?: SketchStroke[]
   netPreset: NetPresetId
   netHeight: number
   display: PlayDisplay

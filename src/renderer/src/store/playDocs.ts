@@ -25,6 +25,7 @@ export function currentDoc(meta: { id: string; code: string; title: string; crea
     trajectories: play.trajectories,
     ...(play.schlag ? { schlag: play.schlag } : {}),
     ...(Object.keys(play.contacts).length ? { contacts: play.contacts } : {}),
+    ...(play.sketch.length ? { sketch: play.sketch } : {}),
     netPreset: ui.netPreset,
     netHeight: ui.netHeight,
     display: play.display,
@@ -66,13 +67,18 @@ export function openDoc(doc: PlayDoc): void {
   usePlayback.setState({ t: 0 })
   const ui = useUi.getState()
   ui.setNetHeight(doc.netHeight)
-  useUi.setState({ netYaw: yawFromOrient(doc.netViewFrom, doc.netAngle), netShowPlayers: doc.netShowPlayers, tool: 'select' })
+  // Eine reine Skizze öffnet sich im Skizzenmodus; ein Spielzug ohne Skizze holt einen dort wieder heraus
+  const sketch = doc.sketch ?? []
+  const planned = Object.keys(doc.trajectories).length > 0 || !!doc.schlag
+  const viewMode = sketch.length && !planned ? 'sketch' : ui.viewMode === 'sketch' && !sketch.length ? '2d' : ui.viewMode
+  useUi.setState({ netYaw: yawFromOrient(doc.netViewFrom, doc.netAngle), netShowPlayers: doc.netShowPlayers, tool: 'select', viewMode })
   usePlay.setState({
     sides: { A: strip('A'), B: strip('B') },
     trajectories: doc.trajectories,
     schlag: doc.schlag ?? null,
     contacts: doc.contacts ?? {},
     display: doc.display,
+    sketch,
     selected: null,
     selectedPlayer: null,
     current: { id: doc.id, code: doc.code, title: doc.title, createdAt: doc.createdAt }
@@ -94,6 +100,7 @@ export function newPlay(): void {
     schlag: null,
     contacts: {},
     display: { ...DEFAULT_DISPLAY },
+    sketch: [],
     selected: null,
     selectedPlayer: null,
     current: null

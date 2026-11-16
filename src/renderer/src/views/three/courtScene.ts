@@ -74,14 +74,14 @@ export function buildNet(netHeight: number): THREE.Group {
   strip(COURT.netBandDepth, netHeight - COURT.netBandDepth / 2, netMat, 10)
 
   // Oberkante + Unterkante (Bänder)
-  const bandMat = new THREE.MeshBasicMaterial({ color: '#c9c9cf', side: THREE.DoubleSide })
+  const bandMat = new THREE.MeshBasicMaterial({ color: COLORS.netBand, side: THREE.DoubleSide })
   strip(0.07, netHeight - 0.035, bandMat, 1)
   strip(0.025, netHeight - COURT.netBandDepth, bandMat, 1)
   g.userData.flex = flex
   g.userData.netHeight = netHeight
 
   // Pfosten
-  const postMat = new THREE.MeshStandardMaterial({ color: '#55555c', metalness: 0.4, roughness: 0.5 })
+  const postMat = new THREE.MeshStandardMaterial({ color: COLORS.post, metalness: 0.4, roughness: 0.5 })
   for (const side of [-1, 1]) {
     const h = netHeight + 0.1
     const post = new THREE.Mesh(new THREE.CylinderGeometry(COURT.postRadius, COURT.postRadius, h, 16), postMat)
@@ -91,7 +91,7 @@ export function buildNet(netHeight: number): THREE.Group {
   }
 
   // Abspannseile oben und unten vom Netzende zum Pfosten, grau wie die Pfosten
-  const ropeMat = new THREE.MeshStandardMaterial({ color: '#55555c', metalness: 0.3, roughness: 0.6 })
+  const ropeMat = new THREE.MeshStandardMaterial({ color: COLORS.rope, metalness: 0.3, roughness: 0.6 })
   const ropeLen = postY - COURT.netWidth / 2
   for (const side of [-1, 1])
     for (const h of [netHeight - 0.035, netHeight - COURT.netBandDepth]) {
@@ -115,7 +115,7 @@ function buildAntenna(netHeight: number, side: number): THREE.Group {
   const g = new THREE.Group()
   const netBottom = netHeight - COURT.netBandDepth
   // Unbeleuchtete Materialien wie bei der Netzkante, damit Band, Tasche und Antenne gleich hell wirken
-  const white = new THREE.MeshBasicMaterial({ color: '#e6e6ea' })
+  const white = new THREE.MeshBasicMaterial({ color: COLORS.antenna })
   const red = new THREE.MeshBasicMaterial({ color: '#d63230' })
 
   // Seitenband: von der Seitenlinie (innen) bis zur Außenkante der Linie
@@ -132,7 +132,7 @@ function buildAntenna(netHeight: number, side: number): THREE.Group {
   // Tasche (Stoffhülle) über die gesamte Netzhöhe
   const pocket = new THREE.Mesh(
     new THREE.CylinderGeometry(COURT.antennaPocketRadius, COURT.antennaPocketRadius, COURT.netBandDepth, 16),
-    new THREE.MeshBasicMaterial({ color: '#d5d5da' })
+    new THREE.MeshBasicMaterial({ color: COLORS.netBand })
   )
   pocket.position.set(ax, netBottom + COURT.netBandDepth / 2, az)
   g.add(pocket)
@@ -230,13 +230,17 @@ export function deformNet(net: THREE.Object3D | null, hits: NetHit[]): void {
 }
 
 let cachedTexture: THREE.Texture | null = null
+let cachedColor = ''
 function meshTexture(): THREE.Texture {
-  if (cachedTexture) return cachedTexture
+  // Je Erscheinungsbild eine eigene Textur (helles Gewebe auf dunklem Grund und umgekehrt)
+  if (cachedTexture && cachedColor === COLORS.netMesh) return cachedTexture
+  cachedColor = COLORS.netMesh
   const c = document.createElement('canvas')
   c.width = c.height = 64
   const ctx = c.getContext('2d')!
   ctx.clearRect(0, 0, 64, 64)
-  ctx.strokeStyle = 'rgba(200,200,210,0.55)'
+  ctx.globalAlpha = 0.55
+  ctx.strokeStyle = COLORS.netMesh
   ctx.lineWidth = 3
   ctx.strokeRect(0, 0, 64, 64)
   const tex = new THREE.CanvasTexture(c)

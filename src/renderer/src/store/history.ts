@@ -4,20 +4,20 @@ import { usePlayback } from './playbackStore'
 
 /**
  * Rückgängig und Wiederholen (Strg+Z, Strg+Y) für den Spielzug: Aufstellung, Laufwege, Sprünge, Block,
- * Ballwege, Kopplungen und Anzeige. Eine zusammenhängende Bearbeitung (Ziehen, Regler, das Gleiten in eine neue
+ * Ballwege, Kopplungen, Anzeige und die Skizze. Eine zusammenhängende Bearbeitung (Ziehen, Regler, das Gleiten in eine neue
  * Aufstellung) wird zu einem Schritt zusammengefasst: Erst nach einer kurzen Pause beginnt ein neuer.
  * Öffnen oder neu Anlegen eines Spielzugs leert den Verlauf.
  */
 type PlayState = ReturnType<typeof usePlay.getState>
-type Snapshot = Pick<PlayState, 'sides' | 'trajectories' | 'schlag' | 'contacts' | 'display'>
+type Snapshot = Pick<PlayState, 'sides' | 'trajectories' | 'schlag' | 'contacts' | 'display' | 'sketch'>
 
 const LIMIT = 100
 /** Änderungen, die schneller aufeinander folgen, gehören zum selben Schritt (ms) */
 const GROUP_MS = 600
 
-const take = (s: PlayState): Snapshot => ({ sides: s.sides, trajectories: s.trajectories, schlag: s.schlag, contacts: s.contacts, display: s.display })
+const take = (s: PlayState): Snapshot => ({ sides: s.sides, trajectories: s.trajectories, schlag: s.schlag, contacts: s.contacts, display: s.display, sketch: s.sketch })
 const changed = (a: Snapshot, b: Snapshot) =>
-  a.sides !== b.sides || a.trajectories !== b.trajectories || a.schlag !== b.schlag || a.contacts !== b.contacts || a.display !== b.display
+  a.sides !== b.sides || a.trajectories !== b.trajectories || a.schlag !== b.schlag || a.contacts !== b.contacts || a.display !== b.display || a.sketch !== b.sketch
 
 interface HistoryState {
   canUndo: boolean

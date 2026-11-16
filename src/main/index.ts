@@ -1,6 +1,6 @@
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, nativeTheme, shell } from 'electron'
 import { join } from 'node:path'
-import { registerIpc } from './ipc'
+import { WINDOW_BG, initTheme, registerIpc } from './ipc'
 
 // Für Tests: eigenes Datenverzeichnis, damit echte Teams/Spielzüge unberührt bleiben
 if (process.env['VBP_USER_DATA']) app.setPath('userData', process.env['VBP_USER_DATA'])
@@ -14,7 +14,7 @@ function createWindow(): void {
     minWidth: 960,
     minHeight: 600,
     show: false,
-    backgroundColor: '#0b0b0d',
+    backgroundColor: nativeTheme.shouldUseDarkColors ? WINDOW_BG.dark : WINDOW_BG.light,
     autoHideMenuBar: true,
     title: 'Volleyball Playbook',
     // Im Entwicklungsmodus das App-Icon zeigen (die installierte .exe bringt es selbst mit)
@@ -48,6 +48,7 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  initTheme()
   registerIpc()
   createWindow()
   app.on('activate', () => {

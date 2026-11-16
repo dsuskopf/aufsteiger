@@ -1,10 +1,16 @@
 import { create } from 'zustand'
-import type { NetPresetId } from '@shared/types'
+import { SKETCH_WIDTHS, type NetPresetId, type SketchColor } from '@shared/types'
 import { normYaw, type PxRect } from '@renderer/core/geometry/transform'
 import { NET_PRESETS, clampNetHeight, presetForHeight } from '@renderer/core/geometry/court'
 
-/** 2D = eine große Ansicht + die andere als Pop-up (Bild-im-Bild); 3D = 3D-Ansicht */
-export type ViewMode = '2d' | '3d'
+/**
+ * 2D = eine große Ansicht + die andere als Pop-up (Bild-im-Bild); 3D = 3D-Ansicht;
+ * Skizze = das Feld als Taktiktafel: frei zeichnen und Spieler stellen, sonst nichts
+ */
+export type ViewMode = '2d' | '3d' | 'sketch'
+
+/** Werkzeug der Skizze */
+export type SketchTool = 'pen' | 'eraser'
 /** Welche 2D-Ansicht groß ist; die andere erscheint im Pop-up */
 export type Main2D = 'top' | 'net'
 
@@ -37,6 +43,11 @@ interface UiState {
   setLock3d: (lock: boolean) => void
   tool: Tool
   setTool: (t: Tool) => void
+  /** Skizze: Stift oder Radierer, Farbe und Strichstärke (m) */
+  sketchTool: SketchTool
+  sketchColor: SketchColor
+  sketchWidth: number
+  setSketch: (patch: Partial<Pick<UiState, 'sketchTool' | 'sketchColor' | 'sketchWidth'>>) => void
   settingsOpen: boolean
   setSettingsOpen: (open: boolean) => void
   /** Offenes Fenster: Bibliothek, Speichern-Dialog (auch „als Kopie“), Export */
@@ -86,6 +97,10 @@ export const useUi = create<UiState>((set) => ({
   setLock3d: (lock3d) => set({ lock3d }),
   tool: 'select',
   setTool: (tool) => set({ tool }),
+  sketchTool: 'pen',
+  sketchColor: 'ink',
+  sketchWidth: SKETCH_WIDTHS[1],
+  setSketch: (patch) => set(patch),
   settingsOpen: false,
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
   dialog: null,
@@ -110,7 +125,8 @@ export const useUi = create<UiState>((set) => ({
   setTeamsOpen: (teamsOpen) => set({ teamsOpen }),
   // Ohne Modulo: der Winkel wächst weiter, damit die Animation immer in dieselbe Richtung dreht
   rotateTop: () => set((s) => ({ topTurns: s.topTurns + 1 })),
-  setViewMode: (viewMode) => set({ viewMode }),
+  // Die Skizze kennt weder Zeichenwerkzeuge für Ballwege noch eine Auswahl
+  setViewMode: (viewMode) => set(viewMode === 'sketch' ? { viewMode, tool: 'select' } : { viewMode }),
   setNetPreset: (netPreset) =>
     set((s) => ({
       netPreset,

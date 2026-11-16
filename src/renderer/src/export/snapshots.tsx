@@ -6,6 +6,7 @@ import { fitViewport, isNearSide, netDepth, netHalfExtent, netOrient, type NetVi
 import { COURT } from '@renderer/core/geometry/court'
 import { COLORS } from '@renderer/theme/colors'
 import { CourtLayer, WORLD_H, WORLD_W } from '@renderer/views/top/TopView'
+import { SketchLayer } from '@renderer/views/sketch/SketchLayer'
 import { PathLayer } from '@renderer/views/top/PathLayer'
 import { PlayersLayer } from '@renderer/views/top/PlayersLayer'
 import { TrajectoryLayer } from '@renderer/views/top/TrajectoryLayer'
@@ -50,6 +51,7 @@ export function snapshotTop(width = 1100, height = 600): Promise<string> {
   return renderKonva((ref) => (
     <Stage ref={ref} width={width} height={height}>
       <CourtLayer vp={vp} />
+      <SketchLayer sketch={usePlay.getState().sketch} vp={vp} />
       <PathLayer vp={vp} interactive={false} />
       <PlayersLayer vp={vp} interactive={false} />
       <TrajectoryLayer vp={vp} interactive={false} preview={null} showBall={false} />
@@ -100,7 +102,7 @@ export function snapshotsThree(width = 900, height = 560): { label: string; url:
   renderer.setSize(width, height, false)
   renderer.setClearColor(COLORS.bgDeep)
   const scene = new THREE.Scene()
-  scene.add(new THREE.HemisphereLight('#c4c4ca', '#0c0c0e', 1.2))
+  scene.add(new THREE.HemisphereLight(COLORS.skyLight, COLORS.groundLight, 1.2))
   const sun = new THREE.DirectionalLight('#ffffff', 1.2)
   sun.position.set(6, 14, 8)
   scene.add(sun)

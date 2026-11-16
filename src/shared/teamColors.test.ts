@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  teamTintOnLight,
   COLOR_PAIRS,
   JERSEY_COLORS,
   LIBERO_COLORS,
@@ -93,5 +94,14 @@ describe('Teamfarben', () => {
     expect(hexToRgb('#2a9d8f')).toEqual([42, 157, 143])
     expect(rgbToHex(42, 157, 143)).toBe('#2a9d8f')
     expect(rgbToHex(300, -5, 128)).toBe('#ff0080')
+  })
+})
+
+describe('Teamfarbe als Akzent im hellen Erscheinungsbild', () => {
+  it('ist auf Weiß gut lesbar (≥ 4.5:1), auch bei hellen Libero-Farben', () => {
+    for (const p of COLOR_PAIRS) for (const c of [p.jersey, p.libero]) expect(contrastRatio(teamTintOnLight(c), '#ffffff')).toBeGreaterThanOrEqual(4.5)
+  })
+  it('lässt dunkle Farben unverändert', () => {
+    expect(teamTintOnLight('#1f4e79')).toBe('#1f4e79')
   })
 })

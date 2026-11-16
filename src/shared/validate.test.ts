@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clampHeight, sanitizePlay, sanitizeTeams } from './validate'
+import { clampHeight, sanitizePlay, sanitizeSettings, sanitizeTeams } from './validate'
 
 describe('sanitizeTeams', () => {
   it('bereinigt fehlerhafte Daten', () => {
@@ -91,5 +91,16 @@ describe('Rundreise neuer Felder', () => {
     ])
     expect(t.rotations).toEqual({ '1-annahme': { pos: { a: { x: -5, y: 1 } }, liberoFor: null } })
     expect(sanitizeTeams(JSON.parse(JSON.stringify([t])))[0]).toEqual(t)
+  })
+})
+
+describe('Einstellungen: Erscheinungsbild', () => {
+  it('folgt ohne Angabe dem System (auch bei älteren Einstellungsdateien)', () => {
+    expect(sanitizeSettings({}).theme).toBe('system')
+    expect(sanitizeSettings({ theme: 'bunt' }).theme).toBe('system')
+  })
+  it('behält Hell und Dunkel', () => {
+    expect(sanitizeSettings({ theme: 'light' }).theme).toBe('light')
+    expect(sanitizeSettings({ theme: 'dark' }).theme).toBe('dark')
   })
 })

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import {
   DEFAULT_DISPLAY,
+  SKETCH_LIMITS,
   type CourtSide,
   type PlayDisplay,
   type PlaySide,
@@ -12,6 +13,7 @@ import {
   type BallType,
   type Contacts,
   type PlayerRef,
+  type SketchStroke,
   type Trajectory,
   type TrajectoryType
 } from '@shared/types'
@@ -49,7 +51,8 @@ interface PlayState {
   saveFormation: (side: CourtSide) => void
   /** Gespeicherte Aufstellung des aktiven Läufers löschen (zurück zu den Standardplätzen) */
   resetFormation: (side: CourtSide) => void
-  movePlayer: (side: CourtSide, playerId: string, x: number, y: number) => void
+  /** Spieler verschieben. free: ohne Aufstellungsregeln (Skizze) – der Libero darf dann auch nach vorn */
+  movePlayer: (side: CourtSide, playerId: string, x: number, y: number, free?: boolean) => void
 
   /** Höchstens eine Annahme und ein Zuspiel; das Zuspiel startet am Schlagpunkt der Annahme */
   trajectories: Partial<Record<TrajectoryType, Trajectory>>
@@ -70,6 +73,12 @@ interface PlayState {
   /** Fake-Schlag: Spieler springt und schlägt ohne Ball */
   setFake: (side: CourtSide, playerId: string, fake: boolean) => void
   display: PlayDisplay
+  /** Freie Skizze auf dem Feld (Skizzenmodus): Striche in Zeichenreihenfolge */
+  sketch: SketchStroke[]
+  addStroke: (stroke: SketchStroke) => void
+  /** Striche löschen (Radierer) – nach ihrer Stelle in der Liste */
+  removeStrokes: (indexes: number[]) => void
+  clearSketch: () => void
   selected: BallType | null
   setTrajectory: (type: TrajectoryType, t: Trajectory) => void
   removeTrajectory: (type: TrajectoryType) => void
@@ -152,10 +161,20 @@ export const usePlay = create<PlayState>((set, get) => {
     schlag: null,
     contacts: {},
     display: { ...DEFAULT_DISPLAY },
+    sketch: [],
     selected: null,
     selectedPlayer: null,
     current: null,
     dirty: false,
+
+    addStroke: (stroke) => set((st) => (st.sketch.length >= SKETCH_LIMITS.strokes ? {} : { sketch: [...st.sketch, stroke] })),
+    removeStrokes: (indexes) =>
+      set((st) => {
+        const gone = new Set(indexes)
+        const sketch = st.sketch.filter((_, i) => !gone.has(i))
+        return sketch.length === st.sketch.length ? {} : { sketch }
+      }),
+    clearSketch: () => set((st) => (st.sketch.length ? { sketch: [] } : {})),
 
     setTrajectory: (type, t) =>
       set((st) => {
@@ -290,13 +309,13 @@ export const usePlay = create<PlayState>((set, get) => {
         const team = teamById(s.teamId)
         return team ? setLiberoFor(s, team, playerId, side) : s
       }),
-    movePlayer: (side, playerId, x, y) =>
+    movePlayer: (side, playerId, x, y, free = false) =>
       mapSide(side, (s) => ({
         ...s,
         players: s.players.map((c) => {
           if (c.playerId !== playerId) return c
           // Mit Regeln bleibt der Libero im Hinterfeld
-          const p = rulesOn() && c.role === 'L' ? clampLibero(side, x, y) : clampToArea(x, y)
+          const p = !free && rulesOn() && c.role === 'L' ? clampLibero(side, x, y) : clampToArea(x, y)
           return { ...c, ...p }
         })
       }))
@@ -304,20 +323,20 @@ export const usePlay = create<PlayState>((set, get) => {
 })
 
 /**
- * Leerer Spielzug: noch nichts geplant (keine Flugbahn). Die Aufstellung allein zählt nicht –
- * dann muss man beim Öffnen eines anderen Spielzugs nicht nachfragen.
+ * Leerer Spielzug: noch nichts geplant (keine Flugbahn, keine Bewegung, keine Skizze). Die Aufstellung allein
+ * zählt nicht – dann muss man beim Öffnen eines anderen Spielzugs nicht nachfragen.
  */
 export function isPlayEmpty(): boolean {
   const s = usePlay.getState()
   const moves = [...s.sides.A.players, ...s.sides.B.players].some((c) => c.path || c.jump || c.block || c.fake)
-  return !s.trajectories.annahme && !s.trajectories.zuspiel && !s.schlag && !moves
+  return !s.trajectories.annahme && !s.trajectories.zuspiel && !s.schlag && !moves && s.sketch.length === 0
 }
 
 // Jede inhaltliche Änderung markiert den Spielzug als ungespeichert
 usePlay.subscribe((s, prev) => {
   if (
     !s.dirty &&
-    (s.sides !== prev.sides || s.trajectories !== prev.trajectories || s.schlag !== prev.schlag || s.display !== prev.display || s.contacts !== prev.contacts)
+    (s.sides !== prev.sides || s.trajectories !== prev.trajectories || s.schlag !== prev.schlag || s.display !== prev.display || s.contacts !== prev.contacts || s.sketch !== prev.sketch)
   )
     usePlay.setState({ dirty: true })
 })

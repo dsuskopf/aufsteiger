@@ -17,6 +17,8 @@ const PATHS = {
   // Bearbeiten: Stift
   pencil: 'M4 20h4L19 9a2.83 2.83 0 0 0-4-4L4 16v4zM13.5 6.5l4 4',
   check: 'M5 12.5l4.5 4.5L19 7',
+  // Radierer (Skizze)
+  eraser: 'M8.5 20 3.6 15.1a2 2 0 0 1 0-2.8l8-8a2 2 0 0 1 2.8 0l5.9 5.9a2 2 0 0 1 0 2.8L13.3 20H8.5zM7.6 8.3l8.1 8.1M13 20h8',
   trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3',
   // Teams: zwei Personen
   people:

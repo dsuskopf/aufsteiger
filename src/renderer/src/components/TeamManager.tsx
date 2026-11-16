@@ -37,7 +37,7 @@ export function TeamManager({ onClose }: { onClose: () => void }) {
       <div className="sheet" role="dialog" aria-modal="true" aria-labelledby="teams-title">
         <header className="sheet-head">
           <h2 id="teams-title">Teams</h2>
-          {saveError && <span className="error">Konnte nicht gespeichert werden. Bitte erneut ändern.</span>}
+          {saveError && <span className="error">Speichern hat nicht geklappt. Mit der nächsten Änderung wird es noch einmal versucht.</span>}
           <button className="prominent" onClick={onClose}>
             Fertig
           </button>

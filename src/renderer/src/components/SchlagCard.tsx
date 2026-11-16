@@ -81,7 +81,7 @@ export function SchlagEditor() {
             unit="m"
             onChange={(v) => setSchlag({ ...schlag, arc: v })}
           />
-          <p className="caption">Der Ball wird mit den Fingern leicht über den Block getippt. Ziel im Feld verschieben, Tempo ergibt sich aus Bogen und Weite.</p>
+          <p className="caption">Der Angreifer tippt den Ball knapp über den Block. Das Ziel verschiebst du im Feld, das Tempo ergibt sich aus Bogen und Weite.</p>
         </>
       ) : (
         <>
@@ -104,7 +104,7 @@ export function SchlagEditor() {
             <div className="spin-row">
               <SpinPad topspin={schlag.topspin} sidespin={schlag.sidespin} onChange={(topspin, sidespin) => setSchlag({ ...schlag, topspin, sidespin })} />
             </div>
-            <p className="caption">Der Punkt ist die Trefferstelle am Ball: oben Topspin (fällt steiler), unten Rückwärtsdrall (trägt). Rechts getroffen kurvt der Ball nach links, links getroffen nach rechts.</p>
+            <p className="caption">Der Punkt zeigt, wo die Hand den Ball trifft. Oben getroffen fällt er steiler (Topspin), unten getroffen trägt er weiter. Rechts getroffen kurvt er nach links, links getroffen nach rechts.</p>
           </details>
         </>
       )}

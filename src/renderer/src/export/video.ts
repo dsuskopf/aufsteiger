@@ -87,7 +87,7 @@ export async function recordVideo(onProgress: (k: number) => void): Promise<{ da
   const formats = videoFormats()
   if (formats.length === 0) throw new Error('Dieses System kann kein Video aufnehmen.')
   const total = totalDuration()
-  if (total <= 0) throw new Error('Keine Flugbahn zum Abspielen.')
+  if (total <= 0) throw new Error('Es gibt noch nichts zum Abspielen.')
 
   const ui = useUi.getState()
   const prevMode = ui.viewMode

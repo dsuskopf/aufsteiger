@@ -5,6 +5,8 @@ import { netYawLabel } from './views/net/netAngles'
 import { Icon } from './components/Icon'
 import { PipWindow } from './components/PipWindow'
 import { ThreeView } from './views/three/ThreeView'
+import { SketchView } from './views/sketch/SketchView'
+import { useTheme } from './theme/themeStore'
 import { useEffect } from 'react'
 import { useUi } from './store/settingsStore'
 import { useTeams } from './store/teamsStore'
@@ -20,19 +22,19 @@ import { ExportDialog } from './components/ExportDialog'
 import { Sidebar } from './components/sidebar/Sidebar'
 import { QuickTeamChip } from './components/QuickTeam'
 import { useSelectionKeys } from './components/sidebar/keys'
-import { quickSave } from './store/actions'
+import { quickSave, rewind } from './store/actions'
 import { clearHistory, redo, undo } from './store/history'
 import { playSfx } from './audio/sfx'
 import { sfxLevel } from './views/three/effects'
 import './store/playDocs'
 
 const HINTS = {
-  annahme: 'Annahme: Start antippen, dann Ziel – oder in einem Zug ziehen · Esc bricht ab',
-  zuspiel: 'Zuspiel: Start antippen, dann Ziel – oder ziehen · Esc bricht ab',
-  zuspielCoupled: 'Zuspiel startet am Ende der Annahme: Ziel antippen oder hinziehen · Esc bricht ab',
-  laufweg: 'Laufweg: auf einem Spieler aufsetzen und den Weg ziehen – Kurven erlaubt · Esc bricht ab',
-  schlag: 'Schlag: Start antippen, dann Ziel – oder ziehen · Esc bricht ab',
-  schlagCoupled: 'Schlag startet am Schlagpunkt des Zuspiels: Ziel antippen oder hinziehen · Esc bricht ab'
+  annahme: 'Annahme: vom Annehmer zum Steller ziehen · Esc bricht ab',
+  zuspiel: 'Zuspiel: vom Steller zum Angreifer ziehen · Esc bricht ab',
+  zuspielCoupled: 'Zuspiel: antippen, wo der Angreifer den Ball trifft · Esc bricht ab',
+  laufweg: 'Laufweg: auf dem Spieler aufsetzen und den Weg ziehen · Esc bricht ab',
+  schlag: 'Angriff: vom Schlagpunkt zum Ziel ziehen · Esc bricht ab',
+  schlagCoupled: 'Angriff: antippen, wo der Ball landen soll · Esc bricht ab'
 }
 
 export function App() {
@@ -59,16 +61,18 @@ export function App() {
   // Tastatur: Leertaste spielt ab/pausiert (nicht in Eingabefeldern), Strg+S speichert
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      const ui = useUi.getState()
+      // Über einem offenen Fenster (Dialog, Teams, Einstellungen) gelten die Kürzel der Arbeitsfläche nicht
+      const covered = !!ui.dialog || ui.teamsOpen || ui.settingsOpen
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault()
-        if (!useUi.getState().dialog) void quickSave().catch(() => {})
+        if (!covered) void quickSave().catch(() => {})
         return
       }
       const tag = (e.target as HTMLElement | null)?.tagName
       const typing = (tag === 'INPUT' && !['range', 'checkbox'].includes((e.target as HTMLInputElement).type)) || tag === 'TEXTAREA'
       // Strg+Z rückgängig, Strg+Y (oder Strg+Umschalt+Z) wiederholen – in Textfeldern bleibt es beim Text
-      const ui = useUi.getState()
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && !typing && !ui.dialog && !ui.teamsOpen && !ui.settingsOpen) {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !typing && !covered) {
         const k = e.key.toLowerCase()
         if (k === 'z' && !e.shiftKey) {
           e.preventDefault()
@@ -83,12 +87,14 @@ export function App() {
       }
       if (tag === 'INPUT' && (e.target as HTMLInputElement).type !== 'range') return
       if (tag === 'SELECT' || tag === 'TEXTAREA') return
-      if (e.key === ' ' && !e.repeat && !useUi.getState().teamsOpen && !useUi.getState().dialog) {
+      // In der Skizze gibt es nichts abzuspielen
+      if (covered || ui.viewMode === 'sketch') return
+      if (e.key === ' ' && !e.repeat) {
         e.preventDefault()
         usePlayback.getState().toggle()
       }
       // F: Flugbahn ein/aus (wie die Checkbox unten rechts) – in 2D und 3D
-      if (e.code === 'KeyF' && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey && !ui.teamsOpen && !ui.dialog && !ui.settingsOpen) {
+      if (e.code === 'KeyF' && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
         e.preventDefault()
         const play = usePlay.getState()
         play.setDisplay({ ballOnly: !play.display.ballOnly })
@@ -136,8 +142,18 @@ export function App() {
       })
   }, [])
 
+  // Skizze: Grundstellung zeigen, nichts ist gewählt
+  useEffect(() => {
+    if (viewMode !== 'sketch') return
+    rewind()
+    usePlay.setState({ selected: null, selectedPlayer: null })
+  }, [viewMode])
+
   const is2d = viewMode === '2d'
   const show3d = viewMode === '3d'
+  const sketching = viewMode === 'sketch'
+  // Die Ansichten zeichnen mit festen Farben: beim Wechsel des Erscheinungsbilds neu aufbauen
+  const theme = useTheme((s) => s.resolved)
   const main2D = useUi((s) => s.main2D)
   const netYaw = useUi((s) => s.netYaw)
   const netTitle = `Netz · ${netYawLabel(netYaw)}`
@@ -147,8 +163,8 @@ export function App() {
     <div className="app">
       <Toolbar />
       <div className="workspace">
-        {sidebarOpen && <Sidebar onManageTeams={() => setTeamsOpen(true)} />}
-        <main className="views">
+        {sidebarOpen && !sketching && <Sidebar onManageTeams={() => setTeamsOpen(true)} />}
+        <main className={`views ${sketching ? 'sketch' : ''}`} key={theme}>
           {is2d && (
             // Große 2D-Ansicht
             <section className="pane" aria-label={main2D === 'top' ? 'Draufsicht' : 'Netzansicht'}>
@@ -180,6 +196,12 @@ export function App() {
               <ThreeView />
             </section>
           )}
+          {sketching && (
+            <section className="pane" aria-label="Skizze">
+              <div className="pane-title">Skizze</div>
+              <SketchView />
+            </section>
+          )}
           {tool === 'select' && <QuickTeamChip />}
           {is2d && tool !== 'select' && (
             <div className="draw-hint" role="status">
@@ -198,7 +220,7 @@ export function App() {
           )}
         </main>
       </div>
-      <Playbar />
+      {!sketching && <Playbar />}
       {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} />}
       {(dialog === 'save' || dialog === 'saveAs') && <SaveDialog asCopy={dialog === 'saveAs'} onClose={() => setDialog(null)} />}
       {dialog === 'library' && <Library onClose={() => setDialog(null)} />}

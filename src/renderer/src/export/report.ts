@@ -1,7 +1,6 @@
 import { TRAJECTORY_LABELS } from '@shared/types'
 import { solveAttack } from '@renderer/core/physics/attack'
-import { DEFAULT_COLOR } from '@renderer/theme/defaultColor'
-import { luminance } from '@shared/teamColors'
+import { COLORS } from '@renderer/theme/colors'
 import { NET_PRESETS } from '@renderer/core/geometry/court'
 import { usePlay } from '@renderer/store/playStore'
 import { useTeams } from '@renderer/store/teamsStore'
@@ -49,7 +48,7 @@ export async function buildReport(code: string, title: string): Promise<string> 
   body { margin: 0; font: 10pt/1.4 'Segoe UI', system-ui, sans-serif; color: #1b1b1f; }
   .page { page-break-after: always; height: 188mm; display: flex; flex-direction: column; gap: 4mm; }
   .page:last-child { page-break-after: auto; }
-  header { display: flex; align-items: baseline; gap: 6mm; border-bottom: 1.5pt solid ${luminance(DEFAULT_COLOR) > 0.7 ? "#9a9aa2" : DEFAULT_COLOR}; padding-bottom: 2mm; }
+  header { display: flex; align-items: baseline; gap: 6mm; border-bottom: 1.5pt solid #9a9aa2; padding-bottom: 2mm; }
   .code { font-size: 20pt; font-weight: 700; }
   h1 { flex: 1; margin: 0; font-size: 15pt; font-weight: 600; }
   .meta { color: #66666e; font-size: 9pt; text-align: right; }
@@ -57,7 +56,7 @@ export async function buildReport(code: string, title: string): Promise<string> 
   .facts b { color: #1b1b1f; }
   figure { margin: 0; display: flex; flex-direction: column; gap: 1mm; min-height: 0; }
   figcaption { font-size: 8.5pt; font-weight: 600; color: #66666e; text-transform: uppercase; letter-spacing: 0.04em; }
-  .img { flex: 1; min-height: 0; border-radius: 3mm; background: #0c0c0e; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .img { flex: 1; min-height: 0; border-radius: 3mm; background: ${COLORS.bgDeep}; display: flex; align-items: center; justify-content: center; overflow: hidden; }
   .img img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
   .row { flex: 1; display: grid; grid-template-columns: 1.15fr 1fr; gap: 4mm; min-height: 0; }
   .grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 3mm; min-height: 0; }

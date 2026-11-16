@@ -167,9 +167,16 @@ export const useTeams = create<TeamsState>((set, get) => {
     saveError: null,
 
     load: async () => {
-      const file = await window.api.teams.load()
+      // Lässt sich die Datei nicht lesen, startet die App ohne Teams, statt beim Laden hängen zu bleiben
+      let file: Awaited<ReturnType<typeof window.api.teams.load>>
+      try {
+        file = await window.api.teams.load()
+      } catch (e) {
+        set({ teams: [], loaded: true, saveError: String(e) })
+        return
+      }
       if (file === null) {
-        // Erster Start: zwei Beispielteams anlegen, damit man sofort loslegen kann
+        // Erster Start: Beispielteams anlegen, damit man sofort loslegen kann
         set({ teams: exampleTeams(), loaded: true })
         persist()
       } else {

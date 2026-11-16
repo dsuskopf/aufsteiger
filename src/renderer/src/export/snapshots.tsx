@@ -51,7 +51,7 @@ export function snapshotTop(width = 1100, height = 600): Promise<string> {
   return renderKonva((ref) => (
     <Stage ref={ref} width={width} height={height}>
       <CourtLayer vp={vp} />
-      <SketchLayer sketch={usePlay.getState().sketch} vp={vp} />
+      <SketchLayer sketch={usePlay.getState().sketch} vp={vp} smooth={useSettings.getState().settings.sketchSmooth} />
       <PathLayer vp={vp} interactive={false} />
       <PlayersLayer vp={vp} interactive={false} />
       <TrajectoryLayer vp={vp} interactive={false} preview={null} showBall={false} />

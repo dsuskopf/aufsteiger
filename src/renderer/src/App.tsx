@@ -26,7 +26,8 @@ import { quickSave, rewind } from './store/actions'
 import { clearHistory, redo, undo } from './store/history'
 import { playSfx } from './audio/sfx'
 import { sfxLevel } from './views/three/effects'
-import './store/playDocs'
+import { openDoc } from './store/playDocs'
+import { applyStartSettings } from './store/prefsSync'
 
 const HINTS = {
   annahme: 'Annahme: vom Annehmer zum Steller ziehen · Esc bricht ab',
@@ -46,16 +47,23 @@ export function App() {
   const hasZuspiel = usePlay((s) => !!s.trajectories.zuspiel)
   useSelectionKeys()
 
-  // Einstellungen laden und als Startwerte übernehmen (Netzhöhe, Schleife, Tempo)
+  // Start: Einstellungen laden und anwenden, dann Teams; Seite A bekommt das erste Team, damit gleich Spieler
+  // zu sehen sind. Auf Wunsch öffnet sich der zuletzt geöffnete Spielzug wieder.
   useEffect(() => {
-    void useSettings
-      .getState()
-      .load()
-      .then((st) => {
-        useUi.getState().setNetHeight(st.netHeight)
-        usePlayback.setState({ loop: st.defaultLoop, speed: st.defaultSpeed })
-        usePlay.setState({ dirty: false })
-      })
+    void (async () => {
+      const st = await useSettings.getState().load()
+      applyStartSettings(st)
+      await useTeams.getState().load()
+      const first = useTeams.getState().teams[0]
+      if (first && usePlay.getState().sides.A.teamId === null) usePlay.getState().setTeam('A', first.id)
+      usePlay.setState({ dirty: false })
+      // Das Aufstellen beim Start ist kein Schritt zum Rückgängigmachen
+      clearHistory()
+      if (st.reopenLast && st.lastPlayId) {
+        const doc = await window.api.plays.load(st.lastPlayId).catch(() => null)
+        if (doc && !usePlay.getState().dirty) openDoc(doc)
+      }
+    })()
   }, [])
 
   // Tastatur: Leertaste spielt ab/pausiert (nicht in Eingabefeldern), Strg+S speichert
@@ -127,20 +135,6 @@ export function App() {
       }),
     []
   )
-
-  // Teams laden; beim Start Seite A mit dem ersten Team belegen, damit gleich Spieler zu sehen sind
-  useEffect(() => {
-    void useTeams
-      .getState()
-      .load()
-      .then(() => {
-        const first = useTeams.getState().teams[0]
-        if (first && usePlay.getState().sides.A.teamId === null) usePlay.getState().setTeam('A', first.id)
-        usePlay.setState({ dirty: false })
-        // Das Aufstellen beim Start ist kein Schritt zum Rückgängigmachen
-        clearHistory()
-      })
-  }, [])
 
   // Skizze: Grundstellung zeigen, nichts ist gewählt
   useEffect(() => {

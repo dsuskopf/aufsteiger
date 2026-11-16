@@ -8,6 +8,8 @@ import { useUi } from '@renderer/store/settingsStore'
 import { usePlayback, useScene } from '@renderer/store/playbackStore'
 import { planAt } from '@renderer/core/motion/plan'
 import { COLORS } from '@renderer/theme/colors'
+import { useSettings } from '@renderer/store/appSettings'
+import { CHIP_SCALE } from '@shared/types'
 import { LaeuferBadge } from './LaeuferBadge'
 
 /** Name der Konva-Gruppen, über die man Spieler beim Treffertest erkennt. */
@@ -29,7 +31,9 @@ export function PlayersLayer({ vp, interactive = true, board = false }: { vp: To
   const selectPlayer = usePlay((s) => s.selectPlayer)
   const selected = usePlay((s) => s.selectedPlayer)
   const markers = useLaeuferMarkers()
-  const r = Math.max(MIN_RADIUS_PX, RADIUS_M * vp.scale)
+  const chipScale = CHIP_SCALE[useSettings((s) => s.settings.chipSize)]
+  const chipLabel = useSettings((s) => s.settings.chipLabel)
+  const r = Math.max(MIN_RADIUS_PX, RADIUS_M * vp.scale) * chipScale
   // Nur wenn sich jemand bewegt (Laufweg, Sprung, gekoppelter Ballkontakt, Block), der Uhr folgen – sonst kein Neuzeichnen pro Bild
   const scene = useScene()
   const moving = [...scene.plans.values()].some((p) => p.path || p.legs.length > 0 || p.jumps.length > 0)
@@ -102,28 +106,25 @@ export function PlayersLayer({ vp, interactive = true, board = false }: { vp: To
               shadowOffsetY={at.z * 18}
               shadowOpacity={0.5}
             />
-            <Text
-              text={p.role}
-              x={-r}
-              y={-r * 0.55}
-              width={2 * r}
-              align="center"
-              fontSize={r * 0.62}
-              fontStyle="bold"
-              fill={colors.text}
-              listening={false}
-            />
-            <Text
-              text={String(p.number)}
-              x={-r}
-              y={r * 0.12}
-              width={2 * r}
-              align="center"
-              fontSize={r * 0.5}
-              fill={colors.text}
-              opacity={0.85}
-              listening={false}
-            />
+            {chipLabel === 'both' ? (
+              <>
+                <Text text={p.role} x={-r} y={-r * 0.55} width={2 * r} align="center" fontSize={r * 0.62} fontStyle="bold" fill={colors.text} listening={false} />
+                <Text text={String(p.number)} x={-r} y={r * 0.12} width={2 * r} align="center" fontSize={r * 0.5} fill={colors.text} opacity={0.85} listening={false} />
+              </>
+            ) : (
+              // Nur Rolle oder nur Nummer: groß und mittig
+              <Text
+                text={chipLabel === 'role' ? p.role : String(p.number)}
+                x={-r}
+                y={-r * 0.42}
+                width={2 * r}
+                align="center"
+                fontSize={r * 0.84}
+                fontStyle="bold"
+                fill={colors.text}
+                listening={false}
+              />
+            )}
             {markers.has(p.key) && (
               // Läufer-Abzeichen oben rechts am Bezugs-Steller
               <LaeuferBadge x={r * 0.8} y={-r * 0.8} n={markers.get(p.key)!.n} standIn={markers.get(p.key)!.standIn} h={Math.max(15, r * 0.6)} />

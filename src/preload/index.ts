@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webFrame } from 'electron'
 import type { AppApi } from './api'
 
 const api: AppApi = {
@@ -28,6 +28,13 @@ const api: AppApi = {
   },
   theme: {
     set: (pref, resolved) => ipcRenderer.send('theme:set', pref, resolved)
+  },
+  ui: {
+    setZoom: (factor) => webFrame.setZoomFactor(Math.min(2, Math.max(0.5, factor)))
+  },
+  app: {
+    info: () => ipcRenderer.invoke('app:info'),
+    openFolder: (kind) => ipcRenderer.invoke('app:openFolder', kind)
   }
 }
 

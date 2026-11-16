@@ -14,6 +14,16 @@ Du bist mein Entwickler für dieses Projekt. Lies die gesamte Spezifikation, ers
 - Feldlinien dezent grau, damit Spielzüge sich klar abheben.
 - Gut bedienbar mit Stift und Finger (ausreichend große Touch-Ziele), optimiert für Querformat.
 
+## Einstellungen
+- Ein Fenster mit Bereichen links und ihren Einstellungen rechts; jede Zeile erklärt in einem Satz, was sie bewirkt. Änderungen gelten sofort.
+- Darstellung: Erscheinungsbild, Größe der Oberfläche (90–130 %), Größe und Beschriftung der Spieler-Kreise, Namen, Läufer-Schild, Zonen.
+- Stift & Eingabe: Finger zeichnet, Bedienleiste links (Linkshänder), Striche der Skizze glätten, Aufstellungsregeln.
+- Neuer Spielzug: Ansicht beim Start, letzten Spielzug wieder öffnen, Netzhöhe, Schleife, Tempo.
+- Wiedergabe & 3D: Geräusche, Abprall, Deckkraft der Flugbahnen, Kamera-Wackeln.
+- Ballwege: Höhen neu gezeichneter Ballwege.
+- Speichern & Daten: automatisch speichern (für schon benannte Spielzüge), Ordner für Exporte und Daten öffnen, Zurücksetzen.
+- Namen- und Zonen-Button sowie Farbe und Strichstärke der Skizze merken sich ihren Stand.
+
 ## Skizze
 - Dritte Ansicht neben 2D und 3D: das Feld als Taktiktafel. Frei zeichnen und Spieler stellen, ohne Ballwege, Kurvenpunkte, 3D, Seitenleiste oder Wiedergabe.
 - Stift und Maus zeichnen, der Finger verschiebt und zoomt (mit „Finger zeichnet“ zeichnet er auch). Wer auf einem Spieler aufsetzt, zieht ihn; die Aufstellungsregeln gelten hier nicht.

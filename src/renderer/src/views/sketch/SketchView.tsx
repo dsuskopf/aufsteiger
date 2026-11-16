@@ -28,6 +28,7 @@ export function SketchView() {
   const tool = useUi((s) => s.sketchTool)
   const sketch = usePlay((s) => s.sketch)
   const fingerDraws = useSettings((s) => s.settings.fingerDraws)
+  const smooth = useSettings((s) => s.settings.sketchSmooth)
   const { vp, zoomIn, zoomOut, reset } = useCourtViewport(ref, size, {
     // Der Finger verschiebt die Ansicht – außer er zeichnet oder zieht gerade einen Spieler
     shouldIgnore: (e) =>
@@ -46,8 +47,8 @@ export function SketchView() {
         {size.width > 0 && (
           <Stage ref={stageRef} width={size.width} height={size.height}>
             <CourtLayer vp={vp} />
-            <SketchLayer sketch={sketch} vp={vp} />
-            <LiveSketchLayer live={live} vp={vp} />
+            <SketchLayer sketch={sketch} vp={vp} smooth={smooth} />
+            <LiveSketchLayer live={live} vp={vp} smooth={smooth} />
             <PlayersLayer vp={vp} board />
           </Stage>
         )}

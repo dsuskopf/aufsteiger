@@ -26,8 +26,10 @@ const playFile = (id: string) => join(PLAYS_DIR, `${id}.json`)
 const validId = (id: unknown): id is string => typeof id === 'string' && /^[\w-]{1,64}$/.test(id)
 
 /** Exporte landen ohne Dateidialog in Dokumente\Volleyball-Spielzüge */
+const exportDir = () => process.env['VBP_EXPORT_DIR'] ?? join(app.getPath('documents'), 'Volleyball-Spielzüge')
+
 async function exportPath(name: string, ext: string): Promise<string> {
-  const dir = process.env['VBP_EXPORT_DIR'] ?? join(app.getPath('documents'), 'Volleyball-Spielzüge')
+  const dir = exportDir()
   await fs.mkdir(dir, { recursive: true })
   const base = safeFileName(name)
   let file = join(dir, `${base}.${ext}`)
@@ -148,6 +150,13 @@ export function registerIpc(): void {
     const file = await exportPath(String(name ?? 'Spielzug'), ext === 'mp4' ? 'mp4' : 'webm')
     await fs.writeFile(file, Buffer.from(data as ArrayBuffer))
     return file
+  })
+
+  ipcMain.handle('app:info', () => ({ version: app.getVersion(), dataDir: dataPath(), exportDir: exportDir() }))
+  ipcMain.handle('app:openFolder', async (_e, kind: unknown) => {
+    const dir = kind === 'exports' ? exportDir() : dataPath()
+    await fs.mkdir(dir, { recursive: true })
+    await shell.openPath(dir)
   })
 
   ipcMain.handle('shell:showItem', (_e, file: unknown) => {

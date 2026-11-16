@@ -242,7 +242,40 @@ export interface Settings {
   soundVolume: number
   /** Erscheinungsbild: hell, dunkel oder wie in Windows eingestellt */
   theme: ThemePref
+  /** Größe der ganzen Oberfläche (Zoomfaktor des Fensters) */
+  uiScale: number
+  /** Ansichts-Steuerung am linken Rand statt am rechten (für Linkshänder mit Stift) */
+  leftHanded: boolean
+  /** Größe der Spieler-Kreise in der Draufsicht und in der Skizze */
+  chipSize: ChipSize
+  /** Was im Spieler-Kreis steht: Rolle und Nummer, nur die Rolle oder nur die Nummer */
+  chipLabel: ChipLabel
+  /** Namen der Spieler einblenden (merkt sich der Namen-Button an der Ansicht) */
+  showNames: boolean
+  /** Zonen einblenden (merkt sich der Zonen-Button an der Ansicht) */
+  showZones: boolean
+  /** Ansicht, mit der die App startet */
+  startView: StartView
+  /** Skizze: Striche beim Zeichnen glätten */
+  sketchSmooth: boolean
+  /** Skizze: zuletzt benutzte Stiftfarbe und Strichstärke */
+  sketchColor: SketchColor
+  sketchWidth: number
+  /** Schon benannte Spielzüge nach jeder Änderung von selbst speichern */
+  autosave: boolean
+  /** Beim Start den zuletzt geöffneten Spielzug wieder öffnen */
+  reopenLast: boolean
+  lastPlayId: string | null
 }
+
+export const UI_SCALES = [0.9, 1, 1.15, 1.3] as const
+export type ChipSize = 'small' | 'normal' | 'large'
+export const CHIP_SIZES: readonly ChipSize[] = ['small', 'normal', 'large']
+export const CHIP_SCALE: Record<ChipSize, number> = { small: 0.82, normal: 1, large: 1.25 }
+export type ChipLabel = 'both' | 'role' | 'number'
+export const CHIP_LABELS: readonly ChipLabel[] = ['both', 'role', 'number']
+export type StartView = '2d' | '3d' | 'sketch'
+export const START_VIEWS: readonly StartView[] = ['2d', '3d', 'sketch']
 
 /** Erscheinungsbild der App: „system“ folgt der Einstellung von Windows */
 export type ThemePref = 'system' | 'light' | 'dark'
@@ -274,7 +307,20 @@ export const DEFAULT_SETTINGS: Settings = {
   cameraShake: true,
   sound: true,
   soundVolume: 60,
-  theme: 'system'
+  theme: 'system',
+  uiScale: 1,
+  leftHanded: false,
+  chipSize: 'normal',
+  chipLabel: 'both',
+  showNames: false,
+  showZones: false,
+  startView: '2d',
+  sketchSmooth: true,
+  sketchColor: 'ink',
+  sketchWidth: 0.09,
+  autosave: false,
+  reopenLast: false,
+  lastPlayId: null
 }
 
 /* ---------- Skizze ---------- */

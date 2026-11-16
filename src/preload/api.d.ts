@@ -29,6 +29,15 @@ export interface AppApi {
     /** Erscheinungsbild des Fensters: Einstellung (System, Hell, Dunkel) und was daraus gerade gilt */
     set: (pref: ThemePref, resolved: 'light' | 'dark') => void
   }
+  ui: {
+    /** Größe der ganzen Oberfläche (1 = 100 %) */
+    setZoom: (factor: number) => void
+  }
+  app: {
+    info: () => Promise<{ version: string; dataDir: string; exportDir: string }>
+    /** Ordner im Explorer öffnen: gespeicherte Daten oder Exporte */
+    openFolder: (kind: 'data' | 'exports') => Promise<void>
+  }
 }
 
 declare global {

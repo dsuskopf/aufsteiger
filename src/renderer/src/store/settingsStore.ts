@@ -50,6 +50,9 @@ interface UiState {
   setSketch: (patch: Partial<Pick<UiState, 'sketchTool' | 'sketchColor' | 'sketchWidth'>>) => void
   settingsOpen: boolean
   setSettingsOpen: (open: boolean) => void
+  /** Zuletzt geöffnete Seite der Einstellungen */
+  settingsPage: string
+  setSettingsPage: (page: string) => void
   /** Offenes Fenster: Bibliothek, Speichern-Dialog (auch „als Kopie“), Export */
   dialog: Dialog | null
   setDialog: (d: Dialog | null) => void
@@ -103,6 +106,8 @@ export const useUi = create<UiState>((set) => ({
   setSketch: (patch) => set(patch),
   settingsOpen: false,
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
+  settingsPage: 'look',
+  setSettingsPage: (settingsPage) => set({ settingsPage }),
   dialog: null,
   setDialog: (dialog) => set({ dialog }),
   viewMode: '2d',

@@ -383,7 +383,7 @@ function DataPage({ s, update, reset }: PageProps & { reset: () => void }) {
           <ConfirmButton label="Zurücksetzen" confirmLabel="Wirklich zurücksetzen?" onConfirm={reset} />
         </Row>
       </Group>
-      {info && <p className="caption settings-version">Volleyball Playbook {info.version}</p>}
+      {info && <p className="caption settings-version">Aufsteiger {info.version}</p>}
     </>
   )
 }

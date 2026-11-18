@@ -4,6 +4,9 @@ import { WINDOW_BG, initTheme, registerIpc } from './ipc'
 
 // Für Tests: eigenes Datenverzeichnis, damit echte Teams/Spielzüge unberührt bleiben
 if (process.env['VBP_USER_DATA']) app.setPath('userData', process.env['VBP_USER_DATA'])
+// Die App hieß früher „Volleyball Playbook“; ihr Datenordner (%APPDATA%\Volleyball Playbook) bleibt,
+// damit gespeicherte Teams, Spielzüge und Einstellungen nach der Umbenennung erhalten sind.
+else app.setPath('userData', join(app.getPath('appData'), 'Volleyball Playbook'))
 /** Automatische Tests: unsichtbares Offscreen-Fenster, Renderer mit ?test (Zugriff auf die Stores) */
 const TEST = !!process.env['VBP_TEST']
 
@@ -16,7 +19,7 @@ function createWindow(): void {
     show: false,
     backgroundColor: nativeTheme.shouldUseDarkColors ? WINDOW_BG.dark : WINDOW_BG.light,
     autoHideMenuBar: true,
-    title: 'Volleyball Playbook',
+    title: 'Aufsteiger',
     // Im Entwicklungsmodus das App-Icon zeigen (die installierte .exe bringt es selbst mit)
     ...(app.isPackaged ? {} : { icon: join(__dirname, '../../build/icon.png') }),
     webPreferences: {

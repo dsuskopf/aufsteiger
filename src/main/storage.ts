@@ -2,7 +2,7 @@ import { app } from 'electron'
 import { promises as fs, mkdirSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 
-/** Dateien liegen im App-Datenverzeichnis (z. B. %APPDATA%\volleyball-playbook). */
+/** Dateien liegen im App-Datenverzeichnis (%APPDATA%\Volleyball Playbook, siehe main/index.ts). */
 export function dataPath(...parts: string[]): string {
   return join(app.getPath('userData'), ...parts)
 }

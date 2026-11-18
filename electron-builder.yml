@@ -1,5 +1,5 @@
 appId: de.volleyball.playbook
-productName: Volleyball Playbook
+productName: Aufsteiger
 directories:
   output: dist
   buildResources: build
@@ -19,7 +19,7 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  shortcutName: Volleyball Playbook
-  artifactName: Volleyball-Playbook-Setup-${version}.${ext}
+  shortcutName: Aufsteiger
+  artifactName: Aufsteiger-Setup-${version}.${ext}
   # Gespeicherte Teams und Spielzüge beim Deinstallieren behalten
   deleteAppDataOnUninstall: false

@@ -1,7 +1,7 @@
 @echo off
 rem Startet den Volleyball-Spielzugplaner im Entwicklungsmodus (Doppelklick genuegt).
 rem Das Konsolenfenster offen lassen - schliessen beendet die App.
-title Volleyball Playbook
+title Aufsteiger
 cd /d "%~dp0"
 
 where npm >nul 2>nul

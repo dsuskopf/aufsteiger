@@ -66,7 +66,7 @@ export async function buildReport(code: string, title: string): Promise<string> 
   .empty { color: #66666e; }
   </style></head><body>
   <section class="page">
-    <header><span class="code">${esc(code)}</span><h1>${esc(title)}</h1><span class="meta">Volleyball Playbook<br>${date}</span></header>
+    <header><span class="code">${esc(code)}</span><h1>${esc(title)}</h1><span class="meta">Aufsteiger<br>${date}</span></header>
     <div class="facts">
       <span>Seite A: <b>${esc(teamName(play.sides.A.teamId))}</b></span>
       <span>Seite B: <b>${esc(teamName(play.sides.B.teamId))}</b></span>

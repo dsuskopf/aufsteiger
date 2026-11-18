@@ -13,6 +13,7 @@ export function updateSummary(s: UpdateStatus | null, checking: boolean): string
   if (!s) return 'Noch nicht geprüft'
   switch (s.state) {
     case 'available':
+      if (s.source === 'github') return s.latestVersion ? `Version ${s.latestVersion} verfügbar` : 'Neue Version verfügbar'
       return s.commits.length === 1 ? 'Neue Version verfügbar (1 Änderung)' : s.commits.length > 1 ? `Neue Version verfügbar (${s.commits.length} Änderungen)` : 'Neue Version verfügbar'
     case 'current':
       return 'Auf dem neuesten Stand'
@@ -22,6 +23,8 @@ export function updateSummary(s: UpdateStatus | null, checking: boolean): string
       return `Projektordner nicht gefunden (${s.projectDir})`
     case 'noGit':
       return 'Git fehlt oder der Projektordner ist kein Git-Repository'
+    case 'offline':
+      return 'Keine Verbindung – Updates konnten nicht geprüft werden'
   }
 }
 
@@ -73,21 +76,28 @@ export function UpdateDialog() {
     </button>
   )
 
+  const github = status?.source === 'github'
+
   if (last) {
     title = last.ok ? 'Aufsteiger wurde aktualisiert' : 'Update hat nicht geklappt'
-    body = <p className={last.ok ? undefined : 'error'}>{last.ok ? `Du arbeitest jetzt mit dem Stand ${shortCommit(status?.installedCommit ?? '')}.` : last.message}</p>
+    const done = github || !status ? last.message : `Du arbeitest jetzt mit dem Stand ${shortCommit(status.installedCommit)}.`
+    body = <p className={last.ok ? undefined : 'error'}>{last.ok ? done : last.message}</p>
   } else if (phase === 'building') {
-    title = 'Neue Version wird gebaut …'
+    title = github ? 'Neue Version wird heruntergeladen …' : 'Neue Version wird gebaut …'
     body = (
       <>
-        <div className="update-progress" role="progressbar" aria-label="Wird gebaut" />
-        <p>Das dauert etwa eine halbe Minute. Danach startet Aufsteiger neu; Windows fragt dabei nach Administratorrechten.</p>
+        <div className="update-progress" role="progressbar" aria-label={github ? 'Wird heruntergeladen' : 'Wird gebaut'} />
+        <p>
+          {github
+            ? 'Das dauert je nach Internetverbindung bis zu einer Minute. Danach wird die neue Version installiert und Aufsteiger startet neu.'
+            : 'Das dauert etwa eine halbe Minute. Danach startet Aufsteiger neu; Windows fragt dabei nach Administratorrechten.'}
+        </p>
       </>
     )
     actions = null
   } else if (phase === 'restarting') {
-    title = 'Aufsteiger startet neu …'
-    body = <p>Gleich geht es mit der neuen Version weiter.</p>
+    title = github ? 'Neue Version wird installiert …' : 'Aufsteiger startet neu …'
+    body = <p>{github ? 'Aufsteiger schließt sich kurz und startet dann von selbst mit der neuen Version.' : 'Gleich geht es mit der neuen Version weiter.'}</p>
     actions = null
   } else if (phase === 'error') {
     title = 'Update hat nicht geklappt'
@@ -110,16 +120,33 @@ export function UpdateDialog() {
     )
   } else if (!status) {
     title = 'Nach Updates suchen …'
-    body = <p className="caption">Projektordner wird geprüft.</p>
+    body = <p className="caption">Es wird nach einer neuen Version gesucht.</p>
     actions = null
   } else {
     const available = status.state === 'available'
-    const canRebuild = available || (status.state === 'current' && status.uncommitted)
+    const canRebuild = available || (!github && status.state === 'current' && status.uncommitted)
     title = available ? 'Neue Version verfügbar' : updateSummary(status, false)
     const listed = status.commits.slice(0, MAX_LISTED)
     body = (
       <>
-        {available && listed.length > 0 && (
+        {github && available && (
+          <>
+            <p>
+              Du hast Version {status.installedVersion}, neu ist Version {status.latestVersion}.
+            </p>
+            {status.notes.length > 0 && (
+              <ul className="update-list">
+                {status.notes.slice(0, MAX_LISTED).map((n, i) => (
+                  <li key={i}>{n}</li>
+                ))}
+                {status.notes.length > MAX_LISTED && <li className="caption">… und {status.notes.length - MAX_LISTED} weitere</li>}
+              </ul>
+            )}
+          </>
+        )}
+        {github && status.state === 'current' && <p>Du hast die neueste Version ({status.installedVersion}).</p>}
+        {github && status.state === 'offline' && <p>Bitte Internetverbindung prüfen und später noch einmal versuchen.</p>}
+        {!github && available && listed.length > 0 && (
           <>
             <p>Neu seit deiner Version ({shortCommit(status.installedCommit)}):</p>
             <ul className="update-list">
@@ -130,14 +157,18 @@ export function UpdateDialog() {
             </ul>
           </>
         )}
-        {available && listed.length === 0 && <p>Im Projektordner gibt es einen neueren Stand ({shortCommit(status.latestCommit)}).</p>}
-        {status.state === 'current' && (
+        {!github && available && listed.length === 0 && <p>Im Projektordner gibt es einen neueren Stand ({shortCommit(status.latestCommit)}).</p>}
+        {!github && status.state === 'current' && (
           <p>
             Stand {shortCommit(status.installedCommit)}
             {status.uncommitted && ' – im Projektordner gibt es nicht committete Änderungen, die du trotzdem übernehmen kannst.'}
           </p>
         )}
-        {canRebuild && <p className="caption">Aufsteiger baut die neue Version, beendet sich und startet neu.</p>}
+        {canRebuild && (
+          <p className="caption">
+            {github ? 'Aufsteiger lädt die neue Version herunter, installiert sie und startet neu.' : 'Aufsteiger baut die neue Version, beendet sich und startet neu.'}
+          </p>
+        )}
         {canRebuild && dirty && unnamed && <p className="error">Der neue Spielzug ist noch nicht gespeichert und geht beim Neustart verloren.</p>}
         {auto && (
           <label className="check-row">

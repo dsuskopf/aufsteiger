@@ -1,6 +1,8 @@
 # Baut den Windows-Installer (Aufsteiger-Setup-<version>.exe) in der Cloud.
 #
 #  - Tag "v*" pushen (z. B. v0.1.0) → Installer wird gebaut und als GitHub-Release veröffentlicht.
+#    Das Tag muss zur Version in package.json passen (v0.1.0 ↔ "version": "0.1.0").
+#    Installierte Apps finden das Release über latest.yml und bieten das Update an.
 #  - Unter "Actions" → "Installer bauen" → "Run workflow" → Installer nur als Download-Artefakt.
 name: Installer bauen
 
@@ -23,11 +25,24 @@ jobs:
           node-version: 24
           cache: npm
 
+      - name: Tag passt zur Version in package.json?
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          v=$(node -p "require('./package.json').version")
+          if [ "v$v" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME passt nicht zu package.json ($v). Bitte die Version in package.json anpassen."
+            exit 1
+          fi
+
       - run: npm ci
 
       - run: npm test
 
       - name: Installer bauen
+        env:
+          # Release-Build: Updates kommen aus den GitHub-Releases, nicht aus einem Projektordner
+          AUFSTEIGER_UPDATE_SOURCE: github
         run: |
           npm run build
           npx electron-builder --win --publish never
@@ -35,12 +50,18 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: Aufsteiger-Installer
-          path: dist/*.exe
+          path: |
+            dist/*.exe
+            dist/*.blockmap
+            dist/latest.yml
           if-no-files-found: error
 
       - name: Release veröffentlichen
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*.exe
+          files: |
+            dist/*.exe
+            dist/*.blockmap
+            dist/latest.yml
           generate_release_notes: true

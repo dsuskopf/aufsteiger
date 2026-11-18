@@ -24,7 +24,7 @@ const PAGES: { id: PageId; label: string; icon: IconName; sub: string }[] = [
   { id: 'playback', label: 'Wiedergabe & 3D', icon: 'play', sub: 'Ton, Abprall, Flugbahnen und Kamera' },
   { id: 'heights', label: 'Ballwege', icon: 'arc', sub: 'Höhen, mit denen neu gezeichnete Ballwege beginnen' },
   { id: 'data', label: 'Speichern & Daten', icon: 'save', sub: 'Automatisch speichern, Ordner, Zurücksetzen' },
-  { id: 'update', label: 'Version & Update', icon: 'update', sub: 'Neue Version aus dem Projektordner holen und neu starten' }
+  { id: 'update', label: 'Version & Update', icon: 'update', sub: 'Neue Version holen und neu starten' }
 ]
 
 /**
@@ -407,13 +407,15 @@ function UpdatePage({ s, update }: PageProps) {
   }, [check])
   const built = status?.builtAt ? new Date(status.builtAt).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : ''
   const available = status?.state === 'available'
+  const github = status?.source === 'github'
+  const versionHint = status ? [!github && `Stand ${shortCommit(status.installedCommit)}`, built && `gebaut am ${built}`].filter(Boolean).join(', ') || undefined : undefined
   return (
     <>
       <Group>
-        <Row label={`Aufsteiger ${version}`} hint={status ? `Stand ${shortCommit(status.installedCommit)}${built ? `, gebaut am ${built}` : ''}` : undefined}>
+        <Row label={`Aufsteiger ${version}`} hint={versionHint}>
           <span />
         </Row>
-        <Row label={updateSummary(status, phase === 'checking')} hint={status?.projectDir ? `Projektordner: ${status.projectDir}` : undefined}>
+        <Row label={updateSummary(status, phase === 'checking')} hint={!github && status?.projectDir ? `Projektordner: ${status.projectDir}` : undefined}>
           <button className={available ? 'prominent' : undefined} disabled={phase === 'building' || phase === 'restarting'} onClick={show}>
             <Icon name="update" />
             {available ? 'Jetzt aktualisieren' : 'Nach Updates suchen'}
@@ -426,8 +428,10 @@ function UpdatePage({ s, update }: PageProps) {
           onChange={(on) => update({ skipUpdatePrompt: !on })}
         />
         <p className="caption">
-          Die App holt neue Versionen aus dem Projektordner, aus dem sie gebaut wurde: Sie baut die neue Version, beendet sich und startet neu. Windows fragt dabei
-          nach Administratorrechten. Deine Spielzüge, Teams und Einstellungen bleiben erhalten.
+          {github
+            ? 'Die App holt neue Versionen aus dem Internet (GitHub): Sie lädt die neue Version herunter, installiert sie und startet neu.'
+            : 'Die App holt neue Versionen aus dem Projektordner, aus dem sie gebaut wurde: Sie baut die neue Version, beendet sich und startet neu. Windows fragt dabei nach Administratorrechten.'}{' '}
+          Deine Spielzüge, Teams und Einstellungen bleiben erhalten.
         </p>
       </Group>
     </>

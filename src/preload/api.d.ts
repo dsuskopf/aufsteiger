@@ -44,9 +44,9 @@ export interface AppApi {
     close: () => void
   }
   update: {
-    /** Gibt es im Projektordner eine neuere Version? */
+    /** Gibt es eine neuere Version (Projektordner oder GitHub-Releases)? */
     check: () => Promise<UpdateStatus>
-    /** Neue Version bauen (dauert etwa eine halbe Minute; die App läuft weiter) */
+    /** Neue Version bauen bzw. herunterladen (die App läuft weiter) */
     prepare: () => Promise<PrepareResult>
     /** Gebaute Version einsetzen: App beendet sich und startet neu. false = vorher nicht gebaut */
     apply: () => Promise<boolean>

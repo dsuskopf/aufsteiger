@@ -8,6 +8,12 @@ files:
   - package.json
   # Renderer und Hauptprozess sind vollständig gebündelt (Vite) – keine node_modules nötig
   - '!node_modules/**/*'
+# Updates aus den GitHub-Releases (electron-updater): erzeugt dist/latest.yml, die mit ins Release gehört
+publish:
+  provider: github
+  owner: dsuskopf
+  repo: aufsteiger
+  releaseType: release
 win:
   icon: build/icon.png
   target:

@@ -2,10 +2,14 @@ import { app, ipcMain } from 'electron'
 import { execFile, spawn } from 'node:child_process'
 import { existsSync, readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
-import { isNewer, type LastUpdate, type PrepareResult, type UpdateCommit, type UpdateStatus } from '@shared/update'
+import { isNewer, type LastUpdate, type PrepareResult, type UpdateCommit, type UpdateSource, type UpdateStatus } from '@shared/update'
+import { checkGithub, downloadGithub, installGithub, lastGithub } from './githubUpdater'
 
 /*
- * Update der installierten App aus dem Projektordner, aus dem sie gebaut wurde.
+ * Update der installierten App. Woher, legt der Build fest (__UPDATE_SOURCE__, siehe electron.vite.config.ts):
+ * - github: Installer aus GitHub Actions → neue Versionen aus den GitHub-Releases (githubUpdater.ts)
+ * - project: selbst gebaut (npm run dist) → neue Versionen aus dem Projektordner, wie folgt:
+ *
  *
  * Beim Bauen merkt sich die App ihren Commit und den Projektordner (electron.vite.config.ts). Gibt es dort
  * neuere Commits, wird ein Update angeboten. Das Update selbst macht scripts/update-installed.mjs:
@@ -17,6 +21,9 @@ import { isNewer, type LastUpdate, type PrepareResult, type UpdateCommit, type U
 declare const __BUILD_COMMIT__: string
 declare const __BUILD_TIME__: string
 declare const __PROJECT_DIR__: string
+declare const __UPDATE_SOURCE__: UpdateSource
+
+const SOURCE: UpdateSource = __UPDATE_SOURCE__ === 'github' ? 'github' : 'project'
 
 const SCRIPT = join('scripts', 'update-installed.mjs')
 const projectDir = (): string => process.env['AUFSTEIGER_PROJECT_DIR'] ?? __PROJECT_DIR__
@@ -47,6 +54,10 @@ export async function checkForUpdate(): Promise<UpdateStatus> {
   const dir = projectDir()
   const status: UpdateStatus = {
     state: 'current',
+    source: SOURCE,
+    installedVersion: app.getVersion(),
+    latestVersion: '',
+    notes: [],
     installedCommit: __BUILD_COMMIT__,
     builtAt: __BUILD_TIME__,
     latestCommit: '',
@@ -54,6 +65,7 @@ export async function checkForUpdate(): Promise<UpdateStatus> {
     uncommitted: false,
     projectDir: dir
   }
+  if (SOURCE === 'github') return app.isPackaged ? checkGithub({ ...status, projectDir: '' }) : { ...status, projectDir: '', state: 'dev' }
   if (!app.isPackaged && !process.env['AUFSTEIGER_PROJECT_DIR']) return { ...status, state: 'dev' }
   if (!existsSync(join(dir, SCRIPT)) || !existsSync(join(dir, 'package.json'))) return { ...status, state: 'noProject' }
 
@@ -85,6 +97,7 @@ export async function checkForUpdate(): Promise<UpdateStatus> {
 
 /** Neue Version bauen und packen; die App läuft dabei weiter */
 async function prepare(): Promise<PrepareResult> {
+  if (SOURCE === 'github') return downloadGithub()
   const dir = projectDir()
   if (!existsSync(join(dir, SCRIPT))) return { ok: false, message: `Projektordner nicht gefunden: ${dir}` }
   const r = await run('node', [SCRIPT, '--vorbereiten'], dir, 5 * 60_000)
@@ -100,6 +113,12 @@ async function prepare(): Promise<PrepareResult> {
 
 /** Austausch einem eigenen Prozess übergeben, der wartet, bis die App beendet ist – dann beenden */
 function apply(): boolean {
+  if (SOURCE === 'github') {
+    // Vor dem Beenden setzen: das Fenster fragt sonst nach ungespeicherten Änderungen und hält die App offen
+    updating = true
+    updating = installGithub()
+    return updating
+  }
   if (!preparedAsar || !existsSync(preparedAsar)) return false
   const child = spawn(
     'node',
@@ -121,6 +140,7 @@ function apply(): boolean {
 
 /** Ergebnis eines Updates, das vor diesem Start lief (einmalig) */
 function lastUpdate(): LastUpdate | null {
+  if (SOURCE === 'github') return lastGithub()
   const file = statusFile()
   try {
     const raw = JSON.parse(readFileSync(file, 'utf-8')) as LastUpdate

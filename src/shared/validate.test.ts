@@ -108,7 +108,7 @@ describe('Einstellungen: Erscheinungsbild', () => {
 describe('Einstellungen: neue Felder', () => {
   it('ältere Dateien bekommen die Standardwerte', () => {
     const s = sanitizeSettings({ netHeight: 2.24 })
-    expect(s).toMatchObject({ uiScale: 1, leftHanded: false, chipSize: 'normal', chipLabel: 'both', startView: '2d', sketchSmooth: true, autosave: false, reopenLast: false, lastPlayId: null })
+    expect(s).toMatchObject({ uiScale: 1, leftHanded: false, chipSize: 'normal', chipLabel: 'both', startView: '2d', sketchSmooth: true, autosave: false, reopenLast: false, skipCloseWarning: false, lastPlayId: null })
   })
   it('lässt nur bekannte Werte durch', () => {
     const s = sanitizeSettings({ uiScale: 3, chipSize: 'riesig', chipLabel: 'number', startView: 'sketch', sketchWidth: 0.5, sketchColor: 'blue', lastPlayId: '../boese' })

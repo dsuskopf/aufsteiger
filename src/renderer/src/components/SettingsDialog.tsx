@@ -356,6 +356,12 @@ function DataPage({ s, update, reset }: PageProps & { reset: () => void }) {
           value={s.autosave}
           onChange={(autosave) => update({ autosave })}
         />
+        <Toggle
+          label="Beim Beenden nicht nachfragen"
+          hint="Aus: Bei ungespeicherten Änderungen fragt die App vor dem Beenden nach. An: Sie schließt sofort, nicht gespeicherte Änderungen gehen verloren."
+          value={s.skipCloseWarning}
+          onChange={(skipCloseWarning) => update({ skipCloseWarning })}
+        />
       </Group>
       <Group title="Ordner">
         <Row label="Exporte" hint={info?.exportDir ?? 'PDF und Videos'}>

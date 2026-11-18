@@ -167,6 +167,7 @@ export function sanitizeSettings(raw: unknown): Settings {
     sketchWidth: (SKETCH_WIDTHS as readonly number[]).includes(Number(r.sketchWidth)) ? Number(r.sketchWidth) : d.sketchWidth,
     autosave: bool(r.autosave, d.autosave),
     reopenLast: bool(r.reopenLast, d.reopenLast),
+    skipCloseWarning: bool(r.skipCloseWarning, d.skipCloseWarning),
     lastPlayId: typeof r.lastPlayId === 'string' && /^[\w-]{1,64}$/.test(r.lastPlayId) ? r.lastPlayId : null
   }
 }

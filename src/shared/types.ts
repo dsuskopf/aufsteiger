@@ -263,6 +263,8 @@ export interface Settings {
   sketchWidth: number
   /** Schon benannte Spielzüge nach jeder Änderung von selbst speichern */
   autosave: boolean
+  /** Beim Schließen nicht nachfragen, auch bei ungespeicherten Änderungen (Standard: aus = es wird gefragt) */
+  skipCloseWarning: boolean
   /** Beim Start den zuletzt geöffneten Spielzug wieder öffnen */
   reopenLast: boolean
   lastPlayId: string | null
@@ -320,6 +322,7 @@ export const DEFAULT_SETTINGS: Settings = {
   sketchWidth: 0.09,
   autosave: false,
   reopenLast: false,
+  skipCloseWarning: false,
   lastPlayId: null
 }
 

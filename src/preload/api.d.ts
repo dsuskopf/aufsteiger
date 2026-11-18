@@ -37,6 +37,10 @@ export interface AppApi {
     info: () => Promise<{ version: string; dataDir: string; exportDir: string }>
     /** Ordner im Explorer öffnen: gespeicherte Daten oder Exporte */
     openFolder: (kind: 'data' | 'exports') => Promise<void>
+    /** Das Fenster soll geschlossen werden (X, Alt+F4): die Oberfläche entscheidet, ob nachgefragt wird */
+    onCloseRequested: (cb: () => void) => () => void
+    /** Fenster jetzt wirklich schließen */
+    close: () => void
   }
 }
 

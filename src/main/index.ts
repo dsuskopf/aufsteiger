@@ -28,6 +28,18 @@ function createWindow(): void {
     }
   })
 
+  // Schließen: erst den Renderer fragen (ungespeicherte Änderungen?); er antwortet mit 'app:close'
+  let forceClose = TEST
+  win.on('close', (e) => {
+    if (forceClose || win.webContents.isDestroyed()) return
+    e.preventDefault()
+    win.webContents.send('app:closeRequested')
+  })
+  win.webContents.ipc.on('app:close', () => {
+    forceClose = true
+    win.close()
+  })
+
   win.once('ready-to-show', () => {
     if (TEST) return
     win.maximize()

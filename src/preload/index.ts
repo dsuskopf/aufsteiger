@@ -34,7 +34,13 @@ const api: AppApi = {
   },
   app: {
     info: () => ipcRenderer.invoke('app:info'),
-    openFolder: (kind) => ipcRenderer.invoke('app:openFolder', kind)
+    openFolder: (kind) => ipcRenderer.invoke('app:openFolder', kind),
+    onCloseRequested: (cb) => {
+      const h = (): void => cb()
+      ipcRenderer.on('app:closeRequested', h)
+      return () => ipcRenderer.removeListener('app:closeRequested', h)
+    },
+    close: () => ipcRenderer.send('app:close')
   }
 }
 

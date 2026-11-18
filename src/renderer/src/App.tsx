@@ -19,6 +19,7 @@ import { currentEvents, onBallEvent, usePlayback } from './store/playbackStore'
 import { SaveDialog } from './components/SaveDialog'
 import { Library } from './components/Library'
 import { ExportDialog } from './components/ExportDialog'
+import { CloseDialog } from './components/CloseDialog'
 import { Sidebar } from './components/sidebar/Sidebar'
 import { QuickTeamChip } from './components/QuickTeam'
 import { useSelectionKeys } from './components/sidebar/keys'
@@ -219,6 +220,7 @@ export function App() {
       {(dialog === 'save' || dialog === 'saveAs') && <SaveDialog asCopy={dialog === 'saveAs'} onClose={() => setDialog(null)} />}
       {dialog === 'library' && <Library onClose={() => setDialog(null)} />}
       {dialog === 'export' && <ExportDialog onClose={() => setDialog(null)} />}
+      <CloseDialog />
       {teamsOpen && (
         <TeamManager
           onClose={() => {

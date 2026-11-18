@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { LastUpdate, UpdateStatus } from '@shared/update'
+import { useSettings } from './appSettings'
 import { usePlay } from './playStore'
 import { saveCurrent } from './playDocs'
 
@@ -17,6 +18,8 @@ interface UpdateStore {
   open: boolean
   /** Meldung zum Update vor diesem Start */
   last: LastUpdate | null
+  /** Dialog kam von selbst nach dem Start (dann mit „Nicht mehr nachfragen“) */
+  auto: boolean
   check: () => Promise<UpdateStatus | null>
   /** Beim Start: Ergebnis des letzten Updates zeigen, sonst nachsehen und ggf. vorschlagen */
   startup: () => Promise<void>
@@ -32,6 +35,7 @@ export const useUpdate = create<UpdateStore>((set, get) => ({
   error: null,
   open: false,
   last: null,
+  auto: false,
 
   check: async () => {
     if (!window.api.update) return null
@@ -55,11 +59,18 @@ export const useUpdate = create<UpdateStore>((set, get) => ({
       return
     }
     const status = await get().check()
-    if (status?.state === 'available') set({ open: true })
+    if (status?.state !== 'available') return
+    // „Nicht mehr nachfragen“ steht in den Einstellungen – erst nachsehen, wenn sie geladen sind
+    if (!useSettings.getState().loaded) {
+      await new Promise<void>((res) => {
+        const off = useSettings.subscribe((s) => s.loaded && (off(), res()))
+      })
+    }
+    if (!useSettings.getState().settings.skipUpdatePrompt) set({ open: true, auto: true })
   },
 
   show: () => {
-    set({ open: true, last: null, error: null })
+    set({ open: true, last: null, error: null, auto: false })
     if (get().phase === 'idle' || get().phase === 'error') {
       set({ phase: 'idle' })
       void get().check()
@@ -69,7 +80,7 @@ export const useUpdate = create<UpdateStore>((set, get) => ({
   close: () => {
     const { phase } = get()
     if (phase === 'building' || phase === 'restarting') return
-    set({ open: false, last: null, error: null, phase: 'idle' })
+    set({ open: false, last: null, error: null, phase: 'idle', auto: false })
   },
 
   run: async () => {

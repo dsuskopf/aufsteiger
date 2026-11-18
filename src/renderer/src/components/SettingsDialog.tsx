@@ -77,7 +77,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
             {page.id === 'playback' && <PlaybackPage s={s} update={update} />}
             {page.id === 'heights' && <HeightsPage s={s} update={update} />}
             {page.id === 'data' && <DataPage s={s} update={update} reset={reset} />}
-            {page.id === 'update' && <UpdatePage />}
+            {page.id === 'update' && <UpdatePage s={s} update={update} />}
           </div>
         </div>
       </div>
@@ -392,7 +392,7 @@ function DataPage({ s, update, reset }: PageProps & { reset: () => void }) {
   )
 }
 
-function UpdatePage() {
+function UpdatePage({ s, update }: PageProps) {
   const status = useUpdate((u) => u.status)
   const phase = useUpdate((u) => u.phase)
   const show = useUpdate((u) => u.show)
@@ -419,6 +419,12 @@ function UpdatePage() {
             {available ? 'Jetzt aktualisieren' : 'Nach Updates suchen'}
           </button>
         </Row>
+        <Toggle
+          label="Beim Start auf neue Versionen hinweisen"
+          hint="Aus: Kein Fenster nach dem Start. Eine neue Version zeigt dann nur der Update-Button oben in der Werkzeugleiste."
+          value={!s.skipUpdatePrompt}
+          onChange={(on) => update({ skipUpdatePrompt: !on })}
+        />
         <p className="caption">
           Die App holt neue Versionen aus dem Projektordner, aus dem sie gebaut wurde: Sie baut die neue Version, beendet sich und startet neu. Windows fragt dabei
           nach Administratorrechten. Deine Spielzüge, Teams und Einstellungen bleiben erhalten.

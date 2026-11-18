@@ -265,6 +265,8 @@ export interface Settings {
   autosave: boolean
   /** Beim Schließen nicht nachfragen, auch bei ungespeicherten Änderungen (Standard: aus = es wird gefragt) */
   skipCloseWarning: boolean
+  /** Nach dem Start nicht mehr mit einem Dialog auf neue Versionen hinweisen (Update-Button bleibt) */
+  skipUpdatePrompt: boolean
   /** Beim Start den zuletzt geöffneten Spielzug wieder öffnen */
   reopenLast: boolean
   lastPlayId: string | null
@@ -323,6 +325,7 @@ export const DEFAULT_SETTINGS: Settings = {
   autosave: false,
   reopenLast: false,
   skipCloseWarning: false,
+  skipUpdatePrompt: false,
   lastPlayId: null
 }
 

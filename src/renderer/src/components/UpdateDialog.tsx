@@ -1,5 +1,6 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { shortCommit, type UpdateStatus } from '@shared/update'
+import { useSettings } from '@renderer/store/appSettings'
 import { usePlay } from '@renderer/store/playStore'
 import { useUi } from '@renderer/store/settingsStore'
 import { useUpdate } from '@renderer/store/updateStore'
@@ -29,10 +30,26 @@ export function updateSummary(s: UpdateStatus | null, checking: boolean): string
  * nach dem Neustart das Ergebnis. Geöffnet auch über den Update-Button (Werkzeugleiste, Einstellungen).
  */
 export function UpdateDialog() {
-  const { open, status, phase, error, last, close, run } = useUpdate()
+  const { open, status, phase, error, last, auto, close: closeDialog, run } = useUpdate()
+  const [dontAsk, setDontAsk] = useState(false)
   const dirty = usePlay((s) => s.dirty)
   const unnamed = usePlay((s) => !s.current)
   const busy = phase === 'building' || phase === 'restarting'
+
+  useEffect(() => setDontAsk(false), [open])
+
+  /** „Nicht mehr nachfragen“ merken, wenn angehakt – egal ob mit Später oder Jetzt aktualisieren verlassen */
+  const remember = () => {
+    if (auto && dontAsk) useSettings.getState().update({ skipUpdatePrompt: true })
+  }
+  const close = () => {
+    remember()
+    closeDialog()
+  }
+  const start = () => {
+    remember()
+    void run()
+  }
 
   useEffect(() => {
     if (!open) return
@@ -122,6 +139,12 @@ export function UpdateDialog() {
         )}
         {canRebuild && <p className="caption">Aufsteiger baut die neue Version, beendet sich und startet neu.</p>}
         {canRebuild && dirty && unnamed && <p className="error">Der neue Spielzug ist noch nicht gespeichert und geht beim Neustart verloren.</p>}
+        {auto && (
+          <label className="check-row">
+            <input type="checkbox" className="switch" checked={dontAsk} onChange={(e) => setDontAsk(e.target.checked)} />
+            Nicht mehr nachfragen
+          </label>
+        )}
       </>
     )
     if (canRebuild) {
@@ -136,7 +159,7 @@ export function UpdateDialog() {
               Erst speichern
             </button>
           )}
-          <button type="button" className="prominent" autoFocus onClick={() => void run()}>
+          <button type="button" className="prominent" autoFocus onClick={start}>
             {available ? 'Jetzt aktualisieren' : 'Trotzdem aktualisieren'}
           </button>
         </>

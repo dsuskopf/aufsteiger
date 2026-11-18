@@ -168,6 +168,7 @@ export function sanitizeSettings(raw: unknown): Settings {
     autosave: bool(r.autosave, d.autosave),
     reopenLast: bool(r.reopenLast, d.reopenLast),
     skipCloseWarning: bool(r.skipCloseWarning, d.skipCloseWarning),
+    skipUpdatePrompt: bool(r.skipUpdatePrompt, d.skipUpdatePrompt),
     lastPlayId: typeof r.lastPlayId === 'string' && /^[\w-]{1,64}$/.test(r.lastPlayId) ? r.lastPlayId : null
   }
 }

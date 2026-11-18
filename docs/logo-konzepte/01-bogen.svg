@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256"><title>Bogen</title>
+<path d="M36 186 C60 116 94 70 130 70 C150 70 164 78 174 88" fill="none" stroke="#111" stroke-width="20" stroke-linecap="round"/>
+<circle cx="208" cy="122" r="28" fill="#111"/>
+<rect x="120" y="114" width="16" height="92" rx="8" fill="#111"/>
+<rect x="28" y="200" width="200" height="16" rx="8" fill="#111"/></svg>

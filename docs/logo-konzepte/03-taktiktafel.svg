@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256"><title>Taktiktafel</title>
+<rect x="24" y="72" width="208" height="112" rx="12" fill="none" stroke="#111" stroke-width="14"/>
+<rect x="121" y="48" width="14" height="160" rx="7" fill="#111"/>
+<circle cx="72" cy="128" r="20" fill="none" stroke="#111" stroke-width="12"/>
+<path d="M166 110 L202 146 M202 110 L166 146" stroke="#111" stroke-width="12" stroke-linecap="round"/></svg>

@@ -1,0 +1,46 @@
+# Baut den Windows-Installer (Aufsteiger-Setup-<version>.exe) in der Cloud.
+#
+#  - Tag "v*" pushen (z. B. v0.1.0) → Installer wird gebaut und als GitHub-Release veröffentlicht.
+#  - Unter "Actions" → "Installer bauen" → "Run workflow" → Installer nur als Download-Artefakt.
+name: Installer bauen
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm test
+
+      - name: Installer bauen
+        run: |
+          npm run build
+          npx electron-builder --win --publish never
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Aufsteiger-Installer
+          path: dist/*.exe
+          if-no-files-found: error
+
+      - name: Release veröffentlichen
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.exe
+          generate_release_notes: true

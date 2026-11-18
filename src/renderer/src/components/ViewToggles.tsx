@@ -40,3 +40,15 @@ export function ZonesButton() {
     </button>
   )
 }
+
+/** Zeichnungen der Skizze auf dem Feldboden ein-/ausblenden (gilt für Draufsicht und 3D) */
+export function SketchButton() {
+  const show = useUi((s) => s.showSketch)
+  const setShow = useUi((s) => s.setShowSketch)
+  const title = show ? 'Skizze auf dem Feld ausblenden' : 'Skizze auf dem Feld einblenden'
+  return (
+    <button className={show ? 'selected' : ''} aria-pressed={show} title={title} aria-label={title} onClick={() => setShow(!show)}>
+      <Icon name="pencil" />
+    </button>
+  )
+}

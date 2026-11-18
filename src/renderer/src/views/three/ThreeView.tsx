@@ -6,7 +6,7 @@ import { useUi } from '@renderer/store/settingsStore'
 import { bendAntennas, buildCourt, buildNet, deformNet, disposeObject } from './courtScene'
 import { CAMERA_LIMITS, clampTarget } from './camera'
 import { ViewControls } from '@renderer/components/ViewControls'
-import { NamesButton, ZonesButton } from '@renderer/components/ViewToggles'
+import { NamesButton, SketchButton, ZonesButton } from '@renderer/components/ViewToggles'
 import { Icon } from '@renderer/components/Icon'
 import { applyDrag, buildPickables, dragAnchor, draggable, faceCamera, groundPoint, pickAt, selectPick, type Pick } from './picking'
 import { rewind } from '@renderer/store/actions'
@@ -17,6 +17,7 @@ import { usePlay } from '@renderer/store/playStore'
 import { currentBall, currentScene, usePathsHidden, usePlayback, useScene } from '@renderer/store/playbackStore'
 import { ballOrientation, buildBall, buildTrajectories, placeBall, updateTrajectoryProgress } from './trajectories'
 import { buildZones, orientZoneLabels } from './zones'
+import { buildSketch } from './sketch'
 import { pathCurve } from '@renderer/core/motion/motion'
 import { skeletonAt } from '@renderer/core/motion/pose'
 import { worldToThree } from '@renderer/core/geometry/transform'
@@ -54,6 +55,7 @@ export function ThreeView() {
     net: THREE.Group | null
     trajectories: THREE.Group | null
     zones: THREE.Group | null
+    sketch: THREE.Group | null
     paths: THREE.Group | null
     picks: THREE.Group | null
     ball: THREE.Group
@@ -71,6 +73,8 @@ export function ThreeView() {
   const hidePaths = usePathsHidden()
   const showZones = useUi((s) => s.showZones)
   const showNames = useUi((s) => s.showNames)
+  const showSketch = useUi((s) => s.showSketch)
+  const sketch = usePlay((s) => s.sketch)
   const followBall = useUi((s) => s.followBall)
   const lock3d = useUi((s) => s.lock3d)
   const setFollowBall = useUi((s) => s.setFollowBall)
@@ -140,7 +144,7 @@ export function ThreeView() {
     })
     controls.update()
 
-    sceneRef.current = { scene, net: null, trajectories: null, zones: null, paths: null, picks: null, ball, camera, controls }
+    sceneRef.current = { scene, net: null, trajectories: null, zones: null, sketch: null, paths: null, picks: null, ball, camera, controls }
 
     // Gewählter Spieler: heller Ring am Boden unter ihm
     const selRing = new THREE.Mesh(
@@ -435,6 +439,20 @@ export function ThreeView() {
     ref.scene.add(ref.zones)
   }, [showZones, zoneStyle])
 
+  // Skizze auf dem Boden ein-/ausblenden bzw. neu aufbauen, wenn sich die Zeichnung ändert
+  useEffect(() => {
+    const ref = sceneRef.current
+    if (!ref) return
+    if (ref.sketch) {
+      ref.scene.remove(ref.sketch)
+      disposeObject(ref.sketch)
+      ref.sketch = null
+    }
+    if (!showSketch || sketch.length === 0) return
+    ref.sketch = buildSketch(sketch)
+    ref.scene.add(ref.sketch)
+  }, [showSketch, sketch])
+
   // Netz neu aufbauen, wenn sich die Netzhöhe ändert
   useEffect(() => {
     const ref = sceneRef.current
@@ -568,6 +586,7 @@ export function ThreeView() {
         </button>
         <NamesButton />
         <ZonesButton />
+        <SketchButton />
       </ViewControls>
       {lock3d && (
         <div className="lock-badge" role="status">

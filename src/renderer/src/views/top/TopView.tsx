@@ -3,12 +3,14 @@ import { COURT, courtLines } from '@renderer/core/geometry/court'
 import { useEffect, useRef } from 'react'
 import type Konva from 'konva'
 import { PlayersLayer, hitsDraggable } from './PlayersLayer'
+import { SketchLayer } from '../sketch/SketchLayer'
 import { TrajectoryLayer } from './TrajectoryLayer'
 import { useDrawTrajectory } from './useDrawTrajectory'
 import { useDrawPath } from './useDrawPath'
 import { PathLayer } from './PathLayer'
 import { useEmptyTapClose } from '@renderer/components/useEmptyTapClose'
 import { useSettings } from '@renderer/store/appSettings'
+import { usePlay } from '@renderer/store/playStore'
 import { worldToTop, type TopViewport } from '@renderer/core/geometry/transform'
 import { useCourtViewport } from './useCourtViewport'
 import { COLORS } from '@renderer/theme/colors'
@@ -17,7 +19,7 @@ import { ViewControls } from '@renderer/components/ViewControls'
 import { Icon } from '@renderer/components/Icon'
 import { PipBar } from '@renderer/components/PipBar'
 import { ZoneMarks } from './ZoneMarks'
-import { NamesButton, ViewSwapButton, ZonesButton } from '@renderer/components/ViewToggles'
+import { NamesButton, SketchButton, ViewSwapButton, ZonesButton } from '@renderer/components/ViewToggles'
 import { useUi } from '@renderer/store/settingsStore'
 
 export { WORLD_W, WORLD_H } from './useCourtViewport'
@@ -32,6 +34,9 @@ export function TopView({ compact = false }: { compact?: boolean }) {
   const tool = useUi((s) => s.tool)
   const drawing = tool !== 'select'
   const stageRef = useRef<Konva.Stage>(null)
+  const showSketch = useUi((s) => s.showSketch)
+  const sketch = usePlay((s) => s.sketch)
+  const smooth = useSettings((s) => s.settings.sketchSmooth)
   // Das Netz-Bild-im-Bild liegt als Overlay darüber und verändert die Draufsicht nicht
   const { vp, zoomIn, zoomOut, reset } = useCourtViewport(ref, size, {
     // Im Pop-up feste Ansicht: kein Zoom, kein Verschieben (Spieler bleiben ziehbar)
@@ -57,6 +62,7 @@ export function TopView({ compact = false }: { compact?: boolean }) {
         {size.width > 0 && (
           <Stage ref={stageRef} width={size.width} height={size.height}>
             <CourtLayer vp={vp} />
+            {showSketch && <SketchLayer sketch={sketch} vp={vp} smooth={smooth} />}
             <PathLayer vp={vp} interactive={!drawing} stroke={stroke} />
             <PlayersLayer vp={vp} interactive={!drawing} />
             <TrajectoryLayer vp={vp} interactive={!drawing} preview={preview} />
@@ -76,6 +82,7 @@ export function TopView({ compact = false }: { compact?: boolean }) {
           <Icon name="rotate" />
         </button>
         <ZonesButton />
+        <SketchButton />
       </ViewControls>
       )}
     </>

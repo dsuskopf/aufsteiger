@@ -32,6 +32,9 @@ interface UiState {
   /** Zonen auf dem Feldboden einblenden (welche Art: Einstellungen → Zonen) */
   showZones: boolean
   setShowZones: (show: boolean) => void
+  /** Zeichnungen der Skizze auf dem Feldboden einblenden (2D-Draufsicht und 3D) */
+  showSketch: boolean
+  setShowSketch: (show: boolean) => void
   /** Namen der Spieler einblenden (nur wenn ein Name eingetragen ist) */
   showNames: boolean
   setShowNames: (show: boolean) => void
@@ -92,6 +95,8 @@ export const useUi = create<UiState>((set) => ({
   showSidebar: (sidebarPage) => set({ sidebarPage, sidebarOpen: true }),
   showZones: false,
   setShowZones: (showZones) => set({ showZones }),
+  showSketch: false,
+  setShowSketch: (showSketch) => set({ showSketch }),
   showNames: false,
   setShowNames: (showNames) => set({ showNames }),
   followBall: false,

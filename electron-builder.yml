@@ -21,5 +21,6 @@ nsis:
   createStartMenuShortcut: true
   shortcutName: Aufsteiger
   artifactName: Aufsteiger-Setup-${version}.${ext}
-  # Gespeicherte Teams und Spielzüge beim Deinstallieren behalten
+  # Datenlöschung beim Deinstallieren steuert build/installer.nsh selbst
+  # (Seite „Daten behalten“ mit Checkboxen; bei Updates wird nichts gelöscht)
   deleteAppDataOnUninstall: false

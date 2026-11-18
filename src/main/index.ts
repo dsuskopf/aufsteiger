@@ -1,12 +1,12 @@
 import { app, BrowserWindow, nativeTheme, shell } from 'electron'
 import { join } from 'node:path'
 import { WINDOW_BG, initTheme, registerIpc } from './ipc'
+import { migrateUserData } from './migrateUserData'
 
 // Für Tests: eigenes Datenverzeichnis, damit echte Teams/Spielzüge unberührt bleiben
 if (process.env['VBP_USER_DATA']) app.setPath('userData', process.env['VBP_USER_DATA'])
-// Die App hieß früher „Volleyball Playbook“; ihr Datenordner (%APPDATA%\Volleyball Playbook) bleibt,
-// damit gespeicherte Teams, Spielzüge und Einstellungen nach der Umbenennung erhalten sind.
-else app.setPath('userData', join(app.getPath('appData'), 'Volleyball Playbook'))
+// Die App hieß früher „Volleyball Playbook“: deren Datenordner beim ersten Start nach %APPDATA%\Aufsteiger umziehen
+else app.setPath('userData', migrateUserData(app.getPath('appData'), 'Volleyball Playbook', 'Aufsteiger'))
 /** Automatische Tests: unsichtbares Offscreen-Fenster, Renderer mit ?test (Zugriff auf die Stores) */
 const TEST = !!process.env['VBP_TEST']
 

@@ -1,4 +1,5 @@
 import type { PlayDoc, PlaySummary, Settings, Team, TeamsFile, ThemePref } from '../shared/types'
+import type { LastUpdate, PrepareResult, UpdateStatus } from '../shared/update'
 
 export interface AppApi {
   versions: { electron: string; chrome: string }
@@ -41,6 +42,16 @@ export interface AppApi {
     onCloseRequested: (cb: () => void) => () => void
     /** Fenster jetzt wirklich schließen */
     close: () => void
+  }
+  update: {
+    /** Gibt es im Projektordner eine neuere Version? */
+    check: () => Promise<UpdateStatus>
+    /** Neue Version bauen (dauert etwa eine halbe Minute; die App läuft weiter) */
+    prepare: () => Promise<PrepareResult>
+    /** Gebaute Version einsetzen: App beendet sich und startet neu. false = vorher nicht gebaut */
+    apply: () => Promise<boolean>
+    /** Ergebnis des Updates vor diesem Start (nur einmal, sonst null) */
+    last: () => Promise<LastUpdate | null>
   }
 }
 

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useUi, type ViewMode } from '@renderer/store/settingsStore'
+import { useUpdate } from '@renderer/store/updateStore'
 import { isPlayEmpty, usePlay } from '@renderer/store/playStore'
 import { newPlay } from '@renderer/store/playDocs'
 import { quickSave } from '@renderer/store/actions'
@@ -19,6 +20,8 @@ const VIEW_MODES: { id: ViewMode; label: string; title: string }[] = [
  */
 export function Toolbar() {
   const { viewMode, setViewMode, sidebarOpen, setSidebarOpen, setTeamsOpen, setSettingsOpen, setDialog } = useUi()
+  const updateAvailable = useUpdate((u) => u.status?.state === 'available')
+  const showUpdate = useUpdate((u) => u.show)
   const sketching = viewMode === 'sketch'
 
   return (
@@ -48,6 +51,12 @@ export function Toolbar() {
       </div>
 
       <div className="toolbar-group toolbar-end">
+        {updateAvailable && (
+          <button className="update-available" title="Neue Version verfügbar – aktualisieren und neu starten" aria-label="Update verfügbar" onClick={showUpdate}>
+            <Icon name="update" />
+            <span className="btn-label">Update</span>
+          </button>
+        )}
         <button aria-label="Teams" title="Teams und Spieler verwalten" onClick={() => setTeamsOpen(true)}>
           <Icon name="people" />
           <span className="btn-label">Teams</span>

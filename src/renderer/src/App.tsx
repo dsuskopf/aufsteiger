@@ -20,6 +20,8 @@ import { SaveDialog } from './components/SaveDialog'
 import { Library } from './components/Library'
 import { ExportDialog } from './components/ExportDialog'
 import { CloseDialog } from './components/CloseDialog'
+import { UpdateDialog } from './components/UpdateDialog'
+import { useUpdate } from './store/updateStore'
 import { Sidebar } from './components/sidebar/Sidebar'
 import { QuickTeamChip } from './components/QuickTeam'
 import { useSelectionKeys } from './components/sidebar/keys'
@@ -137,6 +139,13 @@ export function App() {
     []
   )
 
+  // Nach dem Start: Ergebnis eines Updates melden oder eine neuere Version vorschlagen (nicht in automatischen Tests)
+  useEffect(() => {
+    if (new URLSearchParams(location.search).has('test')) return
+    const t = window.setTimeout(() => void useUpdate.getState().startup(), 1500)
+    return () => window.clearTimeout(t)
+  }, [])
+
   // Skizze: Grundstellung zeigen, nichts ist gewählt
   useEffect(() => {
     if (viewMode !== 'sketch') return
@@ -221,6 +230,7 @@ export function App() {
       {dialog === 'library' && <Library onClose={() => setDialog(null)} />}
       {dialog === 'export' && <ExportDialog onClose={() => setDialog(null)} />}
       <CloseDialog />
+      <UpdateDialog />
       {teamsOpen && (
         <TeamManager
           onClose={() => {

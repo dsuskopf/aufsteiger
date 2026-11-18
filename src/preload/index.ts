@@ -41,6 +41,12 @@ const api: AppApi = {
       return () => ipcRenderer.removeListener('app:closeRequested', h)
     },
     close: () => ipcRenderer.send('app:close')
+  },
+  update: {
+    check: () => ipcRenderer.invoke('update:check'),
+    prepare: () => ipcRenderer.invoke('update:prepare'),
+    apply: () => ipcRenderer.invoke('update:apply'),
+    last: () => ipcRenderer.invoke('update:last')
   }
 }
 

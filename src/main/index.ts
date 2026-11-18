@@ -2,6 +2,7 @@ import { app, BrowserWindow, nativeTheme, shell } from 'electron'
 import { join } from 'node:path'
 import { WINDOW_BG, initTheme, registerIpc } from './ipc'
 import { migrateUserData } from './migrateUserData'
+import { isUpdating, registerUpdater } from './updater'
 
 // Für Tests: eigenes Datenverzeichnis, damit echte Teams/Spielzüge unberührt bleiben
 if (process.env['VBP_USER_DATA']) app.setPath('userData', process.env['VBP_USER_DATA'])
@@ -34,7 +35,7 @@ function createWindow(): void {
   // Schließen: erst den Renderer fragen (ungespeicherte Änderungen?); er antwortet mit 'app:close'
   let forceClose = TEST
   win.on('close', (e) => {
-    if (forceClose || win.webContents.isDestroyed()) return
+    if (forceClose || isUpdating() || win.webContents.isDestroyed()) return
     e.preventDefault()
     win.webContents.send('app:closeRequested')
   })
@@ -65,6 +66,7 @@ function createWindow(): void {
 app.whenReady().then(() => {
   initTheme()
   registerIpc()
+  registerUpdater()
   createWindow()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

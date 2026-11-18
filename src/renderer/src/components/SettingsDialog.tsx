@@ -5,6 +5,9 @@ import { NET_PRESETS, presetForHeight } from '@renderer/core/geometry/court'
 import { SPEEDS } from '@renderer/core/timeline/timeline'
 import { useSettings } from '@renderer/store/appSettings'
 import { useUi } from '@renderer/store/settingsStore'
+import { useUpdate } from '@renderer/store/updateStore'
+import { shortCommit } from '@shared/update'
+import { updateSummary } from './UpdateDialog'
 import { ConfirmButton } from './ConfirmButton'
 import { Icon, type IconName } from './Icon'
 import { NumberField } from './NumberField'
@@ -13,14 +16,15 @@ import { MeterSlider } from './TrajectoryCard'
 export const speedLabel = (s: number) => `${Math.round(s * 100)} %`
 const meters = (v: number) => `${v.toFixed(2).replace('.', ',')} m`
 
-type PageId = 'look' | 'input' | 'play' | 'playback' | 'heights' | 'data'
+type PageId = 'look' | 'input' | 'play' | 'playback' | 'heights' | 'data' | 'update'
 const PAGES: { id: PageId; label: string; icon: IconName; sub: string }[] = [
   { id: 'look', label: 'Darstellung', icon: 'name', sub: 'Hell oder dunkel, Größe, Spieler-Kreise, Zonen' },
   { id: 'input', label: 'Stift & Eingabe', icon: 'pencil', sub: 'Stift, Finger, Skizze und Aufstellungsregeln' },
   { id: 'play', label: 'Neuer Spielzug', icon: 'newfile', sub: 'Womit die App und ein neuer Spielzug starten' },
   { id: 'playback', label: 'Wiedergabe & 3D', icon: 'play', sub: 'Ton, Abprall, Flugbahnen und Kamera' },
   { id: 'heights', label: 'Ballwege', icon: 'arc', sub: 'Höhen, mit denen neu gezeichnete Ballwege beginnen' },
-  { id: 'data', label: 'Speichern & Daten', icon: 'save', sub: 'Automatisch speichern, Ordner, Zurücksetzen' }
+  { id: 'data', label: 'Speichern & Daten', icon: 'save', sub: 'Automatisch speichern, Ordner, Zurücksetzen' },
+  { id: 'update', label: 'Version & Update', icon: 'update', sub: 'Neue Version aus dem Projektordner holen und neu starten' }
 ]
 
 /**
@@ -73,6 +77,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
             {page.id === 'playback' && <PlaybackPage s={s} update={update} />}
             {page.id === 'heights' && <HeightsPage s={s} update={update} />}
             {page.id === 'data' && <DataPage s={s} update={update} reset={reset} />}
+            {page.id === 'update' && <UpdatePage />}
           </div>
         </div>
       </div>
@@ -383,7 +388,42 @@ function DataPage({ s, update, reset }: PageProps & { reset: () => void }) {
           <ConfirmButton label="Zurücksetzen" confirmLabel="Wirklich zurücksetzen?" onConfirm={reset} />
         </Row>
       </Group>
-      {info && <p className="caption settings-version">Aufsteiger {info.version}</p>}
+    </>
+  )
+}
+
+function UpdatePage() {
+  const status = useUpdate((u) => u.status)
+  const phase = useUpdate((u) => u.phase)
+  const show = useUpdate((u) => u.show)
+  const check = useUpdate((u) => u.check)
+  const [version, setVersion] = useState('')
+  useEffect(() => {
+    void window.api.app
+      ?.info()
+      .then((i) => setVersion(i.version))
+      .catch(() => {})
+    void check()
+  }, [check])
+  const built = status?.builtAt ? new Date(status.builtAt).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : ''
+  const available = status?.state === 'available'
+  return (
+    <>
+      <Group>
+        <Row label={`Aufsteiger ${version}`} hint={status ? `Stand ${shortCommit(status.installedCommit)}${built ? `, gebaut am ${built}` : ''}` : undefined}>
+          <span />
+        </Row>
+        <Row label={updateSummary(status, phase === 'checking')} hint={status?.projectDir ? `Projektordner: ${status.projectDir}` : undefined}>
+          <button className={available ? 'prominent' : undefined} disabled={phase === 'building' || phase === 'restarting'} onClick={show}>
+            <Icon name="update" />
+            {available ? 'Jetzt aktualisieren' : 'Nach Updates suchen'}
+          </button>
+        </Row>
+        <p className="caption">
+          Die App holt neue Versionen aus dem Projektordner, aus dem sie gebaut wurde: Sie baut die neue Version, beendet sich und startet neu. Windows fragt dabei
+          nach Administratorrechten. Deine Spielzüge, Teams und Einstellungen bleiben erhalten.
+        </p>
+      </Group>
     </>
   )
 }

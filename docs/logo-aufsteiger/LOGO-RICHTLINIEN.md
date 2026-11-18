@@ -63,5 +63,5 @@ Der große Punkt ist immer rot. Nur in der einfarbigen Fassung haben alle drei P
 
 - Der Schriftzug ist eine eigene Linienschrift aus Pfaden. Es gibt keine Schriftdatei und damit keine Lizenzfrage. Die Buchstaben sind als **Striche** mit runden Enden gebaut. Für Druckereien, die reine Flächen verlangen, in Inkscape oder Illustrator „Kontur in Pfad umwandeln“ ausführen.
 - Geprüft wurde die Darstellung bei 16, 24, 32, 48 und 64 px, einfarbig, auf der dunklen App-Kachel und in den Mockups (App-Icon, Browser-Tab, Website, Profilbild, T-Shirt, Sticker).
-- Das App-Icon der Anwendung (`build/icon.png`) ist **noch nicht** umgestellt.
+- Das App-Icon der Anwendung (`build/icon.png`, 512 px) ist `master/af-app-icon.svg` mit 8 Einheiten transparentem Rand (wie zuvor).
 - Eine Markenrecherche wurde **nicht** gemacht. Vor öffentlicher oder kommerzieller Nutzung in den Registern von DPMA und EUIPO sowie per Bildersuche prüfen.

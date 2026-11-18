@@ -1,0 +1,36 @@
+{
+  "brand": "Aufsteiger",
+  "tagline": "Spielzüge planen, zeichnen, abspielen",
+  "deck_title": "Logo – finale Fassung",
+  "brief": "Offline-Spielzugplaner für Volleyball-Trainer auf dem Surface: Aufstellungen, Ballwege und Laufwege in 2D und 3D. Der Name steht für den Aufstieg. Das Logo muss als Windows-Icon bei 16 px funktionieren, auf heller und dunkler Oberfläche.",
+  "adjectives": ["ehrgeizig", "klar", "sportlich", "präzise"],
+  "criteria": "Erfolg: unverwechselbar, bei 16 px lesbar, einfarbig nutzbar, passt zur dunklen App-Oberfläche und zum App-Rot.",
+  "mockups": ["app-icon", "favicon-tab", "website", "social", "tshirt", "sticker"],
+  "nav": ["Spielzüge", "Teams", "Download"],
+  "brand_color": "#E5484D",
+  "tile_color": "#18181B",
+  "greyscale": false,
+  "final": true,
+  "designer": "Aufsteiger",
+  "concepts": [
+    {
+      "name": "Flugbahn",
+      "symbol": "../master/af-symbol.svg",
+      "lockup": "../master/af-horizontal.svg",
+      "stacked": "../master/af-gestapelt.svg",
+      "symbol_on_tile": "../master/af-symbol-klein-dunkel.svg",
+      "symbol_on_dark": "../master/af-symbol-dunkel.svg",
+      "lockup_on_dark": "../master/af-horizontal-dunkel.svg",
+      "stacked_on_dark": "../master/af-gestapelt-dunkel.svg",
+      "stacked_on_tile": "../master/af-gestapelt-dunkel.svg",
+      "idea": "Annahme, Zuspiel, Angriff: drei Punkte auf einer steigenden Flugbahn, die mit jedem Kontakt wachsen.",
+      "rationale": [
+        "Ein Spielzug in drei Kontakten – und gleichzeitig der Aufstieg nach oben rechts",
+        "Nur Kreise auf einer echten Wurfparabel, gleiche Abstände – ruhig und präzise wie die Ballphysik der App",
+        "Der rote Ball ist das App-Rot und bleibt aus dem alten V-Ball-Logo erhalten",
+        "Eigene Kleinversion mit größeren Punkten für 16–48 px"
+      ]
+    }
+  ],
+  "recommendation": "Flugbahn als Symbol, App-Icon und Favicon; den Schriftzug erst ab ca. 140 px Breite einsetzen."
+}

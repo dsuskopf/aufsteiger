@@ -3,8 +3,8 @@ import type { SketchStroke } from '@shared/types'
 import { worldToThree } from '@renderer/core/geometry/transform'
 import { COLORS } from '@renderer/theme/colors'
 
-/** Höhe über dem Boden (über Feldlinien 0,002 m, unter den Zonen 0,003 m) */
-const Y = 0.0025
+/** Höhe über dem Boden (über Feldlinien 0,002 m und Zonen 0,003/0,004 m) */
+const Y = 0.005
 
 /**
  * Die Zeichnungen der Skizze flach auf dem 3D-Feldboden: je Strichstück ein schmales Rechteck,
@@ -27,7 +27,8 @@ export function buildSketch(strokes: SketchStroke[]): THREE.Group {
     const r = s.width / 2
     const cap = new THREE.CircleGeometry(r, 12)
     const p = s.points
-    const order = 1 + k * 1e-3
+    // Nach den Zonen zeichnen (deren renderOrder ist 1 und 2)
+    const order = 3 + k * 1e-3
     const dot = (x: number, y: number) => {
       const mesh = new THREE.Mesh(cap, m)
       const [tx, , tz] = worldToThree(x, y, 0)

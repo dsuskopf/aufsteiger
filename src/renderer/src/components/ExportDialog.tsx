@@ -13,7 +13,7 @@ type State =
 
 /**
  * Export ohne Dateidialog: PDF (Draufsicht, Netzansicht, vier 3D-Winkel, Werte) oder Video der 3D-Animation.
- * Dateien landen in Dokumente\Volleyball-Spielzüge und lassen sich danach im Ordner zeigen.
+ * Dateien landen in Dokumente\Aufsteiger-Spielzüge und lassen sich danach im Ordner zeigen.
  */
 export function ExportDialog({ onClose }: { onClose: () => void }) {
   const current = usePlay((s) => s.current)

@@ -177,7 +177,7 @@ Details:
 - **PDF** wird mit jsPDF im Renderer erzeugt:
   - Die 2D-Ansichten kommen über `stage.toDataURL({pixelRatio: 2})`.
   - Für 3D wird in ein Offscreen-`WebGLRenderer` mit festen Kamera-Presets gerendert (Seite, Hinter dem Angreifer, 45°, Oben) und daraus `toDataURL` gezogen.
-  - Gespeichert wird über IPC nach `Dokumente\Volleyball-Spielzüge\<Kürzel>.pdf`, danach kommt „Im Ordner anzeigen“. So braucht es keinen Dateidialog.
+  - Gespeichert wird über IPC nach `Dokumente\Aufsteiger-Spielzüge\<Kürzel>.pdf`, danach kommt „Im Ordner anzeigen“. So braucht es keinen Dateidialog.
 - **Video:**
   - Die Aufnahme läuft über `canvas.captureStream()` und `MediaRecorder` und spielt die Timeline in Echtzeit ab.
   - Das Format wird zur Laufzeit geprüft: Zuerst `MediaRecorder.isTypeSupported('video/mp4;codecs=avc1')`, sonst WebM (VP9/VP8).

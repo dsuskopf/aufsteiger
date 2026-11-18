@@ -17,6 +17,22 @@ const hasUserData = (dir: string): boolean => USER_FILES.some((f) => existsSync(
  * - Schlägt das Umbenennen fehl (z. B. weil die alte Version noch läuft), bleibt es beim alten Ordner,
  *   damit keine Daten „verschwinden“. Der Umzug wird beim nächsten Start erneut versucht.
  */
+/**
+ * Zieht einen einfachen Ordner um (z. B. den Exportordner „Volleyball-Spielzüge“ → „Aufsteiger-Spielzüge“).
+ * Nur wenn der alte existiert und der neue noch nicht; schlägt das fehl, bleibt es beim alten Ordner.
+ */
+export function migrateFolder(parent: string, oldName: string, newName: string): string {
+  const oldDir = join(parent, oldName)
+  const newDir = join(parent, newName)
+  if (!existsSync(oldDir) || existsSync(newDir)) return newDir
+  try {
+    renameSync(oldDir, newDir)
+    return newDir
+  } catch {
+    return oldDir
+  }
+}
+
 export function migrateUserData(appData: string, oldName: string, newName: string): string {
   const oldDir = join(appData, oldName)
   const newDir = join(appData, newName)

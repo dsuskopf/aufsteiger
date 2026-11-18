@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { migrateUserData } from './migrateUserData'
+import { migrateFolder, migrateUserData } from './migrateUserData'
 
 let root: string
 const OLD = 'Volleyball Playbook'
@@ -53,5 +53,26 @@ describe('migrateUserData', () => {
     mkdirSync(join(root, OLD, 'Cache'), { recursive: true })
     expect(migrateUserData(root, OLD, NEW)).toBe(join(root, NEW))
     expect(existsSync(join(root, OLD))).toBe(true)
+  })
+})
+
+describe('migrateFolder', () => {
+  it('benennt den alten Exportordner um', () => {
+    mkdirSync(join(root, 'Volleyball-Spielzüge'))
+    writeFileSync(join(root, 'Volleyball-Spielzüge', 'A1.pdf'), 'x')
+    expect(migrateFolder(root, 'Volleyball-Spielzüge', 'Aufsteiger-Spielzüge')).toBe(join(root, 'Aufsteiger-Spielzüge'))
+    expect(existsSync(join(root, 'Aufsteiger-Spielzüge', 'A1.pdf'))).toBe(true)
+    expect(existsSync(join(root, 'Volleyball-Spielzüge'))).toBe(false)
+  })
+
+  it('lässt beide stehen, wenn der neue schon existiert', () => {
+    mkdirSync(join(root, 'Volleyball-Spielzüge'))
+    mkdirSync(join(root, 'Aufsteiger-Spielzüge'))
+    expect(migrateFolder(root, 'Volleyball-Spielzüge', 'Aufsteiger-Spielzüge')).toBe(join(root, 'Aufsteiger-Spielzüge'))
+    expect(existsSync(join(root, 'Volleyball-Spielzüge'))).toBe(true)
+  })
+
+  it('nimmt den neuen, wenn es keinen alten gibt', () => {
+    expect(migrateFolder(root, 'Volleyball-Spielzüge', 'Aufsteiger-Spielzüge')).toBe(join(root, 'Aufsteiger-Spielzüge'))
   })
 })

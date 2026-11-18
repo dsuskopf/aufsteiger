@@ -3,6 +3,7 @@ import { promises as fs, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { SCHEMA_VERSION, THEME_PREFS, type ThemePref, type PlayDoc, type PlaySummary, type Settings, type TeamsFile } from '@shared/types'
 import { safeFileName, sanitizePlay, sanitizeSettings, sanitizeTeams } from '@shared/validate'
+import { migrateFolder } from './migrateUserData'
 import { dataPath, readJson, writeJsonAtomic, writeJsonAtomicSync } from './storage'
 
 const TEAMS_FILE = 'teams.json'
@@ -25,8 +26,11 @@ export function initTheme(): void {
 const playFile = (id: string) => join(PLAYS_DIR, `${id}.json`)
 const validId = (id: unknown): id is string => typeof id === 'string' && /^[\w-]{1,64}$/.test(id)
 
-/** Exporte landen ohne Dateidialog in Dokumente\Volleyball-Spielzüge */
-const exportDir = () => process.env['VBP_EXPORT_DIR'] ?? join(app.getPath('documents'), 'Volleyball-Spielzüge')
+/** Exporte landen ohne Dateidialog in Dokumente\Aufsteiger-Spielzüge (früher „Volleyball-Spielzüge“, wird umgezogen) */
+let exportDirCache: string | null = null
+const exportDir = (): string =>
+  process.env['VBP_EXPORT_DIR'] ??
+  (exportDirCache ??= migrateFolder(app.getPath('documents'), 'Volleyball-Spielzüge', 'Aufsteiger-Spielzüge'))
 
 async function exportPath(name: string, ext: string): Promise<string> {
   const dir = exportDir()

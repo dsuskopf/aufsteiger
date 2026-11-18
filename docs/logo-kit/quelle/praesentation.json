@@ -1,0 +1,36 @@
+{
+  "brand": "Volleyball Playbook",
+  "tagline": "Spielzüge planen, zeichnen, abspielen",
+  "deck_title": "Logo – finale Fassung",
+  "brief": "Offline-Spielzugplaner für Volleyball-Trainer auf dem Surface: Aufstellungen, Ballwege und Skizzen in 2D und 3D. Das Logo muss als Windows-Icon bei 16 px funktionieren, auf heller und dunkler Oberfläche.",
+  "adjectives": ["klar", "sportlich", "präzise", "ruhig"],
+  "criteria": "Erfolg: unverwechselbar, bei 16 px lesbar, einfarbig nutzbar, passt zur dunklen App-Oberfläche und zum App-Rot.",
+  "mockups": ["app-icon", "favicon-tab", "website", "social", "tshirt", "sticker"],
+  "nav": ["Spielzüge", "Teams", "Download"],
+  "brand_color": "#E5484D",
+  "tile_color": "#18181B",
+  "greyscale": false,
+  "final": true,
+  "designer": "Volleyball Playbook",
+  "concepts": [
+    {
+      "name": "V-Ball",
+      "symbol": "../master/vp-symbol.svg",
+      "lockup": "../master/vp-horizontal.svg",
+      "stacked": "../master/vp-gestapelt.svg",
+      "symbol_on_tile": "../master/vp-symbol-dunkel.svg",
+      "symbol_on_dark": "../master/vp-symbol-dunkel.svg",
+      "lockup_on_dark": "../master/vp-horizontal-dunkel.svg",
+      "stacked_on_dark": "../master/vp-gestapelt-dunkel.svg",
+      "stacked_on_tile": "../master/vp-gestapelt-dunkel.svg",
+      "idea": "Ein V, dessen rechter Arm im Ball endet: der Moment, in dem der Zug aufgeht.",
+      "rationale": [
+        "V für Volleyball, der Ball sitzt am Ende der Bewegung",
+        "Schenkel exakt 60°, ein Strich, eine Rundung – ruhig und präzise",
+        "Rot ist schon die Akzentfarbe der App (Antennen, Warnungen)",
+        "Eigene Kleinversion mit kräftigerem Strich für 16–32 px"
+      ]
+    }
+  ],
+  "recommendation": "V-Ball als Symbol, App-Icon und Favicon; den Schriftzug nur ab ca. 120 px Breite einsetzen."
+}

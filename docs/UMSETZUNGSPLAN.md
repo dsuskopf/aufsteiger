@@ -1,6 +1,6 @@
 # Umsetzungsplan: Volleyball-Spielzugplaner
 
-> **Stand 2026-11-12:** Alle Phasen 1–7 umgesetzt. Installer: `npm run dist` → `dist\Volleyball-Playbook-Setup-0.1.0.exe` (x64 + ARM64).
+> **Stand 2026-11-12:** Alle Phasen 1–7 umgesetzt. Installer: `npm run dist` → `dist\Aufsteiger-Setup-0.1.0.exe` (x64 + ARM64).
 > Abweichungen vom Plan: Seitenansicht durch Netzansicht ersetzt (Höhen-Griffe dort + Flugbahn-Karte), 2D = große Ansicht + Pop-up,
 > pro Spielzug höchstens eine Annahme und ein Zuspiel, Bibliothek liest die Dateien direkt (kein index.json), PDF per printToPDF statt jsPDF.
 

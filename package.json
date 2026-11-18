@@ -1,8 +1,8 @@
 {
-  "name": "volleyball-playbook",
+  "name": "aufsteiger",
   "productName": "Aufsteiger",
   "version": "0.1.0",
-  "description": "Volleyball-Spielzugplaner für Windows (offline)",
+  "description": "Aufsteiger – Volleyball-Playbook: Spielzüge planen, zeichnen und in 2D/3D abspielen (Windows, offline)",
   "main": "./out/main/index.js",
   "private": true,
   "scripts": {
